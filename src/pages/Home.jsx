@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { auth, db } from '../lib/firebase'; // Tua config Firebase
-import { supabase } from '../lib/supabase'; // Tua config Supabase
 import { collectionGroup, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Flag, Trophy, Zap, ChevronRight, Star } from 'lucide-react';
 import GpCountdown from '../components/GpCountdown';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { motion } from 'framer-motion';
+import { getNextGrandPrix } from '../lib/supabaseData';
 
 export default function Home() {
   const [user, setUser] = useState(null);
@@ -31,14 +31,7 @@ export default function Home() {
   async function loadData(currentUser) {
     try {
       // 1. Recupero GP da Supabase
-      const { data: gps, error } = await supabase
-        .from('grand_prix')
-        .select('*')
-        .or('status.eq.upcoming,status.eq.live')
-        .order('race_date', { ascending: true })
-        .limit(1);
-
-      const gp = gps?.[0] || null;
+      const gp = await getNextGrandPrix();
       setNextGp(gp);
 
       // 2. Recupero Leghe da Firestore

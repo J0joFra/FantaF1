@@ -1,4 +1,3 @@
-import { supabase } from '../lib/supabase';
 import { db, auth } from '../lib/firebase';
 import { collection, collectionGroup, query, where, getDocs, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
@@ -7,6 +6,7 @@ import { CheckCircle, ChevronLeft, Flag, Lock } from 'lucide-react';
 import DriverCard from '../components/DriverCard';
 import GpCountdown from '../components/GpCountdown';
 import { motion } from 'framer-motion';
+import { getNextGrandPrix, getActiveDrivers } from '../lib/supabaseData';
 
 export default function PickGp() {
   const [user, setUser] = useState(null);
@@ -29,22 +29,12 @@ export default function PickGp() {
     setUser(u);
     
     // 1. Supabase: GP e Piloti
-    const { data: gps } = await supabase
-      .from('grand_prix')
-      .select('*')
-      .or('status.eq.upcoming,status.eq.live')
-      .order('race_date')
-      .limit(1);
-      
-    const { data: driversData } = await supabase
-      .from('drivers')
-      .select('*')
-      .eq('season', 2026)
-      .eq('is_active', true);
-
-    const currentGp = gps?.[0] || null;
+    const [currentGp, driversData] = await Promise.all([
+      getNextGrandPrix(),
+      getActiveDrivers(2026),
+    ]);
     setNextGp(currentGp);
-    setDrivers(driversData || []);
+    setDrivers(driversData);
     setPickClosed(currentGp ? new Date(currentGp.pick_deadline) <= new Date() : false);
 
     // 2. Firestore: Leghe e Pick esistenti

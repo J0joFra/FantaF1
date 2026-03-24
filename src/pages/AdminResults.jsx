@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
+import { getGrandPrixList, getActiveDrivers } from '../lib/supabaseData';
 import {
   collection,
   query,
@@ -29,13 +30,13 @@ export default function AdminResults() {
       const u = auth.currentUser;
       setUser(u);
 
-      const [gpsResult, driversResult] = await Promise.all([
-        supabase.from('grand_prix').select('*').order('race_date', { ascending: false }).limit(50),
-        supabase.from('drivers').select('*').eq('is_active', true).eq('season', 2026),
+      const [allGps, allDrivers] = await Promise.all([
+        getGrandPrixList(50),
+        getActiveDrivers(2026),
       ]);
 
-      setGps(gpsResult.data || []);
-      setDrivers(driversResult.data || []);
+      setGps(allGps);
+      setDrivers(allDrivers);
       setLoading(false);
     }
     init();
