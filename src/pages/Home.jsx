@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { auth, db } from '../lib/firebase'; // Tua config Firebase
+import { supabase } from '../lib/supabase'; // Tua config Supabase
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Flag, Trophy, Zap, ChevronRight, Star } from 'lucide-react';
 import GpCountdown from '../components/GpCountdown';
 import { format } from 'date-fns';
@@ -14,27 +16,53 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    const unsubscribe = auth.onAuthStateChanged((u) => {
+      if (u) {
+        setUser(u);
+        loadData(u);
+      } else {
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
-  async function loadData() {
-    const u = await base44.auth.me();
-    setUser(u);
+  async function loadData(currentUser) {
+    try {
+      // 1. Recupero GP da Supabase
+      const { data: gps, error } = await supabase
+        .from('grand_prix')
+        .select('*')
+        .or('status.eq.upcoming,status.eq.live')
+        .order('race_date', { ascending: true })
+        .limit(1);
 
-    const gps = await base44.entities.GrandPrix.filter({ status: 'upcoming' }, 'race_date', 1);
-    const liveGps = await base44.entities.GrandPrix.filter({ status: 'live' }, 'race_date', 1);
-    const gp = liveGps[0] || gps[0] || null;
-    setNextGp(gp);
+      const gp = gps?.[0] || null;
+      setNextGp(gp);
 
-    const members = await base44.entities.LeagueMember.filter({ user_email: u.email });
-    setMyLeagues(members);
+      // 2. Recupero Leghe da Firestore
+      const leaguesRef = collection(db, 'league_members');
+      const q = query(leaguesRef, where('user_email', '==', currentUser.email));
+      const querySnapshot = await getDocs(q);
+      const members = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMyLeagues(members);
 
-    if (gp && members.length > 0) {
-      const picks = await base44.entities.Pick.filter({ user_email: u.email, gp_id: gp.id });
-      setMyPick(picks[0] || null);
+      // 3. Recupero Pick (se esiste GP e utente ha leghe)
+      if (gp && members.length > 0) {
+        const picksRef = collection(db, 'picks');
+        const pickQ = query(
+          picksRef, 
+          where('user_email', '==', currentUser.email), 
+          where('gp_id', '==', gp.id)
+        );
+        const pickSnap = await getDocs(pickQ);
+        setMyPick(pickSnap.docs[0]?.data() || null);
+      }
+    } catch (err) {
+      console.error("Errore caricamento dati:", err);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
   if (loading) {

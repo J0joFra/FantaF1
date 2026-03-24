@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Plus, Users, LogIn, Copy, ChevronRight, Trophy } from 'lucide-react';
+import { auth, db } from '../lib/firebase';
+import { collection, query, where, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
+import { Plus, Users, LogIn, ChevronRight, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
-function generateCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
-
 export default function Leghe() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(auth.currentUser);
   const [myLeagues, setMyLeagues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -18,17 +15,24 @@ export default function Leghe() {
   const [joinCode, setJoinCode] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    if (user) loadData();
+  }, [user]);
 
   async function loadData() {
-    const u = await base44.auth.me();
-    setUser(u);
-    const members = await base44.entities.LeagueMember.filter({ user_email: u.email });
+    const q = query(collection(db, 'league_members'), where('user_email', '==', user.email));
+    const querySnapshot = await getDocs(q);
+    
     const leagueDetails = await Promise.all(
-      members.map(async m => {
-        const leagues = await base44.entities.League.filter({ id: m.league_id });
-        const allMembers = await base44.entities.LeagueMember.filter({ league_id: m.league_id });
-        return { ...m, league: leagues[0], memberCount: allMembers.length };
+      querySnapshot.docs.map(async (mDoc) => {
+        const mData = mDoc.data();
+        // Recupero i dettagli della lega correlata
+        const leagueSnap = await getDoc(doc(db, 'leagues', mData.league_id));
+        return { 
+          id: mDoc.id, 
+          ...mData, 
+          league: leagueSnap.exists() ? leagueSnap.data() : null 
+        };
       })
     );
     setMyLeagues(leagueDetails);
@@ -38,25 +42,32 @@ export default function Leghe() {
   async function createLeague() {
     if (!newName.trim()) return;
     setSaving(true);
-    const code = generateCode();
-    const league = await base44.entities.League.create({
-      name: newName.trim(),
-      code,
-      season: 2026,
-      is_public: false,
-    });
-    await base44.entities.LeagueMember.create({
-      league_id: league.id,
-      user_email: user.email,
-      user_name: user.full_name,
-      total_points: 0,
-      rank: 1,
-    });
-    toast.success(`Lega "${newName}" creata! Codice: ${code}`);
-    setNewName('');
-    setShowCreate(false);
-    setSaving(false);
-    loadData();
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    try {
+      // Crea la lega
+      const leagueRef = await addDoc(collection(db, 'leagues'), {
+        name: newName.trim(),
+        code,
+        season: 2026,
+        admin_email: user.email
+      });
+
+      await addDoc(collection(db, 'league_members'), {
+        league_id: leagueRef.id,
+        user_email: user.email,
+        user_name: user.displayName || user.email,
+        total_points: 0,
+        rank: 1
+      });
+
+      toast.success("Lega creata!");
+      loadData();
+    } catch (e) {
+      toast.error("Errore nella creazione");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function joinLeague() {

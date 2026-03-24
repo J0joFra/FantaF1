@@ -1,10 +1,7 @@
+import { supabase } from '../lib/supabase';
+import { db, auth } from '../lib/firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Flag, Lock, CheckCircle, ChevronLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import DriverCard from '../components/DriverCard';
-import GpCountdown from '../components/GpCountdown';
-import { toast } from 'sonner';
 
 export default function PickGp() {
   const [user, setUser] = useState(null);
@@ -23,44 +20,45 @@ export default function PickGp() {
   }, []);
 
   async function loadData() {
-    const u = await base44.auth.me();
-    setUser(u);
+    const u = auth.currentUser;
+    
+    // 1. Supabase: GP e Piloti
+    const { data: gps } = await supabase
+      .from('grand_prix')
+      .select('*')
+      .or('status.eq.upcoming,status.eq.live')
+      .order('race_date')
+      .limit(1);
+      
+    const { data: driversData } = await supabase
+      .from('drivers')
+      .select('*')
+      .eq('season', 2026)
+      .eq('is_active', true);
 
-    const [liveGps, upcomingGps, driversData] = await Promise.all([
-      base44.entities.GrandPrix.filter({ status: 'live' }, 'race_date', 1),
-      base44.entities.GrandPrix.filter({ status: 'upcoming' }, 'race_date', 1),
-      base44.entities.Driver.filter({ season: 2026, is_active: true }, 'number', 20),
-    ]);
+    setNextGp(gps?.[0]);
+    setDrivers(driversData || []);
 
-    const gp = liveGps[0] || upcomingGps[0] || null;
-    setNextGp(gp);
-    setDrivers(driversData);
+    // 2. Firestore: Leghe e Pick esistenti
+    if (u && gps?.[0]) {
+      const qMembers = query(collection(db, 'league_members'), where('user_email', '==', u.email));
+      const membersSnap = await getDocs(qMembers);
+      const members = membersSnap.docs.map(d => ({id: d.id, ...d.data()}));
+      setMyLeagues(members);
 
-    if (gp) {
-      const closed = new Date(gp.pick_deadline) <= new Date();
-      setPickClosed(closed);
-    }
-
-    const members = await base44.entities.LeagueMember.filter({ user_email: u.email });
-    setMyLeagues(members);
-    if (members.length > 0) {
-      setSelectedLeague(members[0]);
-      if (gp) {
-        const picks = await base44.entities.Pick.filter({ user_email: u.email, gp_id: gp.id, league_id: members[0].league_id });
-        if (picks[0]) setExistingPick(picks[0]);
+      if (members.length > 0) {
+        const qPicks = query(
+          collection(db, 'picks'), 
+          where('user_email', '==', u.email), 
+          where('gp_id', '==', gps[0].id)
+        );
+        const pickSnap = await getDocs(qPicks);
+        if (!pickSnap.empty) {
+          setExistingPick({ id: pickSnap.docs[0].id, ...pickSnap.docs[0].data() });
+        }
       }
     }
-
     setLoading(false);
-  }
-
-  async function handleLeagueChange(member) {
-    setSelectedLeague(member);
-    setExistingPick(null);
-    if (nextGp) {
-      const picks = await base44.entities.Pick.filter({ user_email: user.email, gp_id: nextGp.id, league_id: member.league_id });
-      setExistingPick(picks[0] || null);
-    }
   }
 
   async function savePick() {
@@ -77,13 +75,6 @@ export default function PickGp() {
       points: 0,
       is_locked: false,
     };
-    if (existingPick) {
-      await base44.entities.Pick.update(existingPick.id, data);
-      toast.success('Pick aggiornato!');
-    } else {
-      await base44.entities.Pick.create(data);
-      toast.success('Pick salvato! Buona fortuna! 🏎️');
-    }
     setExistingPick(data);
     setSaving(false);
   }
