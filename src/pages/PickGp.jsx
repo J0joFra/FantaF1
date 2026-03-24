@@ -1,241 +1,236 @@
-import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronDown, Zap, Shield, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
-import { useAuth } from '../lib/AuthContext';
-import { DRIVERS_2026, FANTA_CALENDAR, getCurrentRace, isRaceLocked, savePrediction, getUserPrediction } from '../lib/fantaF1';
+import { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Flag, Lock, CheckCircle, ChevronLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import DriverCard from '../components/DriverCard';
+import GpCountdown from '../components/GpCountdown';
+import { toast } from 'sonner';
 
-// ─── Select pilota ────────────────────────────────────────────────────────────
-function DriverSelect({ value, onChange, placeholder, exclude = [] }) {
-  const available = DRIVERS_2026.filter(d => !exclude.includes(d.id) || d.id === value);
-  const sel = DRIVERS_2026.find(d => d.id === value);
-  return (
-    <div className="relative">
-      <select
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        className="w-full appearance-none bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white pr-10
-          focus:outline-none focus:border-red-500/50 transition"
-        style={sel ? { borderColor: sel.color + '60' } : {}}
-      >
-        <option value="">{placeholder}</option>
-        {available.map(d => (
-          <option key={d.id} value={d.id}>{d.name} — {d.team}</option>
-        ))}
-      </select>
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
-      {sel && <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full" style={{ backgroundColor: sel.color }} />}
-    </div>
-  );
-}
-
-// ─── Card sezione ─────────────────────────────────────────────────────────────
-function SCard({ title, color = 'text-zinc-500', children }) {
-  return (
-    <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl p-4">
-      <p className={`text-[10px] font-black uppercase tracking-widest mb-3 ${color}`}>{title}</p>
-      {children}
-    </div>
-  );
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function PickGp() {
-  const { user, login } = useAuth();
-  const race    = getCurrentRace();
-  const locked  = isRaceLocked(race);
+  const [user, setUser] = useState(null);
+  const [nextGp, setNextGp] = useState(null);
+  const [drivers, setDrivers] = useState([]);
+  const [myLeagues, setMyLeagues] = useState([]);
+  const [selectedLeague, setSelectedLeague] = useState(null);
+  const [existingPick, setExistingPick] = useState(null);
+  const [selectedDriver, setSelectedDriver] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [pickClosed, setPickClosed] = useState(false);
 
-  const [fullGrid, setFullGrid] = useState(Array(10).fill(''));   // pos 1-10
-  const [lastTail, setLastTail] = useState(Array(12).fill(''));   // pos 11-22
-  const [fl,       setFl]       = useState('');
-  const [sc,       setSc]       = useState(null);
-  const [dnfs,     setDnfs]     = useState(['', '', '']);
-
-  const [loading,  setLoading]  = useState(false);
-  const [saved,    setSaved]    = useState(false);
-  const [error,    setError]    = useState('');
-  const [existing, setExisting] = useState(null);
-
-  // Carica predizione esistente
   useEffect(() => {
-    if (!user || !race) return;
-    getUserPrediction(user, race.raceId).then(pred => {
-      if (!pred) return;
-      setExisting(pred);
-      if (pred.fullGrid) setFullGrid(pred.fullGrid.map(e => e.driverId));
-      if (pred.lastTail) setLastTail([...pred.lastTail.map(e => e.driverId), ...Array(12).fill('')].slice(0, 12));
-      if (pred.bonuses?.fastestLap) setFl(pred.bonuses.fastestLap);
-      if (pred.bonuses?.safetyCar !== undefined) setSc(pred.bonuses.safetyCar);
-      if (pred.bonuses?.dnfDrivers) setDnfs([...pred.bonuses.dnfDrivers, '', ''].slice(0, 3));
-    });
-  }, [user, race]);
+    loadData();
+  }, []);
 
-  const usedDrivers = [...fullGrid, ...lastTail, fl, ...dnfs].filter(Boolean);
+  async function loadData() {
+    const u = await base44.auth.me();
+    setUser(u);
 
-  const handleSubmit = async () => {
-    setError(''); setSaved(false);
-    if (fullGrid.some(d => !d)) return setError('Completa tutti i 10 piloti nella griglia principale');
-    if (!fl)       return setError('Inserisci il giro veloce');
-    if (sc === null) return setError('Specifica se ci sarà Safety Car / VSC');
+    const [liveGps, upcomingGps, driversData] = await Promise.all([
+      base44.entities.GrandPrix.filter({ status: 'live' }, 'race_date', 1),
+      base44.entities.GrandPrix.filter({ status: 'upcoming' }, 'race_date', 1),
+      base44.entities.Driver.filter({ season: 2026, is_active: true }, 'number', 20),
+    ]);
 
-    setLoading(true);
-    try {
-      await savePrediction(user, race.raceId, {
-        fullGrid: fullGrid.map((driverId, i) => ({ pos: i + 1, driverId })),
-        lastTail: lastTail.filter(Boolean).map((driverId, i) => ({ pos: 11 + i, driverId })),
-        bonuses: { fastestLap: fl, safetyCar: sc, dnfDrivers: dnfs.filter(Boolean) },
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  };
+    const gp = liveGps[0] || upcomingGps[0] || null;
+    setNextGp(gp);
+    setDrivers(driversData);
 
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] gap-4 px-4">
-        <p className="font-black text-xl uppercase">Accesso richiesto</p>
-        <button onClick={login}
-          className="flex items-center gap-2 bg-red-600 text-white px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest">
-          Accedi con Google
-        </button>
-      </div>
-    );
+    if (gp) {
+      const closed = new Date(gp.pick_deadline) <= new Date();
+      setPickClosed(closed);
+    }
+
+    const members = await base44.entities.LeagueMember.filter({ user_email: u.email });
+    setMyLeagues(members);
+    if (members.length > 0) {
+      setSelectedLeague(members[0]);
+      if (gp) {
+        const picks = await base44.entities.Pick.filter({ user_email: u.email, gp_id: gp.id, league_id: members[0].league_id });
+        if (picks[0]) setExistingPick(picks[0]);
+      }
+    }
+
+    setLoading(false);
   }
 
+  async function handleLeagueChange(member) {
+    setSelectedLeague(member);
+    setExistingPick(null);
+    if (nextGp) {
+      const picks = await base44.entities.Pick.filter({ user_email: user.email, gp_id: nextGp.id, league_id: member.league_id });
+      setExistingPick(picks[0] || null);
+    }
+  }
+
+  async function savePick() {
+    if (!selectedDriver || !selectedLeague || !nextGp) return;
+    setSaving(true);
+    const data = {
+      user_email: user.email,
+      user_name: user.full_name,
+      league_id: selectedLeague.league_id,
+      gp_id: nextGp.id,
+      driver_id: selectedDriver.id,
+      driver_name: `${selectedDriver.name} ${selectedDriver.surname}`,
+      driver_team: selectedDriver.team,
+      points: 0,
+      is_locked: false,
+    };
+    if (existingPick) {
+      await base44.entities.Pick.update(existingPick.id, data);
+      toast.success('Pick aggiornato!');
+    } else {
+      await base44.entities.Pick.create(data);
+      toast.success('Pick salvato! Buona fortuna! 🏎️');
+    }
+    setExistingPick(data);
+    setSaving(false);
+  }
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="w-8 h-8 border-4 border-ferrari-red border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
   return (
-    <div className="px-4 pt-10 pb-8 space-y-4">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-500 mb-1">Pick GP</p>
-        <h1 className="text-3xl font-black uppercase">{race?.name}</h1>
-        <p className="text-zinc-500 text-sm">{race?.circuit}</p>
+      <div className="relative bg-gradient-to-b from-[#0e0e1a] via-[#130a0a] to-background px-4 pt-14 pb-6">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-ferrari-red/50 to-transparent" />
+        <div className="flex items-center gap-3 mb-4">
+          <Link to="/" className="text-muted-foreground hover:text-foreground">
+            <ChevronLeft size={22} />
+          </Link>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Pick GP</p>
+            <h1 className="font-barlow font-black text-2xl text-foreground uppercase">
+              {nextGp ? nextGp.name : 'Nessun GP'}
+            </h1>
+          </div>
+        </div>
+
+        {nextGp && (
+          <div className="bg-card border border-border rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{nextGp.flag_emoji}</span>
+                <div>
+                  <p className="font-barlow font-bold text-sm text-foreground uppercase">{nextGp.circuit}</p>
+                  <p className="text-xs text-muted-foreground">{nextGp.country}</p>
+                </div>
+              </div>
+              {pickClosed ? (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary rounded-full px-3 py-1">
+                  <Lock size={10} />
+                  <span>Pick Chiuso</span>
+                </div>
+              ) : (
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              )}
+            </div>
+            {!pickClosed && <GpCountdown deadline={nextGp.pick_deadline} />}
+          </div>
+        )}
       </div>
 
-      {locked && (
-        <div className="flex items-center gap-3 bg-zinc-900 border border-white/10 rounded-2xl px-4 py-3">
-          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-          <p className="text-sm text-zinc-400 font-bold">🔒 Pick chiusi per questa gara</p>
-        </div>
-      )}
+      <div className="px-4 space-y-4">
 
-      {existing && !locked && (
-        <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl px-4 py-3">
-          <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
-          <p className="text-sm text-green-300 font-bold">Predizione già inviata — puoi aggiornarla</p>
-        </div>
-      )}
-
-      {/* Griglia top 10 */}
-      <SCard title="Classifica · Posizioni 1 – 10" color="text-blue-400">
-        <div className="space-y-2">
-          {fullGrid.map((val, i) => {
-            const accent = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#6b7280';
-            return (
-              <div key={i} className="flex items-center gap-3">
-                <span className="text-sm font-black w-6 text-center shrink-0 tabular-nums" style={{ color: accent }}>
-                  {i + 1}°
-                </span>
-                <DriverSelect
-                  value={val}
-                  onChange={v => setFullGrid(g => { const n = [...g]; n[i] = v; return n; })}
-                  placeholder={`Posizione ${i + 1}`}
-                  exclude={usedDrivers.filter(d => d !== val)}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </SCard>
-
-      {/* Zona coda */}
-      <SCard title="Zona coda · Posizioni 11 – 22">
-        <p className="text-[11px] text-zinc-600 mb-3">Opzionale ma vale punti — inserisci i piloti rimanenti in ordine.</p>
-        <div className="space-y-2">
-          {lastTail.map((val, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <span className="text-sm font-black w-6 text-center shrink-0 tabular-nums" style={{ color: i >= 7 ? '#a855f7' : '#52525b' }}>
-                {11 + i}°
-              </span>
-              <DriverSelect
-                value={val}
-                onChange={v => setLastTail(t => { const n = [...t]; n[i] = v; return n; })}
-                placeholder={`Pos. ${11 + i} (opzionale)`}
-                exclude={usedDrivers.filter(d => d !== val)}
-              />
-            </div>
-          ))}
-        </div>
-      </SCard>
-
-      {/* Bonus */}
-      <SCard title="Bonus gara" color="text-yellow-500">
-        <div className="space-y-4">
-
-          {/* Giro veloce */}
-          <div>
-            <p className="text-[11px] text-zinc-500 font-bold mb-2 flex items-center gap-1.5">
-              <Zap className="w-3 h-3 text-orange-400" /> Giro veloce *
-            </p>
-            <DriverSelect value={fl} onChange={setFl} placeholder="Chi farà il giro veloce?" />
+        {/* No GP */}
+        {!nextGp && (
+          <div className="rounded-2xl bg-card border border-border p-8 text-center">
+            <Flag size={40} className="text-muted-foreground mx-auto mb-3" />
+            <p className="font-barlow font-bold text-foreground">Nessun GP disponibile</p>
+            <p className="text-sm text-muted-foreground mt-1">Il prossimo GP non è ancora stato programmato.</p>
           </div>
+        )}
 
-          {/* Safety Car */}
+        {/* No leagues */}
+        {nextGp && myLeagues.length === 0 && (
+          <div className="rounded-2xl bg-card border border-border p-8 text-center">
+            <p className="font-barlow font-bold text-foreground mb-2">Nessuna Lega</p>
+            <p className="text-sm text-muted-foreground mb-4">Entra in una lega per poter fare il pick.</p>
+            <Link to="/leghe" className="inline-flex items-center gap-2 bg-ferrari-red text-white font-barlow font-bold text-sm uppercase px-5 py-2.5 rounded-xl">
+              Vai alle Leghe
+            </Link>
+          </div>
+        )}
+
+        {/* League selector */}
+        {nextGp && myLeagues.length > 1 && (
           <div>
-            <p className="text-[11px] text-zinc-500 font-bold mb-2 flex items-center gap-1.5">
-              <Shield className="w-3 h-3 text-cyan-400" /> Safety Car / VSC *
-            </p>
-            <div className="flex gap-3">
-              {[true, false].map(v => (
-                <button key={String(v)} onClick={() => setSc(v)}
-                  className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest border transition
-                    ${sc === v
-                      ? v ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400' : 'bg-zinc-800 border-zinc-600 text-zinc-300'
-                      : 'bg-transparent border-white/10 text-zinc-600 hover:text-zinc-300'}`}>
-                  {v ? '✅ Sì' : '❌ No'}
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-2">Selezione Lega</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {myLeagues.map(m => (
+                <button
+                  key={m.league_id}
+                  onClick={() => handleLeagueChange(m)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-barlow font-bold uppercase tracking-wide border transition-all ${
+                    selectedLeague?.league_id === m.league_id
+                      ? 'bg-ferrari-red border-ferrari-red text-white'
+                      : 'bg-card border-border text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {m.user_name || m.league_id}
                 </button>
               ))}
             </div>
           </div>
+        )}
 
-          {/* DNF */}
-          <div>
-            <p className="text-[11px] text-zinc-500 font-bold mb-2 flex items-center gap-1.5">
-              <AlertCircle className="w-3 h-3 text-red-400" /> DNF / DNS previsti
-            </p>
-            <div className="space-y-2">
-              {dnfs.map((val, i) => (
-                <DriverSelect key={i}
-                  value={val}
-                  onChange={v => setDnfs(d => { const n = [...d]; n[i] = v; return n; })}
-                  placeholder={`Ritiro ${i + 1} (opzionale)`}
-                  exclude={usedDrivers.filter(d => d !== val)}
-                />
-              ))}
+        {/* Current pick banner */}
+        {existingPick && (
+          <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl p-3">
+            <CheckCircle size={20} className="text-green-500 flex-shrink-0" />
+            <div>
+              <p className="text-xs text-muted-foreground">Pick attuale</p>
+              <p className="font-barlow font-bold text-foreground uppercase">{existingPick.driver_name}</p>
             </div>
+            {!pickClosed && <span className="ml-auto text-xs text-muted-foreground">Puoi cambiarlo</span>}
           </div>
-        </div>
-      </SCard>
+        )}
 
-      {/* Error */}
-      {error && (
-        <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3">
-          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-          <p className="text-sm text-red-400">{error}</p>
-        </div>
-      )}
+        {/* Drivers list */}
+        {nextGp && myLeagues.length > 0 && !pickClosed && (
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-3">
+              Scegli il tuo Pilota
+            </p>
+            {drivers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                Nessun pilota disponibile per questa stagione.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {drivers.map(driver => (
+                  <DriverCard
+                    key={driver.id}
+                    driver={driver}
+                    isSelected={selectedDriver?.id === driver.id}
+                    onSelect={setSelectedDriver}
+                    disabled={false}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-      {/* Submit */}
-      {!locked && (
-        <button onClick={handleSubmit} disabled={loading}
-          className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all
-            ${saved    ? 'bg-green-600 text-white' :
-              loading  ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed' :
-              'bg-red-600 hover:bg-red-500 text-white shadow-xl shadow-red-600/20'}`}>
-          {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvataggio...</>
-           : saved   ? <><CheckCircle2 className="w-4 h-4" /> Predizione salvata!</>
-           : existing ? <><Zap className="w-4 h-4" /> Aggiorna predizione</>
-           :            <><Zap className="w-4 h-4" /> Invia predizione</>}
-        </button>
-      )}
+        {/* Save button */}
+        {selectedDriver && !pickClosed && (
+          <div className="sticky bottom-24 pt-2">
+            <button
+              onClick={savePick}
+              disabled={saving}
+              className="w-full bg-ferrari-red hover:bg-ferrari-red/90 text-white font-barlow font-black text-lg uppercase tracking-wider rounded-2xl py-4 shadow-lg shadow-ferrari-red/30 transition-all disabled:opacity-70"
+            >
+              {saving ? 'Salvataggio...' : `Conferma ${selectedDriver.surname} 🏎️`}
+            </button>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

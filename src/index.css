@@ -1,67 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700;1,800;1,900&display=swap');
+
 @tailwind base;
+
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+@layer base {
+  :root {
+    --background: 228 15% 7%;
+    --foreground: 0 0% 96%;
+    --card: 228 13% 10%;
+    --card-foreground: 0 0% 96%;
+    --popover: 228 13% 10%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 354 90% 50%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 228 12% 14%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 228 12% 14%;
+    --muted-foreground: 228 8% 52%;
+    --accent: 43 96% 52%;
+    --accent-foreground: 0 0% 5%;
+    --destructive: 0 62.8% 40%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 228 10% 16%;
+    --input: 228 10% 16%;
+    --ring: 354 90% 50%;
+    --radius: 0.75rem;
 
-/* ── Reset ───────────────────────────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-html, body, #root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  background-color: #0a0a0a;
-  color: #ffffff;
-  font-family: 'Inter', system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  /* Impedisce lo scroll orizzontale su mobile */
-  overflow-x: hidden;
-}
-
-/* ── Scrollbar custom ────────────────────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 2px;
+    --ferrari-red: 354 90% 50%;
+    --ferrari-gold: 43 96% 52%;
+    --racing-dark: 228 15% 7%;
+  }
 }
 
-/* ── Select custom (rimuove sfondo bianco su iOS) ────────────────────────── */
-select {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  background-color: #1a1a1a;
-  color: white;
-}
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
 
-select option {
-  background-color: #1a1a1a;
-  color: white;
-}
-
-/* ── Animazioni ─────────────────────────────────────────────────────────── */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.2s ease-out both;
-}
-
-/* ── Utility ─────────────────────────────────────────────────────────────── */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
+  body {
+    @apply bg-background text-foreground font-inter;
+    -webkit-font-smoothing: antialiased;
+  }
 }

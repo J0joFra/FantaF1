@@ -1,81 +1,39 @@
-# FantaF1 2026
+**Welcome to your Base44 project** 
 
-App mobile-first per il fantasy F1 della stagione 2026.  
-Predici la griglia di arrivo prima di ogni GP, accumula punti e scala la classifica della tua lega.
+**About**
 
-## Stack
+View and Edit  your app on [Base44.com](http://Base44.com) 
 
-- **React 18** + **Vite**
-- **Firebase** (Firestore + Auth Google)
-- **Tailwind CSS**
-- **React Router v6**
-- **Lucide React** (icone)
+This project contains everything you need to run your app locally.
 
-## Setup
+**Edit the code in your local development environment**
 
-```bash
-# 1. Installa le dipendenze
-npm install
+Any change pushed to the repo will also be reflected in the Base44 Builder.
 
-# 2. Crea il file .env copiando il template
-cp .env.example .env
+**Prerequisites:** 
 
-# 3. Inserisci le credenziali Firebase nel .env
-#    (le trovi su Firebase Console → Impostazioni progetto → Web app)
-
-# 4. Avvia il dev server
-npm run dev
-```
-
-L'app gira su `http://localhost:5173`.
-
-## Struttura
+1. Clone the repository using the project's Git URL 
+2. Navigate to the project directory
+3. Install dependencies: `npm install`
+4. Create an `.env.local` file and set the right environment variables
 
 ```
-src/
-├── components/
-│   ├── AppLayout.jsx          # Layout con bottom nav
-│   ├── DriverCard.jsx         # Card pilota selezionabile
-│   ├── GpCountdown.jsx        # Timer countdown GG:HH:MM:SS
-│   └── UserNotRegisteredError.jsx
-├── config/
-│   └── f1-2026.js             # Piloti e calendario 2026
-├── hooks/
-│   └── use-mobile.jsx
-├── lib/
-│   ├── AuthContext.jsx        # Auth Google + profilo Firestore
-│   ├── fantaF1.js             # Logica predizioni, punteggi, token
-│   ├── firebase.js            # Init Firebase
-│   ├── leagues.js             # Gestione leghe
-│   ├── PageNotFound.jsx
-│   └── scoring.js             # Regole punti
-├── pages/
-│   ├── AdminResults.jsx       # Admin: inserimento risultati GP
-│   ├── Classifica.jsx
-│   ├── Home.jsx
-│   ├── Leghe.jsx
-│   ├── PickGp.jsx             # Form predizione completa
-│   ├── Profilo.jsx
-│   └── Regolamento.jsx
-└── utils/
-    └── index.ts
+VITE_BASE44_APP_ID=your_app_id
+VITE_BASE44_APP_BASE_URL=your_backend_url
+
+e.g.
+VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
+VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
 ```
 
-## Firestore — Collezioni
+Run the app: `npm run dev`
 
-| Collezione | Descrizione |
-|---|---|
-| `users` | Profili utente (uid, name, email, role, tokens) |
-| `leagues` | Leghe con codice invito e lista membri |
-| `fantaPredictions` | Predizioni utente per gara |
-| `fantaResults` | Risultati ufficiali inseriti dall'admin |
-| `fantaScores` | Punteggi calcolati per gara/utente |
-| `fantaLeaderboard` | Classifica stagionale aggregata |
-| `leagueScores` | Punteggi per lega |
+**Publish your changes**
 
-## Ruoli
+Open [Base44.com](http://Base44.com) and click on Publish.
 
-- `user` — utente normale, può fare pick e stare nelle leghe
-- `admin` — può accedere a `/admin/results` e inserire i risultati GP
+**Docs & Support**
 
-Per impostare un utente come admin, modifica manualmente il campo `role` su Firestore.
+Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+
+Support: [https://app.base44.com/support](https://app.base44.com/support)

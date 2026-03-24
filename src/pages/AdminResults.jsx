@@ -1,213 +1,251 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, Plus, X, Loader2, Trophy, Zap, Shield, AlertCircle, CheckCircle2, Flag } from 'lucide-react';
-import { useAuth } from '../lib/AuthContext';
-import { DRIVERS_2026, FANTA_CALENDAR, saveRaceResult, awardPredictionTokens } from '../lib/fantaF1';
-
-function DriverSelect({ value, onChange, placeholder = 'Seleziona pilota', exclude = [] }) {
-  const available = DRIVERS_2026.filter(d => !exclude.includes(d.id) || d.id === value);
-  const sel = DRIVERS_2026.find(d => d.id === value);
-  return (
-    <div className="relative">
-      <select value={value || ''} onChange={e => onChange(e.target.value)}
-        className="w-full appearance-none bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white pr-10
-          focus:outline-none focus:border-red-500/50 transition"
-        style={sel ? { borderColor: sel.color + '40' } : {}}>
-        <option value="">{placeholder}</option>
-        {available.map(d => <option key={d.id} value={d.id}>{d.name} — {d.team}</option>)}
-      </select>
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
-      {sel && <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full" style={{ backgroundColor: sel.color }} />}
-    </div>
-  );
-}
+import { base44 } from '@/api/base44Client';
+import { calculatePickPoints } from '@/lib/scoring';
+import { CheckCircle, Loader2, AlertTriangle, ChevronDown } from 'lucide-react';
 
 export default function AdminResults() {
-  const { user } = useAuth();
+  const [user, setUser] = useState(null);
+  const [gps, setGps] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [selectedGp, setSelectedGp] = useState(null);
+  const [positions, setPositions] = useState({}); // { driverId: position }
+  const [fastestLap, setFastestLap] = useState('');
+  const [pole, setPole] = useState('');
+  const [dnfDrivers, setDnfDrivers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null);
 
-  const [raceId,    setRaceId]    = useState('');
-  const [gpStatus,  setGpStatus]  = useState('provisional');
-  const [fullGrid,  setFullGrid]  = useState(Array(10).fill(''));
-  const [lastTail,  setLastTail]  = useState(Array(12).fill(''));
-  const [fl,        setFl]        = useState('');
-  const [sc,        setSc]        = useState(null);
-  const [dnfs,      setDnfs]      = useState(['', '', '']);
-  const [winTeam,   setWinTeam]   = useState('');
-  const [doublePod, setDoublePod] = useState('');
-  const [loading,   setLoading]   = useState(false);
-  const [result,    setResult]    = useState(null);
-  const [error,     setError]     = useState(null);
-
-  // Auto-fill costruttore dal 1° posto
   useEffect(() => {
-    if (!fullGrid[0]) return;
-    const d = DRIVERS_2026.find(d => d.id === fullGrid[0]);
-    if (d) setWinTeam(d.team.toLowerCase().replace(/\s+/g, '-'));
-  }, [fullGrid[0]]);
+    async function init() {
+      const u = await base44.auth.me();
+      setUser(u);
+      const [allGps, allDrivers] = await Promise.all([
+        base44.entities.GrandPrix.list('-race_date', 50),
+        base44.entities.Driver.filter({ is_active: true, season: 2026 }),
+      ]);
+      setGps(allGps);
+      setDrivers(allDrivers);
+      setLoading(false);
+    }
+    init();
+  }, []);
 
-  // Auto-detect doppietta podio
-  useEffect(() => {
-    const [p1, p2, p3] = fullGrid;
-    if (!p1 || !p2 || !p3) { setDoublePod(''); return; }
-    const d = (id) => DRIVERS_2026.find(d => d.id === id);
-    const teamId = t => t?.toLowerCase().replace(/\s+/g, '-');
-    if (d(p1)?.team === d(p2)?.team) setDoublePod(teamId(d(p1)?.team));
-    else if (d(p1)?.team === d(p3)?.team) setDoublePod(teamId(d(p1)?.team));
-    else if (d(p2)?.team === d(p3)?.team) setDoublePod(teamId(d(p2)?.team));
-    else setDoublePod('');
-  }, [fullGrid[0], fullGrid[1], fullGrid[2]]);
-
-  const usedDrivers = [...fullGrid, ...lastTail, fl, ...dnfs].filter(Boolean);
-
-  if (user?.role !== 'admin') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] gap-3 px-4 text-center">
-        <AlertCircle className="w-10 h-10 text-red-500" />
-        <p className="font-black text-xl uppercase">Accesso negato</p>
-        <p className="text-zinc-500 text-sm">Questa pagina è riservata agli admin.</p>
-      </div>
+  function toggleDnf(driverId) {
+    setDnfDrivers(prev =>
+      prev.includes(driverId) ? prev.filter(d => d !== driverId) : [...prev, driverId]
     );
   }
 
-  const handleSubmit = async () => {
-    setError(null); setResult(null);
-    if (!raceId) return setError('Seleziona la gara');
-    if (fullGrid.some(d => !d)) return setError('Completa tutti i 10 piloti');
-    if (!fl) return setError('Inserisci il giro veloce');
-    if (sc === null) return setError('Specifica Safety Car');
+  async function handleSave() {
+    if (!selectedGp) return;
+    setSaving(true);
+    setMessage(null);
 
-    setLoading(true);
-    try {
-      await saveRaceResult(raceId, {
-        status: gpStatus,
-        fullGrid: fullGrid.map((driverId, i) => ({ pos: i + 1, driverId })),
-        lastTail: lastTail.filter(Boolean).map((driverId, i) => ({ pos: 11 + i, driverId })),
-        bonuses: { fastestLap: fl, safetyCar: sc, dnfDrivers: dnfs.filter(Boolean), winningConstructor: winTeam, teamDoublePodium: doublePod || null },
+    const results = {
+      positions,
+      fastest_lap_driver_id: fastestLap || null,
+      pole_driver_id: pole || null,
+      dnf_driver_ids: dnfDrivers,
+    };
+
+    // Salva i risultati nel GP
+    await base44.entities.GrandPrix.update(selectedGp.id, {
+      race_results: JSON.stringify(results),
+      status: 'completed',
+    });
+
+    // Calcola punti per tutti i Pick di questo GP
+    const picks = await base44.entities.Pick.filter({ gp_id: selectedGp.id });
+
+    for (const pick of picks) {
+      const { total, breakdown } = calculatePickPoints(pick.driver_id, results);
+      await base44.entities.Pick.update(pick.id, {
+        points: total,
+        bonus_details: JSON.stringify(breakdown),
+        is_locked: true,
       });
-      const awarded = await awardPredictionTokens(raceId);
-      setResult({ ok: true, awarded });
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  };
+    }
+
+    // Aggiorna i punti totali nei LeagueMember
+    const leagueIds = [...new Set(picks.map(p => p.league_id).filter(Boolean))];
+    for (const leagueId of leagueIds) {
+      const leaguePicks = await base44.entities.Pick.filter({ league_id: leagueId });
+      const pointsByUser = {};
+      for (const p of leaguePicks) {
+        pointsByUser[p.user_email] = (pointsByUser[p.user_email] || 0) + (p.points || 0);
+      }
+      const members = await base44.entities.LeagueMember.filter({ league_id: leagueId });
+      for (const member of members) {
+        const total = pointsByUser[member.user_email] || 0;
+        await base44.entities.LeagueMember.update(member.id, { total_points: total });
+      }
+    }
+
+    setSaving(false);
+    setMessage({ type: 'success', text: `Risultati salvati! ${picks.length} pick aggiornati.` });
+  }
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader2 className="w-8 h-8 animate-spin text-ferrari-red" />
+    </div>
+  );
+
+  if (user?.role !== 'admin') return (
+    <div className="flex items-center justify-center min-h-screen px-6">
+      <div className="text-center">
+        <AlertTriangle size={40} className="text-ferrari-red mx-auto mb-3" />
+        <p className="font-barlow font-bold text-xl text-foreground">Accesso negato</p>
+        <p className="text-muted-foreground text-sm">Solo gli admin possono inserire i risultati.</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="px-4 pt-10 pb-8 space-y-4">
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-red-500 mb-1">Admin</p>
-        <h1 className="text-3xl font-black uppercase">Risultati GP</h1>
+    <div className="min-h-screen bg-background">
+      <div className="relative bg-gradient-to-b from-[#0e0e1a] via-[#130a0a] to-background px-4 pt-14 pb-6">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-ferrari-red/50 to-transparent" />
+        <p className="text-[10px] text-muted-foreground font-barlow font-bold uppercase tracking-[0.2em] mb-1">Admin Panel</p>
+        <h1 className="font-barlow font-black text-3xl text-foreground uppercase">Inserisci Risultati</h1>
       </div>
 
-      {/* Selezione gara */}
-      <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl p-4">
-        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">Gara</p>
-        <div className="relative">
-          <select value={raceId} onChange={e => setRaceId(e.target.value)}
-            className="w-full appearance-none bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white pr-10 focus:outline-none focus:border-red-500/50">
-            <option value="">Seleziona gara...</option>
-            {FANTA_CALENDAR.map(r => <option key={r.raceId} value={r.raceId}>R{r.round} — {r.name}</option>)}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
-        </div>
-        {raceId && (
-          <div className="flex gap-2 mt-3">
-            {['provisional', 'official'].map(s => (
-              <button key={s} onClick={() => setGpStatus(s)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition
-                  ${gpStatus === s ? 'bg-red-600/20 border-red-500/40 text-red-400' : 'border-white/10 text-zinc-600'}`}>
-                {s}
-              </button>
-            ))}
+      <div className="px-4 space-y-4 pb-8">
+
+        {/* Seleziona GP */}
+        <div className="rounded-2xl bg-card border border-border p-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-3">Gran Premio</p>
+          <div className="relative">
+            <select
+              className="w-full bg-secondary border border-border rounded-xl px-4 py-3 text-foreground font-barlow font-bold text-base appearance-none pr-10 focus:outline-none focus:border-ferrari-red"
+              value={selectedGp?.id || ''}
+              onChange={e => {
+                const gp = gps.find(g => g.id === e.target.value);
+                setSelectedGp(gp || null);
+                setPositions({});
+                setFastestLap('');
+                setPole('');
+                setDnfDrivers([]);
+                setMessage(null);
+              }}
+            >
+              <option value="">— Scegli un GP —</option>
+              {gps.map(gp => (
+                <option key={gp.id} value={gp.id}>
+                  {gp.flag_emoji} {gp.name} (R{gp.round})
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           </div>
+        </div>
+
+        {selectedGp && (
+          <>
+            {/* Posizioni finali */}
+            <div className="rounded-2xl bg-card border border-border p-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-3">
+                Posizioni Finali
+              </p>
+              <div className="space-y-2">
+                {drivers.map(driver => (
+                  <div key={driver.id} className="flex items-center gap-3">
+                    <span className="text-sm font-barlow font-bold text-foreground w-36 truncate">
+                      {driver.surname}
+                    </span>
+                    <div className="relative flex-1">
+                      <select
+                        className="w-full bg-secondary border border-border rounded-lg px-3 py-1.5 text-sm text-foreground appearance-none focus:outline-none focus:border-ferrari-red"
+                        value={positions[driver.id] || ''}
+                        onChange={e => setPositions(prev => ({
+                          ...prev,
+                          [driver.id]: e.target.value ? Number(e.target.value) : undefined,
+                        }))}
+                      >
+                        <option value="">—</option>
+                        {Array.from({ length: 20 }, (_, i) => i + 1).map(p => (
+                          <option key={p} value={p}>P{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bonus */}
+            <div className="rounded-2xl bg-card border border-border p-4 space-y-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Bonus / Malus</p>
+
+              {/* Pole */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">🏆 Pole Position (+3 pts)</label>
+                <select
+                  className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm text-foreground appearance-none focus:outline-none focus:border-ferrari-red"
+                  value={pole}
+                  onChange={e => setPole(e.target.value)}
+                >
+                  <option value="">— Nessuno —</option>
+                  {drivers.map(d => <option key={d.id} value={d.id}>{d.surname}</option>)}
+                </select>
+              </div>
+
+              {/* Fastest lap */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">⚡ Giro Veloce (+5 pts)</label>
+                <select
+                  className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm text-foreground appearance-none focus:outline-none focus:border-ferrari-red"
+                  value={fastestLap}
+                  onChange={e => setFastestLap(e.target.value)}
+                >
+                  <option value="">— Nessuno —</option>
+                  {drivers.map(d => <option key={d.id} value={d.id}>{d.surname}</option>)}
+                </select>
+              </div>
+
+              {/* DNF */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">💥 DNF (-10 pts) — seleziona multipli</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {drivers.map(d => (
+                    <button
+                      key={d.id}
+                      onClick={() => toggleDnf(d.id)}
+                      className={`text-left px-3 py-2 rounded-lg text-sm font-barlow font-bold border transition-all ${
+                        dnfDrivers.includes(d.id)
+                          ? 'bg-destructive/20 border-destructive text-red-400'
+                          : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {d.surname}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Feedback */}
+            {message && (
+              <div className={`rounded-xl p-4 flex items-center gap-3 ${
+                message.type === 'success' ? 'bg-green-500/10 border border-green-500/30' : 'bg-destructive/10 border border-destructive/30'
+              }`}>
+                <CheckCircle size={18} className="text-green-400 flex-shrink-0" />
+                <p className="text-sm text-foreground">{message.text}</p>
+              </div>
+            )}
+
+            {/* Save */}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full bg-ferrari-red text-white font-barlow font-black text-base uppercase tracking-wider rounded-2xl py-4 flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {saving ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle size={20} />}
+              {saving ? 'Calcolo in corso...' : 'Salva Risultati & Calcola Punti'}
+            </button>
+          </>
         )}
       </div>
-
-      {/* Top 10 */}
-      <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl p-4">
-        <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-3">Top 10</p>
-        <div className="space-y-2">
-          {fullGrid.map((val, i) => {
-            const accent = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#6b7280';
-            return (
-              <div key={i} className="flex items-center gap-3">
-                <span className="text-sm font-black w-6 text-center shrink-0" style={{ color: accent }}>{i + 1}°</span>
-                <DriverSelect value={val} onChange={v => setFullGrid(g => { const n = [...g]; n[i] = v; return n; })} placeholder={`Pos. ${i + 1}`} exclude={usedDrivers.filter(d => d !== val)} />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Zona coda */}
-      <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl p-4">
-        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">Pos. 11 – 22</p>
-        <div className="space-y-2">
-          {lastTail.map((val, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <span className="text-sm font-black w-6 text-center shrink-0" style={{ color: i >= 7 ? '#a855f7' : '#52525b' }}>{11 + i}°</span>
-              <DriverSelect value={val} onChange={v => setLastTail(t => { const n = [...t]; n[i] = v; return n; })} placeholder={`Pos. ${11 + i}`} exclude={usedDrivers.filter(d => d !== val)} />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bonus */}
-      <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl p-4 space-y-4">
-        <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500">Bonus gara</p>
-        <div>
-          <p className="text-[11px] text-zinc-500 font-bold mb-2 flex items-center gap-1.5"><Zap className="w-3 h-3 text-orange-400" /> Giro veloce</p>
-          <DriverSelect value={fl} onChange={setFl} placeholder="Giro veloce" />
-        </div>
-        <div>
-          <p className="text-[11px] text-zinc-500 font-bold mb-2 flex items-center gap-1.5"><Shield className="w-3 h-3 text-cyan-400" /> Safety Car / VSC</p>
-          <div className="flex gap-3">
-            {[true, false].map(v => (
-              <button key={String(v)} onClick={() => setSc(v)}
-                className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest border transition
-                  ${sc === v ? v ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400' : 'bg-zinc-800 border-zinc-600 text-zinc-300' : 'border-white/10 text-zinc-600'}`}>
-                {v ? '✅ Sì' : '❌ No'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="text-[11px] text-zinc-500 font-bold mb-2 flex items-center gap-1.5"><AlertCircle className="w-3 h-3 text-red-400" /> DNF / DNS</p>
-          <div className="space-y-2">
-            {dnfs.map((val, i) => (
-              <DriverSelect key={i} value={val} onChange={v => setDnfs(d => { const n = [...d]; n[i] = v; return n; })} placeholder={`Ritiro ${i + 1}`} exclude={usedDrivers.filter(d => d !== val)} />
-            ))}
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/5">
-          <div>
-            <p className="text-[10px] text-zinc-600 font-bold uppercase mb-1 flex items-center gap-1"><Trophy className="w-3 h-3 text-green-400" /> Costruttore</p>
-            <div className="px-4 py-3 rounded-xl bg-white/5 text-sm font-bold text-white">{winTeam || <span className="text-zinc-600">Auto dal 1°</span>}</div>
-          </div>
-          <div>
-            <p className="text-[10px] text-zinc-600 font-bold uppercase mb-1 flex items-center gap-1"><Flag className="w-3 h-3 text-purple-400" /> Doppietta</p>
-            <div className="px-4 py-3 rounded-xl bg-white/5 text-sm font-bold text-white">{doublePod || <span className="text-zinc-600">Nessuna</span>}</div>
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3">
-          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-          <p className="text-sm text-red-400">{error}</p>
-        </div>
-      )}
-
-      {result?.ok && (
-        <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl px-4 py-3">
-          <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
-          <p className="text-sm text-green-300 font-bold">Risultati salvati · {result.awarded.length} token assegnati</p>
-        </div>
-      )}
-
-      <button onClick={handleSubmit} disabled={loading}
-        className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition
-          ${loading ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500 text-white shadow-xl shadow-red-600/20'}`}>
-        {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Elaborazione...</> : <><Trophy className="w-4 h-4" /> Salva & Assegna punti</>}
-      </button>
-      <p className="text-center text-[10px] text-zinc-700 font-bold uppercase tracking-widest">Operazione irreversibile</p>
     </div>
   );
 }
