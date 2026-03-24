@@ -2,17 +2,15 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
 import { collectionGroup, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import { Flag, Trophy, Zap, ChevronRight, Star } from 'lucide-react';
+import { Trophy, Zap, ChevronRight, Star, Target } from 'lucide-react';
 import GpCountdown from '../components/GpCountdown';
-import { format, isAfter, parseISO } from 'date-fns';
-import { it } from 'date-fns/locale';
-import { motion } from 'framer-motion';
-import { CALENDAR_2026 } from '../config/f1-2026'; 
+import { isAfter, parseISO } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { DRIVERS_2026, CALENDAR_2026 } from '../config/f1-2026';
 
 export default function Home() {
   const [user, setUser] = useState(null);
   const [nextGp, setNextGp] = useState(null);
-  const [myLeagues, setMyLeagues] = useState([]);
   const [myPick, setMyPick] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,198 +28,117 @@ export default function Home() {
 
   async function loadData(currentUser) {
     try {
-      // 1. Calcolo del Prossimo GP dai dati locali
       const now = new Date();
-      const futureRaces = CALENDAR_2026.filter(race => isAfter(parseISO(race.date), now));
-      const gp = futureRaces.length > 0 ? futureRaces[0] : null;
+      // Trova il primo GP futuro
+      const gp = CALENDAR_2026.find(race => isAfter(parseISO(race.date), now));
       
-      const mappedGp = gp ? {
-        id: gp.raceId,
-        name: gp.name,
-        circuit: gp.circuit,
-        race_date: gp.date,
-        pick_deadline: gp.lockDate, 
-        round: gp.round,
-        flag_emoji: gp.flag,
-        status: 'upcoming'
-      } : null;
+      if (gp) {
+        // Mappatura cruciale per far funzionare GpCountdown
+        setNextGp({
+          id: gp.raceId,
+          name: gp.name,
+          circuit: gp.circuit,
+          race_date: gp.date,
+          pick_deadline: gp.lockDate, // Assicurati che GpCountdown legga questa prop
+          flag_emoji: gp.flag
+        });
+      }
 
-      setNextGp(mappedGp);
-
-      // 2. Recupero Leghe da Firestore
-      const leaguesRef = collectionGroup(db, 'members');
-      const q = query(leaguesRef, where('user_email', '==', currentUser.email));
-      const querySnapshot = await getDocs(q);
-      const members = querySnapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        league_id: docSnap.ref.parent.parent?.id,
-        ...docSnap.data(),
-      })).filter((m) => Boolean(m.league_id));
-      setMyLeagues(members);
-
-      // 3. Recupero Pick
-      if (mappedGp && members.length > 0) {
-        const pickRef = doc(db, 'fantaF1Leagues', members[0].league_id, 'picks', mappedGp.id, 'userPicks', currentUser.uid);
+      // Recupero rapido dell'ultimo pick (opzionale per feedback visivo)
+      const q = query(collectionGroup(db, 'members'), where('user_email', '==', currentUser.email));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const leagueId = snap.docs[0].ref.parent.parent.id;
+        const pickRef = doc(db, 'fantaF1Leagues', leagueId, 'picks', gp.raceId, 'userPicks', currentUser.uid);
         const pickSnap = await getDoc(pickRef);
-        setMyPick(pickSnap.exists() ? pickSnap.data() : null);
+        if (pickSnap.exists()) setMyPick(pickSnap.data());
       }
     } catch (err) {
-      console.error("Errore caricamento dati:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-4 border-ferrari-red border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex h-screen items-center justify-center font-barlow italic font-black text-2xl">CARICAMENTO...</div>;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="relative overflow-hidden bg-gradient-to-b from-[#0e0e1a] via-[#130a0a] to-background px-4 pt-14 pb-8">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-ferrari-red/50 to-transparent" />
-        <div className="relative">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-ferrari-red animate-pulse" />
-            <span className="text-[10px] text-muted-foreground font-barlow font-bold uppercase tracking-[0.2em]">Season 2026 · FantaF1</span>
-          </div>
-          <h1 className="font-barlow font-black text-5xl text-foreground uppercase leading-none tracking-tight">
-            BENVENUTO,<br />
-            <span className="text-ferrari-red italic">{user?.displayName?.split(' ')[0]?.toUpperCase() || 'PILOTA'}</span>
+    <div className="px-6 pt-12 pb-24 space-y-8">
+      {/* Header con Benvenuto */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }} 
+        animate={{ opacity: 1, y: 0 }}
+        className="flex justify-between items-center"
+      >
+        <div>
+          <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">Benvenuto nel 2026</p>
+          <h1 className="text-3xl font-black uppercase italic italic leading-none">
+            Ciao, <span className="text-ferrari-red">{user?.displayName?.split(' ')[0] || 'Pilota'}</span>
           </h1>
         </div>
-      </div>
-
-      <motion.div
-        className="px-4 space-y-4"
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-      >
-
-        {/* Next GP Card */}
-        {nextGp ? (
-          <motion.div
-            className="rounded-2xl bg-card border border-border overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
-            whileHover={{ y: -2 }}
-            transition={{ type: 'spring', stiffness: 220, damping: 20 }}
-          >
-            <div className="bg-gradient-to-r from-ferrari-red/20 to-transparent px-4 py-3 border-b border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Flag size={14} className="text-ferrari-red" />
-                <span className="text-xs font-barlow font-bold uppercase tracking-widest text-ferrari-red">
-                  {nextGp.status === 'live' ? '🔴 LIVE' : 'Prossimo GP'}
-                </span>
-              </div>
-              <span className="text-xs text-muted-foreground">Round {nextGp.round}</span>
-            </div>
-            <div className="p-4">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-3xl mb-1">{nextGp.flag_emoji}</p>
-                  <h2 className="font-barlow font-black text-2xl text-foreground uppercase">{nextGp.name}</h2>
-                  <p className="text-muted-foreground text-sm">{nextGp.circuit}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground mb-1">Data gara</p>
-                  <p className="font-barlow font-bold text-sm text-foreground">
-                    {format(new Date(nextGp.race_date), 'd MMM', { locale: it })}
-                  </p>
-                </div>
-              </div>
-
-              {nextGp.status !== 'live' && (
-                <>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 font-medium">
-                    Scadenza Pick
-                  </p>
-                  <GpCountdown targetDate={nextGp.pick_deadline} />
-                </>
-              )}
-
-              {/* Pick status */}
-              {myPick ? (
-                <div className="mt-4 flex items-center gap-3 bg-ferrari-red/10 border border-ferrari-red/30 rounded-xl p-3">
-                  <div className="w-8 h-8 rounded-full bg-ferrari-red flex items-center justify-center">
-                    <Star size={16} className="text-white fill-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Il tuo pick</p>
-                    <p className="font-barlow font-bold text-foreground uppercase">{myPick.driver_name}</p>
-                  </div>
-                </div>
-              ) : (
-                <Link to="/pick" className="mt-4 flex items-center justify-center gap-2 bg-ferrari-red hover:bg-ferrari-red/90 text-white font-barlow font-bold text-sm uppercase tracking-wider rounded-xl py-3 transition-all">
-                  <Zap size={16} />
-                  Fai il tuo Pick
-                </Link>
-              )}
-            </div>
-          </motion.div>
-        ) : (
-          <div className="rounded-2xl bg-card border border-border p-6 text-center">
-            <Flag size={32} className="text-muted-foreground mx-auto mb-2" />
-            <p className="text-muted-foreground text-sm">Nessun GP in programma</p>
-          </div>
-        )}
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <Link to="/leghe" className="rounded-xl bg-card border border-border p-4 flex items-center gap-3 hover:border-ferrari-red/40 transition-all">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-              <Trophy size={20} className="text-blue-400" />
-            </div>
-            <div>
-              <p className="text-xl font-barlow font-black text-foreground">{myLeagues.length}</p>
-              <p className="text-xs text-muted-foreground">Le mie leghe</p>
-            </div>
-          </Link>
-
-          <Link to="/classifica" className="rounded-xl bg-card border border-border p-4 flex items-center gap-3 hover:border-ferrari-red/40 transition-all">
-            <div className="w-10 h-10 rounded-xl bg-ferrari-gold/20 flex items-center justify-center">
-              <Star size={20} className="text-ferrari-gold" />
-            </div>
-            <div>
-              <p className="text-xl font-barlow font-black text-foreground">
-                {myLeagues.reduce((sum, m) => sum + (m.total_points || 0), 0)}
-              </p>
-              <p className="text-xs text-muted-foreground">Punti totali</p>
-            </div>
-          </Link>
+        <div className="w-12 h-12 rounded-full border-2 border-ferrari-red/30 p-1">
+          <img src={user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="avatar" className="rounded-full bg-zinc-800" />
         </div>
-
-        {/* How it works */}
-        <div className="rounded-2xl bg-card border border-border p-4">
-          <h3 className="font-barlow font-bold text-sm uppercase tracking-widest text-muted-foreground mb-3">
-            Come Funziona
-          </h3>
-          <div className="space-y-3">
-            {[
-              { n: '01', title: 'Crea o unisciti a una Lega', desc: 'Sfida i tuoi amici con un codice segreto', color: 'text-ferrari-red' },
-              { n: '02', title: 'Scegli il tuo Pilota', desc: 'Prima della chiusura del pick (1h prima della gara)', color: 'text-ferrari-gold' },
-              { n: '03', title: 'Accumula Punti', desc: 'Vittorie, pole, giri veloci, pit stop leggendari e molto altro', color: 'text-blue-400' },
-            ].map(({ n, title, desc, color }) => (
-              <div key={n} className="flex items-start gap-3">
-                <span className={`font-barlow font-black text-2xl leading-none ${color} w-8`}>{n}</span>
-                <div>
-                  <p className="font-semibold text-sm text-foreground">{title}</p>
-                  <p className="text-xs text-muted-foreground">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <Link to="/regolamento" className="mt-4 flex items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors">
-            <span>Leggi il regolamento completo</span>
-            <ChevronRight size={14} />
-          </Link>
-        </div>
-
       </motion.div>
+
+      {/* CARD PROSSIMO GP - Qui c'è il Countdown */}
+      {nextGp && (
+        <motion.div 
+          whileTap={{ scale: 0.98 }}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative overflow-hidden rounded-[32px] bg-zinc-900 border border-white/5 p-6 shadow-2xl"
+        >
+          {/* Background decorativo */}
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+             <span className="text-8xl font-black italic">{nextGp.flag_emoji}</span>
+          </div>
+
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="bg-ferrari-red text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">Prossima Gara</span>
+            </div>
+            
+            <h2 className="text-2xl font-black uppercase italic leading-tight">{nextGp.name}</h2>
+            <p className="text-zinc-500 font-bold text-sm mb-6">{nextGp.circuit}</p>
+
+            {/* Il Countdown */}
+            <div className="bg-black/40 backdrop-blur-md rounded-2xl p-4 border border-white/5">
+                <GpCountdown deadline={nextGp.pick_deadline} />
+            </div>
+
+            <Link 
+              to="/pick" 
+              className={`mt-6 w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black uppercase tracking-widest transition-all ${
+                myPick ? 'bg-zinc-800 text-zinc-500' : 'bg-white text-black hover:bg-ferrari-red hover:text-white'
+              }`}
+            >
+              {myPick ? <Star fill="currentColor" size={18}/> : <Target size={18} />}
+              {myPick ? 'Pick Effettuato' : 'Fai il tuo Pick'}
+            </Link>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Sezione Quick Actions */}
+      <div className="grid grid-cols-2 gap-4">
+        <QuickActionLink to="/leghe" icon={<Trophy className="text-ferrari-gold"/>} label="Le mie Leghe" />
+        <QuickActionLink to="/classifica" icon={<Zap className="text-blue-400"/>} label="Classifica" />
+      </div>
     </div>
+  );
+}
+
+function QuickActionLink({ to, icon, label }) {
+  return (
+    <Link to={to}>
+      <motion.div 
+        whileTap={{ scale: 0.95 }}
+        className="bg-zinc-900/50 border border-white/5 p-4 rounded-3xl flex flex-col items-center gap-3"
+      >
+        <div className="p-3 bg-white/5 rounded-2xl">{icon}</div>
+        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{label}</span>
+      </motion.div>
+    </Link>
   );
 }
