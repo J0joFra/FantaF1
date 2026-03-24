@@ -14,7 +14,7 @@ export default function DriverCard({ driver, selected, onSelect, disabled }) {
           ? 'border-red-500 bg-red-500/10'
           : 'border-white/5 bg-[#1a1a1a] hover:border-white/15 hover:bg-white/[0.03]'
         }
-        ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+        ${disabled ? 'opacity-40 cursor-not-allowed scale-95' : 'cursor-pointer active:scale-[0.98]'} `}
     >
       {/* Numero + colore laterale */}
       <div

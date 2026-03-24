@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { isAfter, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { DRIVERS_2026, CALENDAR_2026 } from '../config/f1-2026';
+import confetti from 'canvas-confetti';
 
 export default function PickGp() {
   const [user, setUser] = useState(null);
@@ -37,7 +38,6 @@ export default function PickGp() {
   const handleConfirmPick = async () => {
     setSaving(true);
     try {
-      // Recuperiamo la lega dell'utente (assumendo ne abbia almeno una)
       const q = query(collectionGroup(db, 'members'), where('user_email', '==', user.email));
       const snap = await getDocs(q);
       
@@ -57,13 +57,19 @@ export default function PickGp() {
         user_name: user.displayName || user.email
       }, { merge: true });
 
-      // Feedback aptico (se supportato)
-      if (window.navigator.vibrate) window.navigator.vibrate(20);
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: [selectedDriver.color, '#ffffff', '#ff0000']
+      });
+
+      if (window.navigator.vibrate) window.navigator.vibrate([10, 30, 10]);
       
       setIsModalOpen(false);
-      toast.success(`Pick confermato: ${selectedDriver.name}! 🏎️`);
+      toast.success(`Pick confermato! 🏁`);
     } catch (e) {
-      toast.error("Errore nel salvataggio");
+      toast.error("Errore");
     } finally {
       setSaving(false);
     }
@@ -73,12 +79,11 @@ export default function PickGp() {
 
   return (
     <div className="px-6 pt-10 pb-32">
-      {/* Header GP */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 text-center">
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Prossimo Round</span>
-        <h1 className="text-4xl font-black italic uppercase text-white leading-none mt-1">{nextGp?.name}</h1>
+      {/* Header con prop targetDate corretta */}
+      <motion.div className="mb-8 text-center">
+        <h1 className="text-4xl font-black italic uppercase">{nextGp?.name}</h1>
         <div className="mt-4 inline-block bg-zinc-900 border border-white/5 rounded-2xl p-4">
-           <GpCountdown deadline={nextGp?.deadline} />
+           <GpCountdown targetDate={nextGp?.targetDate} />
         </div>
       </motion.div>
 
@@ -91,7 +96,8 @@ export default function PickGp() {
             selected={selectedDriver?.id === driver.id}
             onSelect={(d) => {
               setSelectedDriver(d);
-              setIsModalOpen(true); // Apriamo il pop-up alla selezione
+              setIsModalOpen(true);
+              if (window.navigator.vibrate) window.navigator.vibrate(10);
             }}
           />
         ))}

@@ -29,22 +29,16 @@ export default function Home() {
   async function loadData(currentUser) {
     try {
       const now = new Date();
-      // Trova il primo GP futuro
       const gp = CALENDAR_2026.find(race => isAfter(parseISO(race.date), now));
-      
-      if (gp) {
-        // Mappatura cruciale per far funzionare GpCountdown
-        setNextGp({
-          id: gp.raceId,
-          name: gp.name,
-          circuit: gp.circuit,
-          race_date: gp.date,
-          pick_deadline: gp.lockDate, // Assicurati che GpCountdown legga questa prop
-          flag_emoji: gp.flag
-        });
-      }
+      const mappedGp = gp ? {
+        id: gp.raceId,
+        name: gp.name,
+        circuit: gp.circuit,
+        race_date: gp.date,
+        targetDate: gp.lockDate,
+        flag_emoji: gp.flag
+      } : null;
 
-      // Recupero rapido dell'ultimo pick (opzionale per feedback visivo)
       const q = query(collectionGroup(db, 'members'), where('user_email', '==', currentUser.email));
       const snap = await getDocs(q);
       if (!snap.empty) {
@@ -104,7 +98,7 @@ export default function Home() {
 
             {/* Il Countdown */}
             <div className="bg-black/40 backdrop-blur-md rounded-2xl p-4 border border-white/5">
-                <GpCountdown deadline={nextGp.pick_deadline} />
+                <GpCountdown targetDate={nextGp.targetDate} />
             </div>
 
             <Link 
