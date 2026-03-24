@@ -16,27 +16,41 @@ export default function Leghe() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const unsub = auth.onAuthStateChanged((firebaseUser) => {
+      setUser(firebaseUser);
+      if (!firebaseUser) setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
     if (user) loadData();
   }, [user]);
 
   async function loadData() {
-    const q = query(collection(db, 'league_members'), where('user_email', '==', user.email));
-    const querySnapshot = await getDocs(q);
-    
-    const leagueDetails = await Promise.all(
-      querySnapshot.docs.map(async (mDoc) => {
-        const mData = mDoc.data();
-        // Recupero i dettagli della lega correlata
-        const leagueSnap = await getDoc(doc(db, 'leagues', mData.league_id));
-        return { 
-          id: mDoc.id, 
-          ...mData, 
-          league: leagueSnap.exists() ? leagueSnap.data() : null 
-        };
-      })
-    );
-    setMyLeagues(leagueDetails);
-    setLoading(false);
+    try {
+      const q = query(collection(db, 'league_members'), where('user_email', '==', user.email));
+      const querySnapshot = await getDocs(q);
+
+      const leagueDetails = await Promise.all(
+        querySnapshot.docs.map(async (mDoc) => {
+          const mData = mDoc.data();
+          // Recupero i dettagli della lega correlata
+          const leagueSnap = await getDoc(doc(db, 'leagues', mData.league_id));
+          return {
+            id: mDoc.id,
+            ...mData,
+            league: leagueSnap.exists() ? { id: leagueSnap.id, ...leagueSnap.data() } : null
+          };
+        })
+      );
+      setMyLeagues(leagueDetails);
+    } catch (error) {
+      console.error(error);
+      toast.error('Errore nel caricamento leghe');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function createLeague() {
