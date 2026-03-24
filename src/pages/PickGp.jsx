@@ -2,6 +2,10 @@ import { supabase } from '../lib/supabase';
 import { db, auth } from '../lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { CheckCircle, ChevronLeft, Flag, Lock } from 'lucide-react';
+import DriverCard from '../components/DriverCard';
+import GpCountdown from '../components/GpCountdown';
 
 export default function PickGp() {
   const [user, setUser] = useState(null);
@@ -21,6 +25,7 @@ export default function PickGp() {
 
   async function loadData() {
     const u = auth.currentUser;
+    setUser(u);
     
     // 1. Supabase: GP e Piloti
     const { data: gps } = await supabase
@@ -36,21 +41,24 @@ export default function PickGp() {
       .eq('season', 2026)
       .eq('is_active', true);
 
-    setNextGp(gps?.[0]);
+    const currentGp = gps?.[0] || null;
+    setNextGp(currentGp);
     setDrivers(driversData || []);
+    setPickClosed(currentGp ? new Date(currentGp.pick_deadline) <= new Date() : false);
 
     // 2. Firestore: Leghe e Pick esistenti
-    if (u && gps?.[0]) {
+    if (u && currentGp) {
       const qMembers = query(collection(db, 'league_members'), where('user_email', '==', u.email));
       const membersSnap = await getDocs(qMembers);
       const members = membersSnap.docs.map(d => ({id: d.id, ...d.data()}));
       setMyLeagues(members);
+      setSelectedLeague(members[0] || null);
 
       if (members.length > 0) {
         const qPicks = query(
           collection(db, 'picks'), 
           where('user_email', '==', u.email), 
-          where('gp_id', '==', gps[0].id)
+          where('gp_id', '==', currentGp.id)
         );
         const pickSnap = await getDocs(qPicks);
         if (!pickSnap.empty) {
@@ -66,7 +74,7 @@ export default function PickGp() {
     setSaving(true);
     const data = {
       user_email: user.email,
-      user_name: user.full_name,
+      user_name: user.displayName || user.email,
       league_id: selectedLeague.league_id,
       gp_id: nextGp.id,
       driver_id: selectedDriver.id,
@@ -75,8 +83,39 @@ export default function PickGp() {
       points: 0,
       is_locked: false,
     };
-    setExistingPick(data);
-    setSaving(false);
+
+    try {
+      if (existingPick?.id) {
+        await updateDoc(doc(db, 'picks', existingPick.id), data);
+        setExistingPick({ ...existingPick, ...data });
+      } else {
+        const created = await addDoc(collection(db, 'picks'), data);
+        setExistingPick({ id: created.id, ...data });
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleLeagueChange(league) {
+    setSelectedLeague(league);
+    if (!user?.email || !nextGp?.id) {
+      setExistingPick(null);
+      return;
+    }
+
+    const qPicks = query(
+      collection(db, 'picks'),
+      where('user_email', '==', user.email),
+      where('gp_id', '==', nextGp.id),
+      where('league_id', '==', league.league_id)
+    );
+    const pickSnap = await getDocs(qPicks);
+    if (!pickSnap.empty) {
+      setExistingPick({ id: pickSnap.docs[0].id, ...pickSnap.docs[0].data() });
+    } else {
+      setExistingPick(null);
+    }
   }
 
   if (loading) return (
@@ -121,7 +160,7 @@ export default function PickGp() {
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
               )}
             </div>
-            {!pickClosed && <GpCountdown deadline={nextGp.pick_deadline} />}
+            {!pickClosed && <GpCountdown targetDate={nextGp.pick_deadline} />}
           </div>
         )}
       </div>
@@ -198,7 +237,7 @@ export default function PickGp() {
                   <DriverCard
                     key={driver.id}
                     driver={driver}
-                    isSelected={selectedDriver?.id === driver.id}
+                    selected={selectedDriver?.id === driver.id}
                     onSelect={setSelectedDriver}
                     disabled={false}
                   />
