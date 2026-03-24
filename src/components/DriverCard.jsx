@@ -1,54 +1,84 @@
+import { motion } from 'framer-motion';
+import { Check } from 'lucide-react';
+
 /**
- * DriverCard — card pilota selezionabile nella pagina Pick GP
- * Mostra numero, iniziali, nome, team e un indicatore colore.
+ * DriverCard — Card pilota ottimizzata per il design F1 Dark
+ * Mostra il colore del team, le iniziali, il cognome e il numero di gara.
  */
 export default function DriverCard({ driver, selected, onSelect, disabled }) {
-  const initials = driver.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  // Estraiamo le iniziali (es: Charles Leclerc -> CL)
+  const initials = driver.name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  // Estraiamo solo il cognome per un look più "racing"
+  const lastName = driver.name.split(' ').slice(-1)[0];
 
   return (
-    <button
+    <motion.button
+      whileTap={!disabled ? { scale: 0.98 } : undefined}
       onClick={() => !disabled && onSelect(driver)}
       disabled={disabled}
-      className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition-all text-left
+      className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all text-left relative overflow-hidden
         ${selected
-          ? 'border-red-500 bg-red-500/10'
+          ? 'border-ferrari-red bg-ferrari-red/10 shadow-[0_0_20px_rgba(220,0,0,0.15)]'
           : 'border-white/5 bg-[#1a1a1a] hover:border-white/15 hover:bg-white/[0.03]'
         }
-        ${disabled ? 'opacity-40 cursor-not-allowed scale-95' : 'cursor-pointer active:scale-[0.98]'} `}
+        ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
     >
-      {/* Numero + colore laterale */}
+      {/* Barra colore Team (laterale sinistra) */}
       <div
-        className="w-1 self-stretch rounded-full shrink-0"
+        className="absolute left-0 top-0 bottom-0 w-1"
         style={{ backgroundColor: driver.color }}
       />
 
-      {/* Avatar iniziali */}
+      {/* Avatar con iniziali */}
       <div
-        className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shrink-0"
-        style={{ backgroundColor: driver.color + '33', color: driver.color }}
+        className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-black shrink-0 shadow-inner"
+        style={{ 
+          backgroundColor: `${driver.color}20`, 
+          color: driver.color,
+          border: `1px solid ${driver.color}30`
+        }}
       >
         {initials}
       </div>
 
-      {/* Info */}
+      {/* Info Pilota */}
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{driver.id}</p>
-        <p className="font-black text-white uppercase truncate">{driver.name.split(' ').slice(-1)[0]}</p>
-        <p className="text-xs text-zinc-600">{driver.team}</p>
+        <div className="flex items-center gap-2">
+           <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+            {driver.id}
+          </span>
+        </div>
+        <div className="text-base font-black uppercase italic text-white leading-tight truncate">
+          {lastName}
+        </div>
+        <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-tighter">
+          {driver.team}
+        </div>
       </div>
 
-      {/* Numero */}
-      <span className="text-zinc-700 font-black text-lg tabular-nums shrink-0">
-        {driver.number}
-      </span>
+      {/* Numero di Gara */}
+      <div className="text-right flex flex-col items-end shrink-0">
+        <span className="text-2xl font-black italic text-zinc-800 leading-none tabular-nums">
+          {driver.number}
+        </span>
+      </div>
 
+      {/* Checkmark animato se selezionato */}
       {selected && (
-        <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shrink-0">
-          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
-            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="ml-2 w-6 h-6 rounded-full bg-ferrari-red flex items-center justify-center shrink-0 shadow-lg shadow-ferrari-red/20"
+        >
+          <Check className="w-3.5 h-3.5 text-white stroke-[4px]" />
+        </motion.div>
       )}
-    </button>
+    </motion.button>
   );
 }

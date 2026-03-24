@@ -12,10 +12,10 @@ import {
   setDoc,
   serverTimestamp
 } from 'firebase/firestore';
-import { Plus, Users, LogIn, ChevronRight, Trophy } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Users, LogIn, ChevronRight, Trophy, Copy, X, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
 
 export default function Leghe() {
   const [user, setUser] = useState(auth.currentUser);
@@ -41,235 +41,229 @@ export default function Leghe() {
 
   async function loadData() {
     try {
+      setLoading(true);
       const q = query(collectionGroup(db, 'members'), where('user_email', '==', user.email));
       const querySnapshot = await getDocs(q);
-
-      const leagueDetails = await Promise.all(
-        querySnapshot.docs.map(async (mDoc) => {
-          const mData = mDoc.data();
-          const leagueId = mDoc.ref.parent.parent?.id;
-          if (!leagueId) return null;
-          // Recupero i dettagli della lega correlata
-          const leagueSnap = await getDoc(doc(db, 'fantaF1Leagues', leagueId));
-          return {
-            id: mDoc.id,
-            ...mData,
-            league_id: leagueId,
-            league: leagueSnap.exists() ? { id: leagueSnap.id, ...leagueSnap.data() } : null
-          };
-        })
-      );
-      setMyLeagues(leagueDetails.filter(Boolean));
-    } catch (error) {
-      console.error(error);
-      toast.error('Errore nel caricamento leghe');
+      
+      const leaguesData = [];
+      for (const memberDoc of querySnapshot.docs) {
+        const leagueRef = memberDoc.ref.parent.parent;
+        const leagueSnap = await getDoc(leagueRef);
+        if (leagueSnap.exists()) {
+          leaguesData.push({
+            id: leagueSnap.id,
+            ...leagueSnap.data(),
+            myRole: memberDoc.data().role,
+            myPoints: memberDoc.data().total_points || 0
+          });
+        }
+      }
+      setMyLeagues(leaguesData);
+    } catch (err) {
+      console.error(err);
+      toast.error("Errore nel caricamento delle leghe");
     } finally {
       setLoading(false);
     }
   }
 
-  async function createLeague() {
-    if (!newName.trim()) return;
+  const handleCreate = async () => {
+    if (!newName.trim() || !user) return;
     setSaving(true);
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
     try {
-      // Crea la lega
+      const leagueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       const leagueRef = await addDoc(collection(db, 'fantaF1Leagues'), {
-        name: newName.trim(),
-        code,
-        season: 2026,
+        name: newName,
+        code: leagueCode,
+        admin_id: user.uid,
         admin_email: user.email,
-        created_at: serverTimestamp()
+        created_at: serverTimestamp(),
       });
 
       await setDoc(doc(db, 'fantaF1Leagues', leagueRef.id, 'members', user.uid), {
         user_id: user.uid,
         user_email: user.email,
         user_name: user.displayName || user.email,
+        role: 'admin',
         total_points: 0,
-        rank: 1,
         joined_at: serverTimestamp()
       });
 
-      toast.success("Lega creata!");
+      toast.success(`Lega "${newName}" creata!`);
+      setNewName('');
+      setShowCreate(false);
       loadData();
     } catch (e) {
-      toast.error("Errore nella creazione");
+      toast.error("Errore durante la creazione");
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  async function joinLeague() {
-    if (!joinCode.trim()) return;
+  const handleJoin = async () => {
+    if (!joinCode.trim() || !user) return;
     setSaving(true);
     try {
-      const leagueCode = joinCode.trim().toUpperCase();
-      const leagueQuery = query(collection(db, 'fantaF1Leagues'), where('code', '==', leagueCode));
-      const leagueSnap = await getDocs(leagueQuery);
+      const q = query(collection(db, 'fantaF1Leagues'), where('code', '==', joinCode.trim().toUpperCase()));
+      const snap = await getDocs(q);
 
-      if (leagueSnap.empty) {
-        toast.error('Codice non valido');
+      if (snap.empty) {
+        toast.error("Codice non valido");
         return;
       }
 
-      const leagueDoc = leagueSnap.docs[0];
-      const league = { id: leagueDoc.id, ...leagueDoc.data() };
+      const leagueId = snap.docs[0].id;
+      const memberRef = doc(db, 'fantaF1Leagues', leagueId, 'members', user.uid);
+      const memberSnap = await getDoc(memberRef);
 
-      const memberRef = doc(db, 'fantaF1Leagues', league.id, 'members', user.uid);
-      const existingMemberSnap = await getDoc(memberRef);
-      if (existingMemberSnap.exists()) {
-        toast.error('Sei già in questa lega!');
-        return;
+      if (memberSnap.exists()) {
+        toast.error("Sei già in questa lega");
+      } else {
+        await setDoc(memberRef, {
+          user_id: user.uid,
+          user_email: user.email,
+          user_name: user.displayName || user.email,
+          role: 'member',
+          total_points: 0,
+          joined_at: serverTimestamp()
+        });
+        toast.success("Ti sei unito alla lega!");
+        setJoinCode('');
+        setShowJoin(false);
+        loadData();
       }
-
-      await setDoc(memberRef, {
-        user_id: user.uid,
-        user_email: user.email,
-        user_name: user.displayName || user.email,
-        total_points: 0,
-        rank: 999,
-        joined_at: serverTimestamp()
-      });
-
-      toast.success(`Hai aderito a "${league.name}"! 🏎️`);
-      setJoinCode('');
-      setShowJoin(false);
-      loadData();
-    } catch (error) {
-      toast.error('Errore durante l\'ingresso nella lega');
-      console.error(error);
+    } catch (e) {
+      toast.error("Errore nell'unione");
     } finally {
       setSaving(false);
     }
-  }
-
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="w-8 h-8 border-4 border-ferrari-red border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="relative bg-gradient-to-b from-[#0e0e1a] via-[#130a0a] to-background px-4 pt-14 pb-6">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-ferrari-red/50 to-transparent" />
-        <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-1">Gestione</p>
-        <h1 className="font-barlow font-black text-3xl text-foreground uppercase">Le Mie Leghe</h1>
+    <div className="min-h-screen pb-20">
+      <div className="pt-12 pb-6 px-6">
+        <div className="max-w-md mx-auto">
+          <p className="text-[10px] font-black tracking-[0.3em] uppercase text-zinc-500 mb-1">Competizione</p>
+          <h1 className="text-3xl font-black italic uppercase text-white">Le tue Leghe</h1>
+        </div>
       </div>
 
-      <motion.div
-        className="px-4 space-y-4"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-
-        {/* Actions */}
+      <div className="px-6 max-w-md mx-auto space-y-4">
+        {/* Action buttons */}
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={() => { setShowCreate(true); setShowJoin(false); }}
-            className="flex items-center justify-center gap-2 bg-ferrari-red text-white font-barlow font-bold text-sm uppercase tracking-wide rounded-xl py-3 transition-all hover:bg-ferrari-red/90"
+            onClick={() => { setShowCreate(!showCreate); setShowJoin(false); }}
+            className="bg-zinc-900/40 border border-white/5 backdrop-blur-md p-5 rounded-[2rem] flex flex-col items-center gap-2 active:scale-95 transition-all"
           >
-            <Plus size={16} />
-            Crea Lega
+            <div className="w-10 h-10 rounded-xl bg-ferrari-red/10 flex items-center justify-center">
+              <Plus className="w-5 h-5 text-ferrari-red" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Crea Lega</span>
           </button>
           <button
-            onClick={() => { setShowJoin(true); setShowCreate(false); }}
-            className="flex items-center justify-center gap-2 bg-secondary text-foreground font-barlow font-bold text-sm uppercase tracking-wide rounded-xl py-3 border border-border transition-all hover:bg-secondary/70"
+            onClick={() => { setShowJoin(!showJoin); setShowCreate(false); }}
+            className="bg-zinc-900/40 border border-white/5 backdrop-blur-md p-5 rounded-[2rem] flex flex-col items-center gap-2 active:scale-95 transition-all"
           >
-            <LogIn size={16} />
-            Unisciti
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+              <LogIn className="w-5 h-5 text-blue-500" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Unisciti</span>
           </button>
         </div>
 
-        {/* Create form */}
-        {showCreate && (
-          <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-            <h3 className="font-barlow font-bold text-sm uppercase tracking-widest text-ferrari-red">Nuova Lega</h3>
-            <input
-              type="text"
-              placeholder="Nome della lega..."
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              className="w-full bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ferrari-red"
-            />
-            <div className="flex gap-2">
-              <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm text-muted-foreground font-medium">
-                Annulla
-              </button>
-              <button onClick={createLeague} disabled={saving || !newName.trim()} className="flex-1 py-2.5 rounded-xl bg-ferrari-red text-white font-barlow font-bold text-sm uppercase disabled:opacity-50">
-                {saving ? '...' : 'Crea'}
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Forms Animati */}
+        <AnimatePresence>
+          {(showCreate || showJoin) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, y: -20 }}
+              animate={{ height: 'auto', opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -20 }}
+              className="overflow-hidden bg-zinc-900/60 border border-white/10 rounded-[2.5rem] p-6 shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                  {showCreate ? "Crea una nuova sfida" : "Inserisci codice invito"}
+                </h3>
+                <button onClick={() => { setShowCreate(false); setShowJoin(false); }}>
+                  <X size={18} className="text-zinc-600" />
+                </button>
+              </div>
 
-        {/* Join form */}
-        {showJoin && (
-          <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-            <h3 className="font-barlow font-bold text-sm uppercase tracking-widest text-ferrari-gold">Unisciti a una Lega</h3>
-            <input
-              type="text"
-              placeholder="Codice invito (es. AB12CD)..."
-              value={joinCode}
-              onChange={e => setJoinCode(e.target.value.toUpperCase())}
-              maxLength={6}
-              className="w-full bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ferrari-gold font-barlow font-bold tracking-widest text-center uppercase"
-            />
-            <div className="flex gap-2">
-              <button onClick={() => setShowJoin(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm text-muted-foreground font-medium">
-                Annulla
+              <input
+                type="text"
+                value={showCreate ? newName : joinCode}
+                onChange={(e) => showCreate ? setNewName(e.target.value) : setJoinCode(e.target.value)}
+                placeholder={showCreate ? "Nome della lega..." : "ES: XJ72KW"}
+                className={`w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-ferrari-red outline-none mb-4 transition-all ${!showCreate && 'text-center font-black tracking-[0.3em] uppercase'}`}
+              />
+              
+              <button
+                onClick={showCreate ? handleCreate : handleJoin}
+                disabled={saving}
+                className="w-full py-4 rounded-2xl bg-white text-black font-black uppercase text-xs tracking-[0.2em] shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2"
+              >
+                {saving ? <Loader2 className="animate-spin" size={16} /> : (showCreate ? "Crea Lega 🏁" : "Unisciti Ora 🏎️")}
               </button>
-              <button onClick={joinLeague} disabled={saving || !joinCode.trim()} className="flex-1 py-2.5 rounded-xl bg-ferrari-gold text-accent-foreground font-barlow font-bold text-sm uppercase disabled:opacity-50">
-                {saving ? '...' : 'Entra'}
-              </button>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* My leagues */}
-        {myLeagues.length === 0 ? (
-          <div className="rounded-2xl bg-card border border-border p-8 text-center">
-            <Users size={40} className="text-muted-foreground mx-auto mb-3" />
-            <p className="font-barlow font-bold text-foreground mb-1">Nessuna Lega</p>
-            <p className="text-sm text-muted-foreground">Crea la tua prima lega o unisciti a una esistente.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Le tue leghe</p>
-            {myLeagues.map(({ league, total_points }) => (
-              league && (
-                <motion.div
-                  key={league.id}
-                  whileHover={{ y: -2 }}
-                  transition={{ type: 'spring', stiffness: 220, damping: 20 }}
-                >
-                  <Link
-                    to={`/classifica?league=${league.id}`}
-                    className="flex items-center gap-4 bg-card border border-border rounded-2xl p-4 hover:border-ferrari-red/40 transition-all"
+        {/* League list */}
+        <div className="space-y-3 pt-2">
+          {loading ? (
+             <div className="flex justify-center py-10"><Loader2 className="animate-spin text-zinc-700" size={32} /></div>
+          ) : myLeagues.map((league, i) => (
+            <motion.div
+              key={league.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+            >
+              <Link
+                to={`/classifica?league=${league.id}`}
+                className="bg-zinc-900/40 border border-white/5 backdrop-blur-md p-5 rounded-[2rem] flex items-center gap-4 hover:bg-zinc-800/40 transition-all group"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-black/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Trophy className={league.myRole === 'admin' ? "text-ferrari-gold" : "text-zinc-500"} size={22} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black uppercase italic text-white truncate">{league.name}</span>
+                    {league.myRole === 'admin' && (
+                      <span className="text-[8px] font-black bg-ferrari-red text-white px-1.5 py-0.5 rounded-sm">ADMIN</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">Codice: {league.code}</span>
+                  </div>
+                </div>
+                
+                <div className="text-right flex flex-col items-end gap-1">
+                   <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigator.clipboard.writeText(league.code);
+                      toast.success("Codice copiato!");
+                    }}
+                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-ferrari-red/10 border border-ferrari-red/30 flex items-center justify-center">
-                      <Trophy size={22} className="text-ferrari-red" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-barlow font-bold text-foreground uppercase truncate">{league.name}</p>
-                      <p className="text-xs text-muted-foreground">Codice: {league.code}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-barlow font-black text-lg text-ferrari-gold">{total_points || 0}</p>
-                      <p className="text-xs text-muted-foreground">punti</p>
-                    </div>
-                    <ChevronRight size={16} className="text-muted-foreground flex-shrink-0" />
-                  </Link>
-                </motion.div>
-              )
-            ))}
-          </div>
-        )}
+                    <Copy size={14} className="text-zinc-400" />
+                  </button>
+                </div>
+                <ChevronRight className="text-zinc-700 group-hover:translate-x-1 transition-transform" size={18} />
+              </Link>
+            </motion.div>
+          ))}
 
-      </motion.div>
+          {!loading && myLeagues.length === 0 && (
+            <div className="bg-zinc-900/20 border border-dashed border-white/10 rounded-[2.5rem] p-12 text-center">
+              <Users className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
+              <h3 className="text-sm font-black uppercase text-zinc-500">Nessuna Lega attiva</h3>
+              <p className="text-xs text-zinc-600 mt-2">Crea la tua prima lega o unisciti a quella dei tuoi amici per iniziare a giocare.</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

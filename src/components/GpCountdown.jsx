@@ -1,51 +1,75 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
+/**
+ * GpCountdown — Timer alla rovescia per la chiusura dei pick.
+ * Design ottimizzato per il look F1 Dark.
+ */
 export default function GpCountdown({ targetDate }) {
-  const [time, setTime] = useState({ gg: '00', hh: '00', mm: '00', ss: '00', expired: false });
+  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
-  useEffect(() => {
-    const target = new Date(targetDate);
+  function calculateTimeLeft() {
+    if (!targetDate) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+    
+    const diff = new Date(targetDate).getTime() - Date.now();
+    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
 
-    const tick = () => {
-      const diff = target - new Date();
-      if (diff <= 0) {
-        setTime({ gg: '00', hh: '00', mm: '00', ss: '00', expired: true });
-        return;
-      }
-      setTime({
-        gg: String(Math.floor(diff / 86400000)).padStart(2, '0'),
-        hh: String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0'),
-        mm: String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0'),
-        ss: String(Math.floor((diff % 60000) / 1000)).padStart(2, '0'),
-        expired: false,
-      });
+    return {
+      days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+      hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+      minutes: Math.floor((diff / (1000 * 60)) % 60),
+      seconds: Math.floor((diff / 1000) % 60),
     };
-
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [targetDate]);
-
-  if (time.expired) {
-    return <p className="text-red-500 font-black text-sm uppercase tracking-widest">Pick chiusi</p>;
   }
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  const units = [
+    { label: 'GG', value: timeLeft.days },
+    { label: 'ORE', value: timeLeft.hours },
+    { label: 'MIN', value: timeLeft.minutes },
+    { label: 'SEC', value: timeLeft.seconds },
+  ];
+
+  const isExpired = timeLeft.days + timeLeft.hours + timeLeft.minutes + timeLeft.seconds === 0;
+
   return (
-    <div className="flex items-center gap-2">
-      {[
-        { val: time.gg, label: 'GG' },
-        { val: time.hh, label: 'HH' },
-        { val: time.mm, label: 'MM' },
-        { val: time.ss, label: 'SS' },
-      ].map(({ val, label }, i) => (
-        <div key={label} className="flex items-center gap-2">
-          {i > 0 && <span className="text-red-500 font-black text-xl">:</span>}
-          <div className="flex flex-col items-center">
-            <span className="bg-[#1a1a1a] text-red-500 font-black text-xl tabular-nums w-12 h-12 flex items-center justify-center rounded-xl">
-              {val}
+    <div className="flex items-center justify-center gap-3 py-2">
+      {units.map((unit, i) => (
+        <div key={unit.label} className="flex items-center gap-3">
+          <div className="flex flex-col items-center min-w-[45px]">
+            {/* Animazione cifra singola */}
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={unit.value}
+                initial={{ y: 5, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -5, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className={`text-2xl font-black italic tabular-nums leading-none ${
+                  isExpired ? 'text-zinc-600' : 'text-white'
+                }`}
+              >
+                {String(unit.value).padStart(2, '0')}
+              </motion.span>
+            </AnimatePresence>
+            
+            <span className="text-[8px] font-black text-zinc-500 tracking-[0.2em] mt-1 uppercase">
+              {unit.label}
             </span>
-            <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mt-1">{label}</span>
           </div>
+
+          {/* Separatore (due punti) */}
+          {i < units.length - 1 && (
+            <div className={`text-lg font-black mb-4 ${isExpired ? 'text-zinc-800' : 'text-ferrari-red/50 animate-pulse'}`}>
+              :
+            </div>
+          )}
         </div>
       ))}
     </div>
