@@ -15,6 +15,7 @@ import {
 import { Plus, Users, LogIn, ChevronRight, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 export default function Leghe() {
   const [user, setUser] = useState(auth.currentUser);
@@ -158,7 +159,12 @@ export default function Leghe() {
         <h1 className="font-barlow font-black text-3xl text-foreground uppercase">Le Mie Leghe</h1>
       </div>
 
-      <div className="px-4 space-y-4">
+      <motion.div
+        className="px-4 space-y-4"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
 
         {/* Actions */}
         <div className="grid grid-cols-2 gap-3">
@@ -235,30 +241,35 @@ export default function Leghe() {
             <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Le tue leghe</p>
             {myLeagues.map(({ league, total_points }) => (
               league && (
-                <Link
+                <motion.div
                   key={league.id}
-                  to={`/classifica?league=${league.id}`}
-                  className="flex items-center gap-4 bg-card border border-border rounded-2xl p-4 hover:border-ferrari-red/40 transition-all"
+                  whileHover={{ y: -2 }}
+                  transition={{ type: 'spring', stiffness: 220, damping: 20 }}
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-ferrari-red/10 border border-ferrari-red/30 flex items-center justify-center">
-                    <Trophy size={22} className="text-ferrari-red" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-barlow font-bold text-foreground uppercase truncate">{league.name}</p>
-                    <p className="text-xs text-muted-foreground">Codice: {league.code}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-barlow font-black text-lg text-ferrari-gold">{total_points || 0}</p>
-                    <p className="text-xs text-muted-foreground">punti</p>
-                  </div>
-                  <ChevronRight size={16} className="text-muted-foreground flex-shrink-0" />
-                </Link>
+                  <Link
+                    to={`/classifica?league=${league.id}`}
+                    className="flex items-center gap-4 bg-card border border-border rounded-2xl p-4 hover:border-ferrari-red/40 transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-ferrari-red/10 border border-ferrari-red/30 flex items-center justify-center">
+                      <Trophy size={22} className="text-ferrari-red" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-barlow font-bold text-foreground uppercase truncate">{league.name}</p>
+                      <p className="text-xs text-muted-foreground">Codice: {league.code}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-barlow font-black text-lg text-ferrari-gold">{total_points || 0}</p>
+                      <p className="text-xs text-muted-foreground">punti</p>
+                    </div>
+                    <ChevronRight size={16} className="text-muted-foreground flex-shrink-0" />
+                  </Link>
+                </motion.div>
               )
             ))}
           </div>
         )}
 
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Flag, Trophy, Zap, ChevronRight, Star } from 'lucide-react';
 import GpCountdown from '../components/GpCountdown';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { motion } from 'framer-motion';
 
 export default function Home() {
   const [user, setUser] = useState(null);
@@ -97,11 +98,20 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="px-4 space-y-4">
+      <motion.div
+        className="px-4 space-y-4"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+      >
 
         {/* Next GP Card */}
         {nextGp ? (
-          <div className="rounded-2xl bg-card border border-border overflow-hidden">
+          <motion.div
+            className="rounded-2xl bg-card border border-border overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
+            whileHover={{ y: -2 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+          >
             <div className="bg-gradient-to-r from-ferrari-red/20 to-transparent px-4 py-3 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Flag size={14} className="text-ferrari-red" />
@@ -153,7 +163,7 @@ export default function Home() {
                 </Link>
               )}
             </div>
-          </div>
+          </motion.div>
         ) : (
           <div className="rounded-2xl bg-card border border-border p-6 text-center">
             <Flag size={32} className="text-muted-foreground mx-auto mb-2" />
@@ -163,7 +173,7 @@ export default function Home() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-3">
-          <Link to="/leghe" className="rounded-xl bg-card border border-border p-4 flex items-center gap-3">
+          <Link to="/leghe" className="rounded-xl bg-card border border-border p-4 flex items-center gap-3 hover:border-ferrari-red/40 transition-all">
             <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
               <Trophy size={20} className="text-blue-400" />
             </div>
@@ -173,7 +183,7 @@ export default function Home() {
             </div>
           </Link>
 
-          <Link to="/classifica" className="rounded-xl bg-card border border-border p-4 flex items-center gap-3">
+          <Link to="/classifica" className="rounded-xl bg-card border border-border p-4 flex items-center gap-3 hover:border-ferrari-red/40 transition-all">
             <div className="w-10 h-10 rounded-xl bg-ferrari-gold/20 flex items-center justify-center">
               <Star size={20} className="text-ferrari-gold" />
             </div>
@@ -212,7 +222,7 @@ export default function Home() {
           </Link>
         </div>
 
-      </div>
+      </motion.div>
     </div>
   );
 }

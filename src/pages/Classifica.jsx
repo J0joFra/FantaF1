@@ -3,6 +3,7 @@ import { auth, db } from '../lib/firebase';
 import { collection, collectionGroup, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
 import { Trophy, Medal, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 const medals = ['🥇', '🥈', '🥉'];
 
@@ -91,7 +92,12 @@ export default function Classifica() {
         )}
       </div>
 
-      <div className="px-4 space-y-4">
+      <motion.div
+        className="px-4 space-y-4"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
 
         {/* League selector */}
         {myLeagues.length > 1 && (
@@ -135,13 +141,16 @@ export default function Classifica() {
               const isMe = member.user_email === user?.email;
               const isTop3 = index < 3;
               return (
-                <div
+                <motion.div
                   key={member.id}
                   className={`flex items-center gap-4 rounded-2xl p-4 border transition-all ${
                     isMe
                       ? 'bg-ferrari-red/10 border-ferrari-red/40'
                       : 'bg-card border-border'
                   }`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(index * 0.04, 0.2), duration: 0.2 }}
                 >
                   {/* Rank */}
                   <div className="w-8 text-center flex-shrink-0">
@@ -174,13 +183,13 @@ export default function Classifica() {
                     </p>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider">PTS</p>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
         )}
 
-      </div>
+      </motion.div>
     </div>
   );
 }

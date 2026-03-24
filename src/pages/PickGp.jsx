@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, ChevronLeft, Flag, Lock } from 'lucide-react';
 import DriverCard from '../components/DriverCard';
 import GpCountdown from '../components/GpCountdown';
+import { motion } from 'framer-motion';
 
 export default function PickGp() {
   const [user, setUser] = useState(null);
@@ -161,7 +162,12 @@ export default function PickGp() {
         )}
       </div>
 
-      <div className="px-4 space-y-4">
+      <motion.div
+        className="px-4 space-y-4"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
 
         {/* No GP */}
         {!nextGp && (
@@ -219,7 +225,7 @@ export default function PickGp() {
 
         {/* Drivers list */}
         {nextGp && myLeagues.length > 0 && !pickClosed && (
-          <div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-3">
               Scegli il tuo Pilota
             </p>
@@ -240,7 +246,7 @@ export default function PickGp() {
                 ))}
               </div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* Save button */}
@@ -256,7 +262,7 @@ export default function PickGp() {
           </div>
         )}
 
-      </div>
+      </motion.div>
     </div>
   );
 }
