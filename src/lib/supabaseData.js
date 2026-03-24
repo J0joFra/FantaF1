@@ -30,15 +30,24 @@ export async function getGrandPrixList(limit = 50) {
 }
 
 export async function getActiveDrivers(season = 2026) {
-  const { data, error } = await supabase
-    .from('drivers')
-    .select('*')
-    .eq('season', season)
-    .eq('is_active', true)
-    .order('surname', { ascending: true });
+  const tryLoad = async (tableName) => {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq('season', season)
+      .eq('is_active', true)
+      .order('surname', { ascending: true });
+    return { data, error };
+  };
 
-  throwIfError(error, 'Failed loading active drivers');
-  return data || [];
+  const first = await tryLoad('drivers');
+  if (!first.error) return first.data || [];
+
+  // Fallback for projects using singular table names.
+  const second = await tryLoad('driver');
+  if (!second.error) return second.data || [];
+
+  throw new Error(`Failed loading active drivers: ${first.error.message}`);
 }
 
 export async function getCircuits() {
