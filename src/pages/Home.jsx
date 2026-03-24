@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { auth, db } from '../lib/firebase'; // Tua config Firebase
 import { supabase } from '../lib/supabase'; // Tua config Supabase
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collectionGroup, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Flag, Trophy, Zap, ChevronRight, Star } from 'lucide-react';
 import GpCountdown from '../components/GpCountdown';
 import { format } from 'date-fns';
@@ -41,22 +41,29 @@ export default function Home() {
       setNextGp(gp);
 
       // 2. Recupero Leghe da Firestore
-      const leaguesRef = collection(db, 'league_members');
+      const leaguesRef = collectionGroup(db, 'members');
       const q = query(leaguesRef, where('user_email', '==', currentUser.email));
       const querySnapshot = await getDocs(q);
-      const members = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const members = querySnapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        league_id: docSnap.ref.parent.parent?.id,
+        ...docSnap.data(),
+      })).filter((m) => Boolean(m.league_id));
       setMyLeagues(members);
 
       // 3. Recupero Pick (se esiste GP e utente ha leghe)
       if (gp && members.length > 0) {
-        const picksRef = collection(db, 'picks');
-        const pickQ = query(
-          picksRef, 
-          where('user_email', '==', currentUser.email), 
-          where('gp_id', '==', gp.id)
+        const pickRef = doc(
+          db,
+          'fantaF1Leagues',
+          members[0].league_id,
+          'picks',
+          gp.id,
+          'userPicks',
+          currentUser.uid
         );
-        const pickSnap = await getDocs(pickQ);
-        setMyPick(pickSnap.docs[0]?.data() || null);
+        const pickSnap = await getDoc(pickRef);
+        setMyPick(pickSnap.exists() ? pickSnap.data() : null);
       }
     } catch (err) {
       console.error("Errore caricamento dati:", err);
@@ -85,7 +92,7 @@ export default function Home() {
           </div>
           <h1 className="font-barlow font-black text-5xl text-foreground uppercase leading-none tracking-tight">
             BENVENUTO,<br />
-            <span className="text-ferrari-red italic">{user?.full_name?.split(' ')[0]?.toUpperCase() || 'PILOTA'}</span>
+            <span className="text-ferrari-red italic">{user?.displayName?.split(' ')[0]?.toUpperCase() || 'PILOTA'}</span>
           </h1>
         </div>
       </div>
@@ -124,7 +131,7 @@ export default function Home() {
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 font-medium">
                     Scadenza Pick
                   </p>
-                  <GpCountdown deadline={nextGp.pick_deadline} />
+                  <GpCountdown targetDate={nextGp.pick_deadline} />
                 </>
               )}
 

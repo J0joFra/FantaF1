@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { db, auth } from '../lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, getDocs, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, ChevronLeft, Flag, Lock } from 'lucide-react';
@@ -48,22 +48,21 @@ export default function PickGp() {
 
     // 2. Firestore: Leghe e Pick esistenti
     if (u && currentGp) {
-      const qMembers = query(collection(db, 'league_members'), where('user_email', '==', u.email));
+      const qMembers = query(collectionGroup(db, 'members'), where('user_email', '==', u.email));
       const membersSnap = await getDocs(qMembers);
-      const members = membersSnap.docs.map(d => ({id: d.id, ...d.data()}));
+      const members = membersSnap.docs.map((d) => ({
+        id: d.id,
+        league_id: d.ref.parent.parent?.id,
+        ...d.data(),
+      })).filter((m) => Boolean(m.league_id));
       setMyLeagues(members);
       setSelectedLeague(members[0] || null);
 
       if (members.length > 0) {
-        const qPicks = query(
-          collection(db, 'picks'), 
-          where('user_email', '==', u.email), 
-          where('gp_id', '==', currentGp.id)
-        );
-        const pickSnap = await getDocs(qPicks);
-        if (!pickSnap.empty) {
-          setExistingPick({ id: pickSnap.docs[0].id, ...pickSnap.docs[0].data() });
-        }
+        const firstLeagueId = members[0].league_id;
+        const pickRef = doc(db, 'fantaF1Leagues', firstLeagueId, 'picks', currentGp.id, 'userPicks', u.uid);
+        const pickSnap = await getDoc(pickRef);
+        if (pickSnap.exists()) setExistingPick({ id: pickSnap.id, ...pickSnap.data() });
       }
     }
     setLoading(false);
@@ -82,16 +81,21 @@ export default function PickGp() {
       driver_team: selectedDriver.team,
       points: 0,
       is_locked: false,
+      updated_at: serverTimestamp(),
     };
 
     try {
-      if (existingPick?.id) {
-        await updateDoc(doc(db, 'picks', existingPick.id), data);
-        setExistingPick({ ...existingPick, ...data });
-      } else {
-        const created = await addDoc(collection(db, 'picks'), data);
-        setExistingPick({ id: created.id, ...data });
-      }
+      const pickRef = doc(
+        db,
+        'fantaF1Leagues',
+        selectedLeague.league_id,
+        'picks',
+        nextGp.id,
+        'userPicks',
+        user.uid
+      );
+      await setDoc(pickRef, data, { merge: true });
+      setExistingPick({ id: user.uid, ...data });
     } finally {
       setSaving(false);
     }
@@ -104,18 +108,10 @@ export default function PickGp() {
       return;
     }
 
-    const qPicks = query(
-      collection(db, 'picks'),
-      where('user_email', '==', user.email),
-      where('gp_id', '==', nextGp.id),
-      where('league_id', '==', league.league_id)
-    );
-    const pickSnap = await getDocs(qPicks);
-    if (!pickSnap.empty) {
-      setExistingPick({ id: pickSnap.docs[0].id, ...pickSnap.docs[0].data() });
-    } else {
-      setExistingPick(null);
-    }
+    const pickRef = doc(db, 'fantaF1Leagues', league.league_id, 'picks', nextGp.id, 'userPicks', user.uid);
+    const pickSnap = await getDoc(pickRef);
+    if (pickSnap.exists()) setExistingPick({ id: pickSnap.id, ...pickSnap.data() });
+    else setExistingPick(null);
   }
 
   if (loading) return (

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../lib/firebase';
-import { collection, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
 import { Trophy, Medal, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -29,12 +29,15 @@ export default function Classifica() {
     const urlParams = new URLSearchParams(window.location.search);
     const leagueIdParam = urlParams.get('league');
 
-    const myMembershipsQuery = query(collection(db, 'league_members'), where('user_email', '==', u.email));
+    const myMembershipsQuery = query(collectionGroup(db, 'members'), where('user_email', '==', u.email));
     const myMembershipsSnap = await getDocs(myMembershipsQuery);
-    const myMemberships = myMembershipsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const myMemberships = myMembershipsSnap.docs.map((d) => {
+      const leagueId = d.ref.parent.parent?.id;
+      return { id: d.id, league_id: leagueId, ...d.data() };
+    }).filter((m) => Boolean(m.league_id));
     const leaguesData = await Promise.all(
       myMemberships.map(async m => {
-        const leagueSnap = await getDoc(doc(db, 'leagues', m.league_id));
+        const leagueSnap = await getDoc(doc(db, 'fantaF1Leagues', m.league_id));
         return { ...m, league: leagueSnap.exists() ? { id: leagueSnap.id, ...leagueSnap.data() } : null };
       })
     );
@@ -55,8 +58,7 @@ export default function Classifica() {
   async function loadLeagueMembers(memberObj) {
     setSelectedLeague(memberObj);
     const membersQuery = query(
-      collection(db, 'league_members'),
-      where('league_id', '==', memberObj.league_id),
+      collection(db, 'fantaF1Leagues', memberObj.league_id, 'members'),
       orderBy('total_points', 'desc')
     );
     const membersSnap = await getDocs(membersQuery);

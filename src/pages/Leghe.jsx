@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../lib/firebase';
-import { collection, query, where, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
+import {
+  collection,
+  collectionGroup,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp
+} from 'firebase/firestore';
 import { Plus, Users, LogIn, ChevronRight, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -29,22 +40,25 @@ export default function Leghe() {
 
   async function loadData() {
     try {
-      const q = query(collection(db, 'league_members'), where('user_email', '==', user.email));
+      const q = query(collectionGroup(db, 'members'), where('user_email', '==', user.email));
       const querySnapshot = await getDocs(q);
 
       const leagueDetails = await Promise.all(
         querySnapshot.docs.map(async (mDoc) => {
           const mData = mDoc.data();
+          const leagueId = mDoc.ref.parent.parent?.id;
+          if (!leagueId) return null;
           // Recupero i dettagli della lega correlata
-          const leagueSnap = await getDoc(doc(db, 'leagues', mData.league_id));
+          const leagueSnap = await getDoc(doc(db, 'fantaF1Leagues', leagueId));
           return {
             id: mDoc.id,
             ...mData,
+            league_id: leagueId,
             league: leagueSnap.exists() ? { id: leagueSnap.id, ...leagueSnap.data() } : null
           };
         })
       );
-      setMyLeagues(leagueDetails);
+      setMyLeagues(leagueDetails.filter(Boolean));
     } catch (error) {
       console.error(error);
       toast.error('Errore nel caricamento leghe');
@@ -60,19 +74,21 @@ export default function Leghe() {
     
     try {
       // Crea la lega
-      const leagueRef = await addDoc(collection(db, 'leagues'), {
+      const leagueRef = await addDoc(collection(db, 'fantaF1Leagues'), {
         name: newName.trim(),
         code,
         season: 2026,
-        admin_email: user.email
+        admin_email: user.email,
+        created_at: serverTimestamp()
       });
 
-      await addDoc(collection(db, 'league_members'), {
-        league_id: leagueRef.id,
+      await setDoc(doc(db, 'fantaF1Leagues', leagueRef.id, 'members', user.uid), {
+        user_id: user.uid,
         user_email: user.email,
         user_name: user.displayName || user.email,
         total_points: 0,
-        rank: 1
+        rank: 1,
+        joined_at: serverTimestamp()
       });
 
       toast.success("Lega creata!");
@@ -89,7 +105,7 @@ export default function Leghe() {
     setSaving(true);
     try {
       const leagueCode = joinCode.trim().toUpperCase();
-      const leagueQuery = query(collection(db, 'leagues'), where('code', '==', leagueCode));
+      const leagueQuery = query(collection(db, 'fantaF1Leagues'), where('code', '==', leagueCode));
       const leagueSnap = await getDocs(leagueQuery);
 
       if (leagueSnap.empty) {
@@ -100,24 +116,20 @@ export default function Leghe() {
       const leagueDoc = leagueSnap.docs[0];
       const league = { id: leagueDoc.id, ...leagueDoc.data() };
 
-      const memberQuery = query(
-        collection(db, 'league_members'),
-        where('league_id', '==', league.id),
-        where('user_email', '==', user.email)
-      );
-      const existingMemberSnap = await getDocs(memberQuery);
-
-      if (!existingMemberSnap.empty) {
+      const memberRef = doc(db, 'fantaF1Leagues', league.id, 'members', user.uid);
+      const existingMemberSnap = await getDoc(memberRef);
+      if (existingMemberSnap.exists()) {
         toast.error('Sei già in questa lega!');
         return;
       }
 
-      await addDoc(collection(db, 'league_members'), {
-        league_id: league.id,
+      await setDoc(memberRef, {
+        user_id: user.uid,
         user_email: user.email,
         user_name: user.displayName || user.email,
         total_points: 0,
-        rank: 999
+        rank: 999,
+        joined_at: serverTimestamp()
       });
 
       toast.success(`Hai aderito a "${league.name}"! 🏎️`);
@@ -221,7 +233,7 @@ export default function Leghe() {
         ) : (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Le tue leghe</p>
-            {myLeagues.map(({ league, memberCount, total_points, rank }) => (
+            {myLeagues.map(({ league, total_points }) => (
               league && (
                 <Link
                   key={league.id}
@@ -233,7 +245,7 @@ export default function Leghe() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-barlow font-bold text-foreground uppercase truncate">{league.name}</p>
-                    <p className="text-xs text-muted-foreground">{memberCount} partecipanti · Codice: {league.code}</p>
+                    <p className="text-xs text-muted-foreground">Codice: {league.code}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-barlow font-black text-lg text-ferrari-gold">{total_points || 0}</p>
