@@ -1,3 +1,4 @@
+// App.jsx
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -7,7 +8,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AppLayout from './components/AppLayout';
 import Home from './pages/Home';
-import PickGp from './pages/PickGp';
+// PickGp rimosso!
 import Leghe from './pages/Leghe';
 import Classifica from './pages/Classifica';
 import Regolamento from './pages/Regolamento';
@@ -17,7 +18,6 @@ import AdminResults from './pages/AdminResults';
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
-  // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -26,23 +26,20 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Handle authentication errors
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
       navigateToLogin();
       return null;
     }
   }
 
-  // Render the main app
   return (
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/pick" element={<PickGp />} />
+        {/* ROUTE PICK RIMOSSA */}
         <Route path="/leghe" element={<Leghe />} />
         <Route path="/classifica" element={<Classifica />} />
         <Route path="/regolamento" element={<Regolamento />} />
@@ -54,9 +51,7 @@ const AuthenticatedApp = () => {
   );
 };
 
-
 function App() {
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>

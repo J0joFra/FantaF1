@@ -1,23 +1,20 @@
+// pages/AdminResults.jsx
 import { useState, useEffect } from 'react';
-import { auth, db } from '../lib/firebase';
+import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
-import { getGrandPrixList, getActiveDrivers } from '../lib/supabaseData';
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  updateDoc,
-  doc
-} from 'firebase/firestore';
+import { 
+  getAllPicksForRace, 
+  updatePickPoints, 
+  updateAllMemberTotals 
+} from '../lib/firestoreService';
 import { CheckCircle, Loader2, AlertTriangle, ChevronDown } from 'lucide-react';
 
 export default function AdminResults() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [gps, setGps] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [selectedGp, setSelectedGp] = useState(null);
-  const [positions, setPositions] = useState({}); // { driverId: position }
+  const [positions, setPositions] = useState({});
   const [fastestLap, setFastestLap] = useState('');
   const [pole, setPole] = useState('');
   const [dnfDrivers, setDnfDrivers] = useState([]);
@@ -27,26 +24,23 @@ export default function AdminResults() {
 
   useEffect(() => {
     async function init() {
-      const u = auth.currentUser;
-      setUser(u);
-
-      const [allGps, allDrivers] = await Promise.all([
-        getGrandPrixList(50),
-        getActiveDrivers(2026),
-      ]);
-
-      setGps(allGps);
-      setDrivers(allDrivers);
-      setLoading(false);
+      try {
+        const [allGps, allDrivers] = await Promise.all([
+          supabase.from('grands_prix').select('*').order('race_date', { ascending: false }),
+          supabase.from('drivers').select('*').eq('is_active', true),
+        ]);
+        
+        setGps(allGps.data || []);
+        setDrivers(allDrivers.data || []);
+      } catch (err) {
+        console.error(err);
+        setMessage({ type: 'error', text: 'Errore nel caricamento dati' });
+      } finally {
+        setLoading(false);
+      }
     }
     init();
   }, []);
-
-  function toggleDnf(driverId) {
-    setDnfDrivers(prev =>
-      prev.includes(driverId) ? prev.filter(d => d !== driverId) : [...prev, driverId]
-    );
-  }
 
   async function handleSave() {
     if (!selectedGp) return;
@@ -60,77 +54,69 @@ export default function AdminResults() {
       dnf_driver_ids: dnfDrivers,
     };
 
-    // Salva i risultati nel GP su Supabase
-    await supabase
-      .from('grand_prix')
-      .update({
-        race_results: results,
-        status: 'completed',
-      })
-      .eq('id', selectedGp.id);
+    try {
+      // 1. Salva risultati su Supabase
+      await supabase
+        .from('grands_prix')
+        .update({ 
+          race_results: results, 
+          status: 'completed' 
+        })
+        .eq('id', selectedGp.id);
 
-    // Recupera i pick su Firestore e calcola un punteggio base
-    const picksQuery = query(collection(db, 'picks'), where('gp_id', '==', selectedGp.id));
-    const picksSnap = await getDocs(picksQuery);
-    const picks = picksSnap.docs.map((pickDoc) => ({ id: pickDoc.id, ...pickDoc.data() }));
+      // 2. Recupera tutti i picks per questo GP
+      const picks = await getAllPicksForRace(selectedGp.raceId);
 
-    for (const pick of picks) {
-      const points = pick.driver_id && results.positions[pick.driver_id] === 1 ? 25 : 0;
-      const pickRef = doc(db, 'picks', pick.id);
-      await updateDoc(pickRef, {
-        points,
-        bonus_details: {
-          win_pick: points > 0,
-        },
-        is_locked: true,
-      });
-    }
-
-    // Aggiorna i punti totali nei LeagueMember
-    const leagueIds = [...new Set(picks.map(p => p.league_id).filter(Boolean))];
-    for (const leagueId of leagueIds) {
-      const leaguePicksQuery = query(
-        collection(db, 'picks'),
-        where('league_id', '==', leagueId)
-      );
-      const leaguePicksSnap = await getDocs(leaguePicksQuery);
-      const leaguePicks = leaguePicksSnap.docs.map((leaguePickDoc) => ({
-        id: leaguePickDoc.id,
-        ...leaguePickDoc.data(),
-      }));
-      const pointsByUser = {};
-      for (const p of leaguePicks) {
-        pointsByUser[p.user_email] = (pointsByUser[p.user_email] || 0) + (p.points || 0);
+      // 3. Calcola punti per ogni pick
+      for (const pick of picks) {
+        const { total, breakdown } = calculatePickPoints(pick.driverId, results);
+        await updatePickPoints(pick.id, total, breakdown);
       }
-      const membersQuery = query(collection(db, 'league_members'), where('league_id', '==', leagueId));
-      const membersSnap = await getDocs(membersQuery);
-      const members = membersSnap.docs.map((memberDoc) => ({ id: memberDoc.id, ...memberDoc.data() }));
-      for (const member of members) {
-        const total = pointsByUser[member.user_email] || 0;
-        const memberRef = doc(db, 'league_members', member.id);
-        await updateDoc(memberRef, { total_points: total });
-      }
-    }
 
-    setSaving(false);
-    setMessage({ type: 'success', text: `Risultati salvati! ${picks.length} pick aggiornati.` });
+      // 4. Aggiorna i punti totali in tutte le leghe
+      // Recupera tutte le leghe che hanno picks per questo GP
+      const leagueIds = [...new Set(picks.map(p => p.leagueId).filter(Boolean))];
+      
+      for (const leagueId of leagueIds) {
+        // Recupera tutti gli ID dei GP completati per questa lega
+        const { data: completedRaces } = await supabase
+          .from('grands_prix')
+          .select('race_id')
+          .eq('status', 'completed')
+          .order('race_date');
+        
+        const raceIds = completedRaces?.map(r => r.race_id) || [];
+        await updateAllMemberTotals(leagueId, raceIds);
+      }
+
+      setMessage({ type: 'success', text: `Risultati salvati! ${picks.length} pick aggiornati.` });
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: 'error', text: 'Errore durante il salvataggio' });
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Loader2 className="w-8 h-8 animate-spin text-ferrari-red" />
-    </div>
-  );
-
-  if (user?.role !== 'admin') return (
-    <div className="flex items-center justify-center min-h-screen px-6">
-      <div className="text-center">
-        <AlertTriangle size={40} className="text-ferrari-red mx-auto mb-3" />
-        <p className="font-barlow font-bold text-xl text-foreground">Accesso negato</p>
-        <p className="text-muted-foreground text-sm">Solo gli admin possono inserire i risultati.</p>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-ferrari-red" />
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (user?.role !== 'admin') {
+    return (
+      <div className="flex items-center justify-center min-h-screen px-6">
+        <div className="text-center">
+          <AlertTriangle size={40} className="text-ferrari-red mx-auto mb-3" />
+          <p className="font-barlow font-bold text-xl text-foreground">Accesso negato</p>
+          <p className="text-muted-foreground text-sm">Solo gli admin possono inserire i risultati.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
