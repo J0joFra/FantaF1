@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { auth, db } from '../lib/firebase'; // Tua config Firebase
+import { auth, db } from '../lib/firebase';
 import { collectionGroup, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Flag, Trophy, Zap, ChevronRight, Star } from 'lucide-react';
 import GpCountdown from '../components/GpCountdown';
-import { format } from 'date-fns';
+import { format, isAfter, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { motion } from 'framer-motion';
-import { getNextGrandPrix } from '../lib/supabaseData';
+import { CALENDAR_2026 } from '../config/f1-2026'; 
 
 export default function Home() {
   const [user, setUser] = useState(null);
@@ -30,9 +30,23 @@ export default function Home() {
 
   async function loadData(currentUser) {
     try {
-      // 1. Recupero GP da Supabase
-      const gp = await getNextGrandPrix();
-      setNextGp(gp);
+      // 1. Calcolo del Prossimo GP dai dati locali
+      const now = new Date();
+      const futureRaces = CALENDAR_2026.filter(race => isAfter(parseISO(race.date), now));
+      const gp = futureRaces.length > 0 ? futureRaces[0] : null;
+      
+      const mappedGp = gp ? {
+        id: gp.raceId,
+        name: gp.name,
+        circuit: gp.circuit,
+        race_date: gp.date,
+        pick_deadline: gp.lockDate, 
+        round: gp.round,
+        flag_emoji: gp.flag,
+        status: 'upcoming'
+      } : null;
+
+      setNextGp(mappedGp);
 
       // 2. Recupero Leghe da Firestore
       const leaguesRef = collectionGroup(db, 'members');
@@ -45,17 +59,9 @@ export default function Home() {
       })).filter((m) => Boolean(m.league_id));
       setMyLeagues(members);
 
-      // 3. Recupero Pick (se esiste GP e utente ha leghe)
-      if (gp && members.length > 0) {
-        const pickRef = doc(
-          db,
-          'fantaF1Leagues',
-          members[0].league_id,
-          'picks',
-          gp.id,
-          'userPicks',
-          currentUser.uid
-        );
+      // 3. Recupero Pick
+      if (mappedGp && members.length > 0) {
+        const pickRef = doc(db, 'fantaF1Leagues', members[0].league_id, 'picks', mappedGp.id, 'userPicks', currentUser.uid);
         const pickSnap = await getDoc(pickRef);
         setMyPick(pickSnap.exists() ? pickSnap.data() : null);
       }

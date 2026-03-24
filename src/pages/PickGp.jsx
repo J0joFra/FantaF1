@@ -6,7 +6,9 @@ import { CheckCircle, ChevronLeft, Flag, Lock } from 'lucide-react';
 import DriverCard from '../components/DriverCard';
 import GpCountdown from '../components/GpCountdown';
 import { motion } from 'framer-motion';
-import { getNextGrandPrix, getActiveDrivers } from '../lib/supabaseData';
+import { isAfter, parseISO } from 'date-fns';
+// Importiamo i dati locali
+import { DRIVERS_2026, CALENDAR_2026 } from '../config/f1-2026';
 
 export default function PickGp() {
   const [user, setUser] = useState(null);
@@ -28,16 +30,28 @@ export default function PickGp() {
     const u = auth.currentUser;
     setUser(u);
     
-    // 1. Supabase: GP e Piloti
-    const [currentGp, driversData] = await Promise.all([
-      getNextGrandPrix(),
-      getActiveDrivers(2026),
-    ]);
-    setNextGp(currentGp);
-    setDrivers(driversData);
-    setPickClosed(currentGp ? new Date(currentGp.pick_deadline) <= new Date() : false);
+    // 1. Selezione GP e Piloti dai file locali
+    const now = new Date();
+    const futureRaces = CALENDAR_2026.filter(race => isAfter(parseISO(race.date), now));
+    const currentGpRaw = futureRaces[0];
 
-    // 2. Firestore: Leghe e Pick esistenti
+    const currentGp = currentGpRaw ? {
+        id: currentGpRaw.raceId,
+        name: currentGpRaw.name,
+        circuit: currentGpRaw.circuit,
+        country: currentGpRaw.country,
+        race_date: currentGpRaw.date,
+        pick_deadline: currentGpRaw.lockDate,
+        flag_emoji: currentGpRaw.flag
+    } : null;
+
+    setNextGp(currentGp);
+    setDrivers(DRIVERS_2026);
+    
+    const isClosed = currentGp ? !isAfter(parseISO(currentGp.pick_deadline), now) : true;
+    setPickClosed(isClosed);
+
+    // 2. Firestore: Leghe e Pick esistenti (rimane invariato)
     if (u && currentGp) {
       const qMembers = query(collectionGroup(db, 'members'), where('user_email', '==', u.email));
       const membersSnap = await getDocs(qMembers);
@@ -50,8 +64,7 @@ export default function PickGp() {
       setSelectedLeague(members[0] || null);
 
       if (members.length > 0) {
-        const firstLeagueId = members[0].league_id;
-        const pickRef = doc(db, 'fantaF1Leagues', firstLeagueId, 'picks', currentGp.id, 'userPicks', u.uid);
+        const pickRef = doc(db, 'fantaF1Leagues', members[0].league_id, 'picks', currentGp.id, 'userPicks', u.uid);
         const pickSnap = await getDoc(pickRef);
         if (pickSnap.exists()) setExistingPick({ id: pickSnap.id, ...pickSnap.data() });
       }
@@ -62,13 +75,18 @@ export default function PickGp() {
   async function savePick() {
     if (!selectedDriver || !selectedLeague || !nextGp) return;
     setSaving(true);
+    
+    // Gestione nome/cognome per il database
+    const nameParts = selectedDriver.name.split(' ');
+    const surname = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0];
+
     const data = {
       user_email: user.email,
       user_name: user.displayName || user.email,
       league_id: selectedLeague.league_id,
       gp_id: nextGp.id,
       driver_id: selectedDriver.id,
-      driver_name: `${selectedDriver.name} ${selectedDriver.surname}`,
+      driver_name: selectedDriver.name, // "Charles Leclerc"
       driver_team: selectedDriver.team,
       points: 0,
       is_locked: false,
@@ -76,21 +94,13 @@ export default function PickGp() {
     };
 
     try {
-      const pickRef = doc(
-        db,
-        'fantaF1Leagues',
-        selectedLeague.league_id,
-        'picks',
-        nextGp.id,
-        'userPicks',
-        user.uid
-      );
+      const pickRef = doc(db, 'fantaF1Leagues', selectedLeague.league_id, 'picks', nextGp.id, 'userPicks', user.uid);
       await setDoc(pickRef, data, { merge: true });
       setExistingPick({ id: user.uid, ...data });
     } finally {
       setSaving(false);
     }
-  }
+}       
 
   async function handleLeagueChange(league) {
     setSelectedLeague(league);

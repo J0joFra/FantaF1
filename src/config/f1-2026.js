@@ -25,8 +25,6 @@ export const DRIVERS_2026 = [
 ];
 
 // ─── CALENDARIO 2026 ─────────────────────────────────────────────────────────
-// date     = data della gara (domenica)
-// lockDate = giorno entro cui fare il pick (di solito sabato)
 export const CALENDAR_2026 = [
   { raceId: '2026-R01', round: 1,  name: 'GP d\'Australia',   country: 'Australia',  flag: 'AU', circuit: 'Albert Park Circuit',              date: '2026-03-15', lockDate: '2026-03-14' },
   { raceId: '2026-R02', round: 2,  name: 'GP della Cina',     country: 'Cina',       flag: 'CN', circuit: 'Shanghai International Circuit',   date: '2026-03-22', lockDate: '2026-03-21' },
