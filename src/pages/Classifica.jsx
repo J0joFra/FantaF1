@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { auth, db } from '../lib/firebase';
+import { collection, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
 import { Trophy, Medal, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -18,17 +19,23 @@ export default function Classifica() {
   }, []);
 
   async function loadData() {
-    const u = await base44.auth.me();
+    const u = auth.currentUser;
+    if (!u?.email) {
+      setLoading(false);
+      return;
+    }
     setUser(u);
 
     const urlParams = new URLSearchParams(window.location.search);
     const leagueIdParam = urlParams.get('league');
 
-    const myMemberships = await base44.entities.LeagueMember.filter({ user_email: u.email });
+    const myMembershipsQuery = query(collection(db, 'league_members'), where('user_email', '==', u.email));
+    const myMembershipsSnap = await getDocs(myMembershipsQuery);
+    const myMemberships = myMembershipsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
     const leaguesData = await Promise.all(
       myMemberships.map(async m => {
-        const l = await base44.entities.League.filter({ id: m.league_id });
-        return { ...m, league: l[0] };
+        const leagueSnap = await getDoc(doc(db, 'leagues', m.league_id));
+        return { ...m, league: leagueSnap.exists() ? { id: leagueSnap.id, ...leagueSnap.data() } : null };
       })
     );
     setMyLeagues(leaguesData);
@@ -47,11 +54,13 @@ export default function Classifica() {
 
   async function loadLeagueMembers(memberObj) {
     setSelectedLeague(memberObj);
-    const allMembers = await base44.entities.LeagueMember.filter(
-      { league_id: memberObj.league_id },
-      '-total_points',
-      50
+    const membersQuery = query(
+      collection(db, 'league_members'),
+      where('league_id', '==', memberObj.league_id),
+      orderBy('total_points', 'desc')
     );
+    const membersSnap = await getDocs(membersQuery);
+    const allMembers = membersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
     setMembers(allMembers);
     if (memberObj.league) setLeagueDetails(memberObj.league);
   }

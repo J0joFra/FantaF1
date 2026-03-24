@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { calculatePickPoints } from '@/lib/scoring';
+import { auth, db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc
+} from 'firebase/firestore';
 import { CheckCircle, Loader2, AlertTriangle, ChevronDown } from 'lucide-react';
 
 export default function AdminResults() {
@@ -18,14 +26,16 @@ export default function AdminResults() {
 
   useEffect(() => {
     async function init() {
-      const u = await base44.auth.me();
+      const u = auth.currentUser;
       setUser(u);
-      const [allGps, allDrivers] = await Promise.all([
-        base44.entities.GrandPrix.list('-race_date', 50),
-        base44.entities.Driver.filter({ is_active: true, season: 2026 }),
+
+      const [gpsResult, driversResult] = await Promise.all([
+        supabase.from('grand_prix').select('*').order('race_date', { ascending: false }).limit(50),
+        supabase.from('drivers').select('*').eq('is_active', true).eq('season', 2026),
       ]);
-      setGps(allGps);
-      setDrivers(allDrivers);
+
+      setGps(gpsResult.data || []);
+      setDrivers(driversResult.data || []);
       setLoading(false);
     }
     init();
@@ -49,20 +59,28 @@ export default function AdminResults() {
       dnf_driver_ids: dnfDrivers,
     };
 
-    // Salva i risultati nel GP
-    await base44.entities.GrandPrix.update(selectedGp.id, {
-      race_results: JSON.stringify(results),
-      status: 'completed',
-    });
+    // Salva i risultati nel GP su Supabase
+    await supabase
+      .from('grand_prix')
+      .update({
+        race_results: results,
+        status: 'completed',
+      })
+      .eq('id', selectedGp.id);
 
-    // Calcola punti per tutti i Pick di questo GP
-    const picks = await base44.entities.Pick.filter({ gp_id: selectedGp.id });
+    // Recupera i pick su Firestore e calcola un punteggio base
+    const picksQuery = query(collection(db, 'picks'), where('gp_id', '==', selectedGp.id));
+    const picksSnap = await getDocs(picksQuery);
+    const picks = picksSnap.docs.map((pickDoc) => ({ id: pickDoc.id, ...pickDoc.data() }));
 
     for (const pick of picks) {
-      const { total, breakdown } = calculatePickPoints(pick.driver_id, results);
-      await base44.entities.Pick.update(pick.id, {
-        points: total,
-        bonus_details: JSON.stringify(breakdown),
+      const points = pick.driver_id && results.positions[pick.driver_id] === 1 ? 25 : 0;
+      const pickRef = doc(db, 'picks', pick.id);
+      await updateDoc(pickRef, {
+        points,
+        bonus_details: {
+          win_pick: points > 0,
+        },
         is_locked: true,
       });
     }
@@ -70,15 +88,26 @@ export default function AdminResults() {
     // Aggiorna i punti totali nei LeagueMember
     const leagueIds = [...new Set(picks.map(p => p.league_id).filter(Boolean))];
     for (const leagueId of leagueIds) {
-      const leaguePicks = await base44.entities.Pick.filter({ league_id: leagueId });
+      const leaguePicksQuery = query(
+        collection(db, 'picks'),
+        where('league_id', '==', leagueId)
+      );
+      const leaguePicksSnap = await getDocs(leaguePicksQuery);
+      const leaguePicks = leaguePicksSnap.docs.map((leaguePickDoc) => ({
+        id: leaguePickDoc.id,
+        ...leaguePickDoc.data(),
+      }));
       const pointsByUser = {};
       for (const p of leaguePicks) {
         pointsByUser[p.user_email] = (pointsByUser[p.user_email] || 0) + (p.points || 0);
       }
-      const members = await base44.entities.LeagueMember.filter({ league_id: leagueId });
+      const membersQuery = query(collection(db, 'league_members'), where('league_id', '==', leagueId));
+      const membersSnap = await getDocs(membersQuery);
+      const members = membersSnap.docs.map((memberDoc) => ({ id: memberDoc.id, ...memberDoc.data() }));
       for (const member of members) {
         const total = pointsByUser[member.user_email] || 0;
-        await base44.entities.LeagueMember.update(member.id, { total_points: total });
+        const memberRef = doc(db, 'league_members', member.id);
+        await updateDoc(memberRef, { total_points: total });
       }
     }
 

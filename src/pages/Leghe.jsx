@@ -73,31 +73,49 @@ export default function Leghe() {
   async function joinLeague() {
     if (!joinCode.trim()) return;
     setSaving(true);
-    const leagues = await base44.entities.League.filter({ code: joinCode.trim().toUpperCase() });
-    if (!leagues[0]) {
-      toast.error('Codice non valido');
+    try {
+      const leagueCode = joinCode.trim().toUpperCase();
+      const leagueQuery = query(collection(db, 'leagues'), where('code', '==', leagueCode));
+      const leagueSnap = await getDocs(leagueQuery);
+
+      if (leagueSnap.empty) {
+        toast.error('Codice non valido');
+        return;
+      }
+
+      const leagueDoc = leagueSnap.docs[0];
+      const league = { id: leagueDoc.id, ...leagueDoc.data() };
+
+      const memberQuery = query(
+        collection(db, 'league_members'),
+        where('league_id', '==', league.id),
+        where('user_email', '==', user.email)
+      );
+      const existingMemberSnap = await getDocs(memberQuery);
+
+      if (!existingMemberSnap.empty) {
+        toast.error('Sei già in questa lega!');
+        return;
+      }
+
+      await addDoc(collection(db, 'league_members'), {
+        league_id: league.id,
+        user_email: user.email,
+        user_name: user.displayName || user.email,
+        total_points: 0,
+        rank: 999
+      });
+
+      toast.success(`Hai aderito a "${league.name}"! 🏎️`);
+      setJoinCode('');
+      setShowJoin(false);
+      loadData();
+    } catch (error) {
+      toast.error('Errore durante l\'ingresso nella lega');
+      console.error(error);
+    } finally {
       setSaving(false);
-      return;
     }
-    const league = leagues[0];
-    const existing = await base44.entities.LeagueMember.filter({ league_id: league.id, user_email: user.email });
-    if (existing[0]) {
-      toast.error('Sei già in questa lega!');
-      setSaving(false);
-      return;
-    }
-    await base44.entities.LeagueMember.create({
-      league_id: league.id,
-      user_email: user.email,
-      user_name: user.full_name,
-      total_points: 0,
-      rank: 999,
-    });
-    toast.success(`Hai aderito a "${league.name}"! 🏎️`);
-    setJoinCode('');
-    setShowJoin(false);
-    setSaving(false);
-    loadData();
   }
 
   if (loading) return (
