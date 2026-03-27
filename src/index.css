@@ -1,46 +1,74 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700;1,800;1,900&display=swap');
 
 @tailwind base;
-
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 228 15% 7%;
+    --background: 228 15% 5%;
     --foreground: 0 0% 96%;
-    --card: 228 13% 10%;
+    --card: 228 13% 8%;
     --card-foreground: 0 0% 96%;
-    --popover: 228 13% 10%;
+    --popover: 228 13% 8%;
     --popover-foreground: 0 0% 96%;
-    --primary: 354 90% 50%;
+    --primary: 0 85% 50%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 228 12% 14%;
+    --secondary: 228 12% 12%;
     --secondary-foreground: 0 0% 90%;
-    --muted: 228 12% 14%;
-    --muted-foreground: 228 8% 52%;
+    --muted: 228 12% 12%;
+    --muted-foreground: 228 8% 48%;
     --accent: 43 96% 52%;
     --accent-foreground: 0 0% 5%;
     --destructive: 0 62.8% 40%;
     --destructive-foreground: 0 0% 98%;
-    --border: 228 10% 16%;
-    --input: 228 10% 16%;
-    --ring: 354 90% 50%;
+    --border: 228 10% 13%;
+    --input: 228 10% 13%;
+    --ring: 0 85% 50%;
     --radius: 0.75rem;
-
-    --ferrari-red: 354 90% 50%;
+    --ferrari-red: 0 85% 50%;
     --ferrari-gold: 43 96% 52%;
-    --racing-dark: 228 15% 7%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
-    @apply bg-background text-foreground font-inter;
+    @apply bg-[#060608] text-white;
+    font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+  }
+
+  /* Hide scrollbar but keep scrolling */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+}
+
+@layer utilities {
+  .font-barlow {
+    font-family: 'Barlow Condensed', sans-serif;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }

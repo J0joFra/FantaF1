@@ -1,158 +1,15 @@
 // lib/firestoreService.js
 import { db } from './firebase';
-import { 
-  collection, doc, setDoc, getDoc, getDocs, 
-  query, where, orderBy, updateDoc, arrayUnion,
+import {
+  collection, doc, setDoc, getDoc, getDocs,
+  query, where, orderBy, updateDoc,
   deleteDoc, Timestamp
 } from 'firebase/firestore';
 
-// ─────────────────────────────────────────────────────────────
-// LEGHE
-// ─────────────────────────────────────────────────────────────
+// ─── PICKS ───────────────────────────────────────────────────────────────────
 
 /**
- * Crea una nuova lega
- * @param {string} userId - ID dell'utente che crea (admin)
- * @param {string} userName - Nome visualizzato
- * @param {string} userEmail - Email dell'admin
- * @param {string} leagueName - Nome della lega
- * @returns {Promise<{id: string, code: string}>}
- */
-export async function createLeague(userId, userName, userEmail, leagueName) {
-  const leagueCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-  const leagueRef = doc(collection(db, 'fantaF1Leagues'));
-  
-  await setDoc(leagueRef, {
-    name: leagueName,
-    code: leagueCode,
-    adminId: userId,
-    adminEmail: userEmail,
-    createdAt: Timestamp.now(),
-    memberCount: 1,
-  });
-  
-  const memberRef = doc(leagueRef, 'members', userId);
-  await setDoc(memberRef, {
-    userId,
-    userEmail,
-    userName,
-    role: 'admin',
-    totalPoints: 0,
-    joinedAt: Timestamp.now(),
-  });
-  
-  return { id: leagueRef.id, code: leagueCode };
-}
-
-/**
- * Unisce un utente a una lega tramite codice
- * @param {string} userId - ID dell'utente
- * @param {string} userName - Nome visualizzato
- * @param {string} userEmail - Email
- * @param {string} inviteCode - Codice invito
- * @returns {Promise<{leagueId: string, leagueName: string}>}
- */
-export async function joinLeague(userId, userName, userEmail, inviteCode) {
-  const leaguesRef = collection(db, 'fantaF1Leagues');
-  const q = query(leaguesRef, where('code', '==', inviteCode.toUpperCase()));
-  const snapshot = await getDocs(q);
-  
-  if (snapshot.empty) {
-    throw new Error('Codice invito non valido');
-  }
-  
-  const leagueDoc = snapshot.docs[0];
-  const leagueId = leagueDoc.id;
-  const leagueData = leagueDoc.data();
-  
-  // Verifica se l'utente è già membro
-  const memberRef = doc(db, 'fantaF1Leagues', leagueId, 'members', userId);
-  const memberSnap = await getDoc(memberRef);
-  
-  if (memberSnap.exists()) {
-    throw new Error('Sei già in questa lega');
-  }
-  
-  await setDoc(memberRef, {
-    userId,
-    userEmail,
-    userName,
-    role: 'member',
-    totalPoints: 0,
-    joinedAt: Timestamp.now(),
-  });
-  
-  // Incrementa contatore membri
-  await updateDoc(leagueDoc.ref, {
-    memberCount: (leagueData.memberCount || 0) + 1
-  });
-  
-  return { leagueId, leagueName: leagueData.name };
-}
-
-/**
- * Recupera tutte le leghe di un utente
- * @param {string} userId - ID dell'utente
- * @returns {Promise<Array>}
- */
-export async function getUserLeagues(userId) {
-  if (!userId) return [];
-  
-  // Query su tutte le subcollections 'members' dove userId corrisponde
-  const membersQuery = query(
-    collection(db, 'fantaF1Leagues', '***', 'members'),
-    where('userId', '==', userId)
-  );
-  const leaguesRef = collection(db, 'fantaF1Leagues');
-  const leaguesSnapshot = await getDocs(leaguesRef);
-  
-  const userLeagues = [];
-  for (const leagueDoc of leaguesSnapshot.docs) {
-    const memberRef = doc(leagueDoc.ref, 'members', userId);
-    const memberSnap = await getDoc(memberRef);
-    if (memberSnap.exists()) {
-      userLeagues.push({
-        id: leagueDoc.id,
-        name: leagueDoc.data().name,
-        code: leagueDoc.data().code,
-        adminId: leagueDoc.data().adminId,
-        memberCount: leagueDoc.data().memberCount,
-        myRole: memberSnap.data().role,
-        myPoints: memberSnap.data().totalPoints || 0,
-      });
-    }
-  }
-  
-  return userLeagues;
-}
-
-/**
- * Recupera la classifica di una lega
- * @param {string} leagueId
- * @returns {Promise<Array>}
- */
-export async function getLeagueStandings(leagueId) {
-  const membersRef = collection(db, 'fantaF1Leagues', leagueId, 'members');
-  const q = query(membersRef, orderBy('totalPoints', 'desc'));
-  const snapshot = await getDocs(q);
-  
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
-}
-
-// ─────────────────────────────────────────────────────────────
-// PICKS
-// ─────────────────────────────────────────────────────────────
-
-/**
- * Salva un pick per un GP (unico per utente, non per lega)
- * @param {string} userId
- * @param {string} raceId - ID del GP (da Supabase)
- * @param {string} driverId
- * @param {string} driverName
- * @returns {Promise<void>}
+ * Salva un pick per un GP
  */
 export async function savePick(userId, raceId, driverId, driverName) {
   const pickRef = doc(db, 'picks', `${userId}_${raceId}`);
@@ -169,41 +26,81 @@ export async function savePick(userId, raceId, driverId, driverName) {
 
 /**
  * Recupera il pick di un utente per un GP
- * @param {string} userId
- * @param {string} raceId
- * @returns {Promise<object|null>}
  */
 export async function getUserPick(userId, raceId) {
+  if (!userId || !raceId) return null;
   const pickRef = doc(db, 'picks', `${userId}_${raceId}`);
   const snap = await getDoc(pickRef);
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
 /**
- * Recupera tutti i picks per un GP (usato dall'admin per calcolare punti)
- * @param {string} raceId
- * @returns {Promise<Array>}
+ * Recupera tutti i picks per un GP
  */
 export async function getAllPicksForRace(raceId) {
-  const picksRef = collection(db, 'picks');
-  const q = query(picksRef, where('raceId', '==', raceId));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const q = query(collection(db, 'picks'), where('raceId', '==', raceId));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 /**
  * Aggiorna i punti di un pick
- * @param {string} pickId
- * @param {number} points
- * @param {object} bonusDetails
  */
 export async function updatePickPoints(pickId, points, bonusDetails) {
   const pickRef = doc(db, 'picks', pickId);
-  await updateDoc(pickRef, {
-    points,
-    bonusDetails,
-    isLocked: true,
-  });
+  await updateDoc(pickRef, { points, bonusDetails, isLocked: true });
+}
+
+// ─── LEGHE ───────────────────────────────────────────────────────────────────
+
+/**
+ * Recupera tutte le leghe di un utente (basato su uid)
+ */
+export async function getUserLeagues(userId) {
+  if (!userId) return [];
+  try {
+    const leaguesSnap = await getDocs(collection(db, 'fantaF1Leagues'));
+    const userLeagues = [];
+
+    for (const leagueDoc of leaguesSnap.docs) {
+      const memberRef = doc(leagueDoc.ref, 'members', userId);
+      const memberSnap = await getDoc(memberRef);
+      if (memberSnap.exists()) {
+        const data = leagueDoc.data();
+        const memberData = memberSnap.data();
+        userLeagues.push({
+          id: leagueDoc.id,
+          name: data.name,
+          code: data.code,
+          adminId: data.admin_id || data.adminId,
+          memberCount: data.memberCount || 1,
+          myRole: memberData.role,
+          myPoints: memberData.total_points || 0,
+          myScore: memberData.total_points || 0,
+        });
+      }
+    }
+    return userLeagues;
+  } catch (err) {
+    console.error('getUserLeagues error:', err);
+    return [];
+  }
+}
+
+/**
+ * Recupera la classifica di una lega
+ */
+export async function getLeagueStandings(leagueId) {
+  try {
+    const q = query(
+      collection(db, 'fantaF1Leagues', leagueId, 'members'),
+      orderBy('total_points', 'desc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -211,25 +108,7 @@ export async function updatePickPoints(pickId, points, bonusDetails) {
  */
 export async function updateMemberPoints(leagueId, userId, newTotalPoints) {
   const memberRef = doc(db, 'fantaF1Leagues', leagueId, 'members', userId);
-  await updateDoc(memberRef, { totalPoints: newTotalPoints });
-}
-
-// ─────────────────────────────────────────────────────────────
-// FUNZIONI UTILITY
-// ─────────────────────────────────────────────────────────────
-
-/**
- * Calcola i punti totali di un utente in una lega
- * @param {string} userId
- * @param {Array} raceIds - Array di ID dei GP da considerare
- */
-export async function calculateUserTotalPoints(userId, raceIds) {
-  let total = 0;
-  for (const raceId of raceIds) {
-    const pick = await getUserPick(userId, raceId);
-    if (pick && pick.points) total += pick.points;
-  }
-  return total;
+  await updateDoc(memberRef, { total_points: newTotalPoints });
 }
 
 /**
@@ -237,9 +116,12 @@ export async function calculateUserTotalPoints(userId, raceIds) {
  */
 export async function updateAllMemberTotals(leagueId, raceIds) {
   const members = await getLeagueStandings(leagueId);
-  
   for (const member of members) {
-    const totalPoints = await calculateUserTotalPoints(member.userId, raceIds);
-    await updateMemberPoints(leagueId, member.userId, totalPoints);
+    let total = 0;
+    for (const raceId of raceIds) {
+      const pick = await getUserPick(member.user_id || member.id, raceId);
+      if (pick?.points) total += pick.points;
+    }
+    await updateMemberPoints(leagueId, member.user_id || member.id, total);
   }
 }

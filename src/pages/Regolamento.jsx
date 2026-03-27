@@ -1,71 +1,134 @@
-import { Zap, Flame, Shield } from 'lucide-react';
+import { Zap, Flame, Shield, ChevronLeft } from 'lucide-react';
 import { SCORING_RULES } from '../lib/scoring';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+
+function RuleRow({ label, points, index }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.03 }}
+      className="flex items-center justify-between py-3 border-b border-white/[0.04] last:border-0"
+    >
+      <span className="text-sm text-zinc-400 pr-4 leading-snug">{label}</span>
+      <span className="font-black text-base text-green-400 tabular-nums shrink-0">
+        +{points}
+      </span>
+    </motion.div>
+  );
+}
 
 export default function Regolamento() {
-  const autoRules   = Object.entries(SCORING_RULES).filter(([, v]) => v.type === 'auto');
+  const autoRules = Object.entries(SCORING_RULES).filter(([, v]) => v.type === 'auto');
   const manualRules = Object.entries(SCORING_RULES).filter(([, v]) => v.type === 'manual');
 
   return (
-    <div className="px-4 pt-10 pb-8 space-y-8">
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-500 mb-1">FantaF1 2026</p>
-        <h1 className="text-3xl font-black uppercase">Regolamento</h1>
+    <div className="min-h-screen">
+      {/* Header */}
+      <div className="relative pt-12 pb-6 px-5 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-950/10 to-transparent pointer-events-none" />
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <p className="text-[10px] font-black tracking-[0.35em] uppercase text-blue-400/60 mb-2">
+            FantaF1 2026
+          </p>
+          <h1 className="text-4xl font-black uppercase tracking-tight leading-none">
+            Regolamento
+          </h1>
+        </motion.div>
       </div>
 
-      {/* Punti automatici */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <Zap className="w-5 h-5 text-yellow-400" />
-          <h2 className="text-lg font-black uppercase italic">Punti automatici</h2>
-        </div>
-        <p className="text-zinc-500 text-sm mb-4">Calcolati dopo ogni gara. Nessuna discrezionalità.</p>
-        <div className="space-y-2">
-          {autoRules.map(([key, rule]) => (
-            <div key={key} className="flex items-center justify-between px-4 py-3 rounded-xl border border-white/5 bg-[#1a1a1a]">
-              <span className="text-sm font-bold text-zinc-300">{rule.label}</span>
-              <span className="text-sm font-black text-green-400 tabular-nums">+{rule.points}</span>
+      <div className="px-5 space-y-4 pb-8">
+
+        {/* Intro */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="rounded-2xl bg-[#0f0f17] border border-white/[0.06] p-5"
+        >
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            <span className="text-red-400 font-black">FantaF1</span> è un fantasy basato sulla Formula 1.
+            Prima di ogni Gran Premio, pronostica la griglia completa, il giro veloce, la safety car e i DNF.
+            Più sei preciso, più punti guadagni.
+          </p>
+        </motion.div>
+
+        {/* Punti automatici */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="rounded-2xl bg-[#0f0f17] border border-white/[0.06] overflow-hidden"
+        >
+          <div className="flex items-center gap-3 p-5 border-b border-white/[0.05]">
+            <div className="w-8 h-8 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center">
+              <Zap className="w-4 h-4 text-yellow-400" />
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bonus manuali */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <Flame className="w-5 h-5 text-orange-500" />
-          <h2 className="text-lg font-black uppercase italic">Bonus gara</h2>
-        </div>
-        <p className="text-zinc-500 text-sm mb-4">Inseriti dall'admin dopo ogni gara.</p>
-        <div className="space-y-2">
-          {manualRules.map(([key, rule]) => (
-            <div key={key} className="flex items-center justify-between px-4 py-3 rounded-xl border border-white/5 bg-[#1a1a1a]">
-              <span className="text-sm font-bold text-zinc-300">{rule.label}</span>
-              <span className="text-sm font-black text-green-400 tabular-nums">+{rule.points}</span>
+            <div>
+              <h2 className="font-black text-sm uppercase tracking-widest text-white">Punti automatici</h2>
+              <p className="text-[10px] text-zinc-500">Calcolati dopo ogni gara</p>
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+          <div className="px-5">
+            {autoRules.map(([key, rule], i) => (
+              <RuleRow key={key} label={rule.label} points={rule.points} index={i} />
+            ))}
+          </div>
+        </motion.div>
 
-      {/* Regole generali */}
-      <div className="bg-[#1a1a1a] border border-white/5 rounded-2xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-5 h-5 text-blue-400" />
-          <h2 className="text-base font-black uppercase italic">Regole generali</h2>
-        </div>
-        <ul className="space-y-3 text-sm text-zinc-500 leading-relaxed">
-          {[
-            'Il pick si chiude alle 23:59 del giorno prima della gara.',
-            'La predizione include la griglia completa 1–22, il giro veloce, la safety car e i DNF previsti.',
-            'I punteggi vengono elaborati entro 24 ore dalla fine della gara.',
-            'In caso di errori nei dati, l\'admin può correggere manualmente i punteggi.',
-            'I token SFT della Fan Zone sono separati dal punteggio FantaF1.',
-          ].map((r, i) => (
-            <li key={i} className="flex items-start gap-2">
-              <span className="text-red-500 font-black shrink-0">·</span>
-              <span>{r}</span>
-            </li>
-          ))}
-        </ul>
+        {/* Bonus gara */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-2xl bg-[#0f0f17] border border-white/[0.06] overflow-hidden"
+        >
+          <div className="flex items-center gap-3 p-5 border-b border-white/[0.05]">
+            <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+              <Flame className="w-4 h-4 text-orange-400" />
+            </div>
+            <div>
+              <h2 className="font-black text-sm uppercase tracking-widest text-white">Bonus gara</h2>
+              <p className="text-[10px] text-zinc-500">Inseriti dall'admin dopo ogni gara</p>
+            </div>
+          </div>
+          <div className="px-5">
+            {manualRules.map(([key, rule], i) => (
+              <RuleRow key={key} label={rule.label} points={rule.points} index={i} />
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Regole generali */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="rounded-2xl bg-[#0f0f17] border border-white/[0.06] overflow-hidden"
+        >
+          <div className="flex items-center gap-3 p-5 border-b border-white/[0.05]">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-blue-400" />
+            </div>
+            <h2 className="font-black text-sm uppercase tracking-widest text-white">Regole generali</h2>
+          </div>
+          <ul className="p-5 space-y-3">
+            {[
+              'Il pick si chiude alle 23:59 del giorno prima della gara.',
+              'La predizione include la griglia completa 1–22, il giro veloce, la safety car e i DNF previsti.',
+              'I punteggi vengono elaborati entro 24 ore dalla fine della gara.',
+              "In caso di errori nei dati, l'admin può correggere manualmente i punteggi.",
+              'I token SFT della Fan Zone sono separati dal punteggio FantaF1.',
+            ].map((rule, i) => (
+              <li key={i} className="flex items-start gap-3 text-sm text-zinc-400 leading-snug">
+                <span className="text-red-500 font-black text-base leading-none mt-0.5 shrink-0">·</span>
+                {rule}
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+
       </div>
     </div>
   );
