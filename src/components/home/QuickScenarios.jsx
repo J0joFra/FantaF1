@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import {
   calculateMaxAvailablePoints, pointsNeededPerRace,
-  isMathematicallyEliminated, pointsToClinch,
+  isMathematicallyEliminated, pointsToClinchVsRival,
 } from "@/lib/f1Utils";
 import { Zap, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -30,7 +30,8 @@ export default function QuickScenarios({ drivers, config }) {
 
   // Clinch tracker
   if (drivers[1]) {
-    const clinch = pointsToClinch(leader.points, drivers[1].points, maxAvailable);
+    const sprintsLeft = (config.total_sprints || 0) - (config.sprints_completed || 0);
+    const clinch = pointsToClinchVsRival(leader.points, drivers[1].points, racesLeft, sprintsLeft);
     if (clinch > 0) {
       scenarios.push({
         emoji: "🎯",
