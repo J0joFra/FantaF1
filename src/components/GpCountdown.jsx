@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function GpCountdown({ targetDate }) {
-  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
-
-  function calculateTimeLeft() {
+  // Wrap calculateTimeLeft in useCallback so it can safely be listed
+  // as a dependency — fixes the stale-closure bug where the timer kept
+  // reading the original targetDate even after a prop change.
+  const calculateTimeLeft = useCallback(() => {
     if (!targetDate) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
     const diff = new Date(targetDate).getTime() - Date.now();
     if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
@@ -14,12 +15,16 @@ export default function GpCountdown({ targetDate }) {
       minutes: Math.floor((diff / (1000 * 60)) % 60),
       seconds: Math.floor((diff / 1000) % 60),
     };
-  }
+  }, [targetDate]);
+
+  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft);
 
   useEffect(() => {
+    // Recalculate immediately when targetDate changes
+    setTimeLeft(calculateTimeLeft());
     const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000);
     return () => clearInterval(timer);
-  }, [targetDate]);
+  }, [calculateTimeLeft]);
 
   const units = [
     { label: 'GG',  value: timeLeft.days },
