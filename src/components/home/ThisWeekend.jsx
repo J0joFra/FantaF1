@@ -2,7 +2,11 @@ import { Calendar, MapPin, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { calculateMaxAvailablePoints, MAX_POINTS_WEEKEND_WITH_SPRINT, MAX_POINTS_WEEKEND_NO_SPRINT, isMathematicallyEliminated } from "@/lib/f1Utils";
+import {
+  calculateMaxAvailablePoints,
+  MAX_POINTS_WEEKEND_WITH_SPRINT,
+  MAX_POINTS_WEEKEND_NO_SPRINT,
+} from "@/lib/f1Utils";
 
 export default function ThisWeekend({ config, drivers }) {
   if (!config?.next_race_name) return null;
@@ -11,18 +15,35 @@ export default function ThisWeekend({ config, drivers }) {
     ? MAX_POINTS_WEEKEND_WITH_SPRINT
     : MAX_POINTS_WEEKEND_NO_SPRINT;
 
-  // Calculate who could be eliminated this weekend
   const leader = drivers?.[0];
-  const eliminationRisks = drivers?.slice(1).filter(d => {
-    const remainingAfterThis = calculateMaxAvailablePoints({
-      ...config,
-      races_completed: config.races_completed + 1,
-      sprints_completed: config.sprints_completed + (config.next_race_has_sprint ? 1 : 0)
-    });
-    const bestCase = d.points + maxWeekendPoints + remainingAfterThis;
-    const worstCaseLeader = leader.points + maxWeekendPoints;
-    return bestCase < worstCaseLeader;
-  }) || [];
+
+  // Calculate elimination risks AFTER this weekend.
+  // A driver is at risk if — even assuming they score max points this weekend
+  // AND max points in all remaining rounds after it — they still can't beat
+  // the leader who scores the minimum (0) this weekend and onwards.
+  //
+  // Previous logic was wrong: it added maxWeekendPoints to the leader's score
+  // (best case for leader) while also adding it to the driver's score
+  // (best case for driver), making the threshold way too strict and showing
+  // false eliminations.
+  const eliminationRisks = (leader && drivers?.length > 1)
+    ? drivers.slice(1).filter(d => {
+        // Remaining points AFTER this race weekend
+        const remainingAfterThis = calculateMaxAvailablePoints({
+          ...config,
+          races_completed:  (config.races_completed  || 0) + 1,
+          sprints_completed: (config.sprints_completed || 0) + (config.next_race_has_sprint ? 1 : 0),
+        });
+
+        // Best possible total for the challenger: max this weekend + max all remaining
+        const challengerBestCase = d.points + maxWeekendPoints + remainingAfterThis;
+
+        // Minimum total the leader could finish the season with (scores 0 from here)
+        const leaderCurrentPoints = leader.points;
+
+        return challengerBestCase < leaderCurrentPoints;
+      })
+    : [];
 
   return (
     <motion.div
@@ -71,7 +92,8 @@ export default function ThisWeekend({ config, drivers }) {
           <div className="bg-destructive/5 rounded-lg p-3 border border-destructive/10">
             <p className="text-xs font-semibold text-destructive mb-1">Rischio eliminazione</p>
             <p className="text-xs text-muted-foreground">
-              {eliminationRisks.map(d => d.driver_name).join(", ")} potrebbero essere matematicamente eliminati
+              {eliminationRisks.map(d => d.driver_name).join(", ")} potrebbero essere
+              matematicamente eliminati dopo questo weekend
             </p>
           </div>
         )}
