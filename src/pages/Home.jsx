@@ -1,34 +1,42 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import {
+  getDriverStandings,
+  getConstructorStandings,
+  getSeasonConfig,
+  getFerrariSeasonSummary,
+} from "@/lib/supabaseData";
 import ChampionshipBattle from "@/components/home/ChampionshipBattle";
 import ThisWeekend from "@/components/home/ThisWeekend";
 import QuickScenarios from "@/components/home/QuickScenarios";
 import FerrariWatch from "@/components/home/FerrariWatch";
 import ConstructorsStanding from "@/components/home/ConstructorsStanding";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 
 export default function Home() {
-  const { data: drivers = [], isLoading: loadingDrivers } = useQuery({
-    queryKey: ["driverStandings", 2025],
-    queryFn: () => base44.entities.DriverStanding.filter({ season: 2025 }, "position", 100),
+  const { data: drivers = [], isLoading: loadingDrivers, error: driversError } = useQuery({
+    queryKey: ["driverStandings"],
+    queryFn: getDriverStandings,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: teams = [], isLoading: loadingTeams } = useQuery({
-    queryKey: ["teamStandings", 2025],
-    queryFn: () => base44.entities.TeamStanding.filter({ season: 2025 }, "position", 100),
+    queryKey: ["constructorStandings"],
+    queryFn: getConstructorStandings,
+    staleTime: 5 * 60 * 1000,
   });
 
-  const { data: configs = [], isLoading: loadingConfig } = useQuery({
-    queryKey: ["seasonConfig", 2025],
-    queryFn: () => base44.entities.SeasonConfig.filter({ season: 2025 }),
+  const { data: config, isLoading: loadingConfig } = useQuery({
+    queryKey: ["seasonConfig"],
+    queryFn: getSeasonConfig,
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: ferrariSeasons = [] } = useQuery({
     queryKey: ["ferrariSeasons"],
-    queryFn: () => base44.entities.FerrariSeason.list("-season", 5),
+    queryFn: getFerrariSeasonSummary,
+    staleTime: 30 * 60 * 1000,
   });
 
-  const config = configs[0];
   const isLoading = loadingDrivers || loadingTeams || loadingConfig;
 
   if (isLoading) {
@@ -39,11 +47,25 @@ export default function Home() {
     );
   }
 
+  if (driversError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center">
+        <AlertCircle className="w-8 h-8 text-destructive" />
+        <p className="text-sm text-muted-foreground max-w-xs">
+          Errore nel caricamento dei dati. Controlla la connessione a Supabase.
+        </p>
+        <p className="text-xs text-muted-foreground/60">{driversError.message}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5 pb-10">
       <div className="mb-2">
         <h1 className="font-heading font-black text-2xl tracking-tight">F1 Scenarios</h1>
-        <p className="text-sm text-muted-foreground">Stagione 2025 · Scenari campionato in tempo reale</p>
+        <p className="text-sm text-muted-foreground">
+          Stagione {config?.season || new Date().getFullYear()} · Scenari campionato in tempo reale
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
