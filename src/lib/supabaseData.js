@@ -1,128 +1,190 @@
 import { supabase } from './supabase';
 
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
 function throwIfError(error, context) {
-  if (error) {
-    throw new Error(`${context}: ${error.message}`);
-  }
+  if (error) throw new Error(`${context}: ${error.message}`);
 }
 
-function normalizeGp(row) {
-  const raceDateRaw = row.race_date || row.date || row.race_datetime || row.raceDate;
-  const raceDate = raceDateRaw ? new Date(raceDateRaw) : null;
-  const pickDeadlineRaw = row.pick_deadline || (raceDate ? new Date(raceDate.getTime() - 60 * 60 * 1000).toISOString() : null);
-  const pickDeadline = pickDeadlineRaw ? new Date(pickDeadlineRaw) : null;
+// ─── DRIVER STANDINGS ────────────────────────────────────────────────────────
+export async function getDriverStandings() {
+  const { data, error } = await supabase
+    .from('current_season_driver_standings')
+    .select('*')
+    .order('position', { ascending: true });
+
+  throwIfError(error, 'Driver standings');
+  return (data || []).map(normalizeDriver);
+}
+
+function normalizeDriver(row) {
+  return {
+    // Use ?? instead of || so falsy-but-valid values like 0 are preserved
+    id:           String(row.driver_id ?? row.id ?? row.driver_code ?? ''),
+    driver_name:  row.driver_name || `${row.first_name || ''} ${row.last_name || ''}`.trim(),
+    driver_code:  row.driver_code || row.abbreviation || '',
+    team:         row.constructor_name || row.team || '',
+    points:       row.points       ?? 0,
+    position:     row.position     ?? 0,
+    wins:         row.wins         ?? 0,
+    podiums:      row.podiums      ?? 0,
+    poles:        row.poles        ?? row.pole_positions ?? 0,
+    fastest_laps: row.fastest_laps ?? 0,
+    dnfs:         row.dnfs         ?? row.retirements   ?? 0,
+  };
+}
+
+// ─── CONSTRUCTOR STANDINGS ───────────────────────────────────────────────────
+export async function getConstructorStandings() {
+  const { data, error } = await supabase
+    .from('current_season_constructor_standings')
+    .select('*')
+    .order('position', { ascending: true });
+
+  throwIfError(error, 'Constructor standings');
+  return (data || []).map(normalizeConstructor);
+}
+
+function normalizeConstructor(row) {
+  return {
+    id:         String(row.constructor_id ?? row.id ?? ''),
+    team_name:  row.constructor_name || row.name || '',
+    team_color: row.color || null,
+    points:     row.points   ?? 0,
+    position:   row.position ?? 0,
+    wins:       row.wins     ?? 0,
+    podiums:    row.podiums  ?? 0,
+  };
+}
+
+// ─── SEASON CONFIG ────────────────────────────────────────────────────────────
+export async function getSeasonConfig() {
+  const { data, error } = await supabase
+    .from('race_calendar_with_results')
+    .select('*')
+    .order('round', { ascending: true });
+
+  throwIfError(error, 'Season config');
+
+  const races = data || [];
   const now = new Date();
 
-  let status = row.status || 'upcoming';
-  if (!row.status && raceDate) {
-    if (now >= raceDate) status = 'completed';
-    else if (pickDeadline && now >= pickDeadline) status = 'live';
-    else status = 'upcoming';
-  }
+  // A race counts as completed if its date has passed — regardless of whether
+  // results have been entered yet. Using winner_name as the gate caused
+  // races_completed to be under-counted whenever results were delayed.
+  const completed = races.filter(r => {
+    const d = r.race_date || r.date;
+    return d && new Date(d) < now;
+  });
+
+  const upcoming = races.find(r => {
+    const d = r.race_date || r.date;
+    return d && new Date(d) >= now;
+  });
+
+  const sprintRaces     = races.filter(r => r.has_sprint_race || r.sprint_race_winner);
+  const completedSprints = completed.filter(r => r.has_sprint_race || r.sprint_race_winner);
 
   return {
-    id: String(row.id || row.race_id || row.grand_prix_id || row.round || row.name || Math.random()),
-    name: row.name || row.grand_prix_name || row.race_name || 'Grand Prix',
-    race_date: raceDateRaw || null,
-    pick_deadline: pickDeadlineRaw || raceDateRaw || null,
-    round: row.round || row.race_round || null,
-    flag_emoji: row.flag_emoji || row.country_flag || '🏁',
-    circuit: row.circuit || row.circuit_name || row.track_name || '',
-    country: row.country || row.country_name || '',
-    status,
-    race_results: row.race_results || null,
+    season:              upcoming?.season || new Date().getFullYear(),
+    total_races:         races.length,
+    races_completed:     completed.length,
+    total_sprints:       sprintRaces.length,
+    sprints_completed:   completedSprints.length,
+    next_race_name:      upcoming ? (upcoming.grand_prix_name || upcoming.race_name || upcoming.name) : null,
+    next_race_circuit:   upcoming ? (upcoming.circuit_name || upcoming.circuit || '') : null,
+    next_race_date:      upcoming ? (upcoming.race_date || upcoming.date) : null,
+    next_race_has_sprint: !!(upcoming?.has_sprint_race),
   };
 }
 
-async function fetchGpRows(limit = 50, ascending = true) {
-  const attempts = [
-    () =>
-      supabase
-        .from('grand_prix')
-        .select('*')
-        .order('race_date', { ascending })
-        .limit(limit),
-    () =>
-      supabase
-        .from('race_calendar_with_results')
-        .select('*')
-        .order('race_date', { ascending })
-        .limit(limit),
-    () =>
-      supabase
-        .from('race')
-        .select('*')
-        .order('date', { ascending })
-        .limit(limit),
-  ];
-
-  let lastError = null;
-  for (const attempt of attempts) {
-    const { data, error } = await attempt();
-    if (!error) return data || [];
-    lastError = error;
-  }
-  throwIfError(lastError, 'Failed loading grand prix data');
-  return [];
-}
-
+// ─── NEXT GRAND PRIX ─────────────────────────────────────────────────────────
 export async function getNextGrandPrix() {
-  const rows = await fetchGpRows(200, true);
-  const mapped = rows.map(normalizeGp).filter((gp) => gp.race_date);
-  const now = new Date();
+  // Filter and limit server-side — avoids fetching the entire calendar
+  const today = new Date().toISOString().split('T')[0];
 
-  const upcoming = mapped.find((gp) => new Date(gp.race_date) >= now);
-  return upcoming || mapped[mapped.length - 1] || null;
-}
-
-export async function getGrandPrixList(limit = 50) {
-  const rows = await fetchGpRows(limit, false);
-  return rows.map(normalizeGp);
-}
-
-export async function getActiveDrivers(season = 2026) {
-  const tryLoadWithFilters = async (tableName) => {
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('*')
-      .eq('season', season)
-      .eq('is_active', true)
-      .order('surname', { ascending: true });
-    return { data, error };
-  };
-
-  const tryLoadSimple = async (tableName) => {
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('*')
-      .order('surname', { ascending: true })
-      .limit(40);
-    return { data, error };
-  };
-
-  const first = await tryLoadWithFilters('drivers');
-  if (!first.error) return first.data || [];
-
-  // Fallback for projects using singular table names.
-  const second = await tryLoadWithFilters('driver');
-  if (!second.error) return second.data || [];
-
-  const third = await tryLoadSimple('driver');
-  if (!third.error) return third.data || [];
-
-  const fourth = await tryLoadSimple('drivers');
-  if (!fourth.error) return fourth.data || [];
-
-  throw new Error(`Failed loading active drivers: ${first.error.message}`);
-}
-
-export async function getCircuits() {
-  // Optional dataset: not all projects include this table.
   const { data, error } = await supabase
-    .from('circuits')
+    .from('race_calendar_with_results')
     .select('*')
-    .order('name', { ascending: true });
+    .gte('race_date', today)
+    .order('round', { ascending: true })
+    .limit(1)
+    .single();
 
-  if (error) return [];
+  if (error) return null; // No upcoming races is not a fatal error
+  return data;
+}
+
+// ─── LATEST RACE RESULTS ─────────────────────────────────────────────────────
+export async function getLatestRaceResults() {
+  const { data, error } = await supabase
+    .from('latest_race_results')
+    .select('*')
+    .order('position', { ascending: true });
+
+  if (error) {
+    console.error('Latest race results:', error.message);
+    return [];
+  }
   return data || [];
+}
+
+// ─── FERRARI DATA ─────────────────────────────────────────────────────────────
+export async function getFerrariSeasonSummary() {
+  const { data, error } = await supabase
+    .from('ferrari_season_summary')
+    .select('*')
+    .order('season', { ascending: false })
+    .limit(20);
+
+  throwIfError(error, 'Ferrari summary');
+  return (data || []).map(row => ({
+    season:                row.season,
+    points:                row.total_points  ?? row.points   ?? 0,
+    position:              row.final_position ?? row.position ?? null,
+    wins:                  row.wins           ?? row.race_wins ?? 0,
+    podiums:               row.podiums        ?? 0,
+    poles:                 row.poles          ?? row.pole_positions ?? 0,
+    drivers_champion:      row.drivers_champion      ?? false,
+    constructors_champion: row.constructors_champion ?? false,
+  }));
+}
+
+export async function getFerrariPointsByYear() {
+  const { data, error } = await supabase
+    .from('ferrari_points_by_year')
+    .select('*')
+    .order('season', { ascending: true });
+
+  if (error) {
+    console.error('Ferrari points by year:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+export async function getFerrariDriverStats() {
+  const { data, error } = await supabase
+    .from('driver_ferrari_stats')
+    .select('*')
+    .order('wins', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error('Ferrari driver stats:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+export async function getFerrariArchiveStats() {
+  const { data, error } = await supabase
+    .from('ferrari_archive_stats')
+    .select('*')
+    .limit(1);
+
+  if (error) {
+    console.error('Ferrari archive stats:', error.message);
+    return null;
+  }
+  return data?.[0] || null;
 }
