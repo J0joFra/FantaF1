@@ -1,4 +1,3 @@
-// lib/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from './firebase';
 import {
@@ -37,7 +36,7 @@ export function AuthProvider({ children }) {
       const result = await signInWithPopup(auth, provider);
       return result.user;
     } catch (error) {
-      console.error('Errore login:', error);
+      console.error('Login error:', error);
       throw error;
     }
   };
