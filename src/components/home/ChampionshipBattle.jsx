@@ -1,70 +1,50 @@
 import { motion } from "framer-motion";
 import { getTeamColor, calculateMaxAvailablePoints, isMathematicallyEliminated } from "@/lib/f1Utils";
-import { Trophy } from "lucide-react";
+import { Trophy, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 function DriverRow({ driver, leader, maxAvailable, index }) {
-  const gap        = leader.points - driver.points;
   const isLeader   = index === 0;
-  const isTop3     = index < 3;
-  const eliminated = !isLeader && isMathematicallyEliminated(driver.points, leader.points, maxAvailable);
-  const barWidth   = leader.points > 0 ? (driver.points / leader.points) * 100 : 0;
   const color      = getTeamColor(driver.team);
-
-  const medals = ["🥇", "🥈", "🥉"];
+  const gap        = leader.points - driver.points;
+  const eliminated = !isLeader && isMathematicallyEliminated(driver.points, leader.points, maxAvailable);
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -16 }}
+      initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.04 }}
-      className={`flex items-center gap-3 py-2.5 ${index > 0 ? "border-t border-border/40" : ""}`}
+      className={`flex items-center gap-4 py-3.5
+        ${index > 0 ? "border-t border-gray-100" : ""}
+        ${isLeader ? "accent-bar" : ""}`}
     >
-      {/* Position */}
-      <div className="w-7 text-center shrink-0">
-        {isTop3
-          ? <span className="text-base">{medals[index]}</span>
-          : <span className={`font-mono text-xs font-bold ${eliminated ? "text-muted-foreground/40" : "text-muted-foreground"}`}>
-              {driver.position}
-            </span>
-        }
+      <span className={`w-6 text-center font-heading font-black text-lg shrink-0
+        ${isLeader ? "text-primary" : "text-gray-300"}`}>
+        {driver.position}
+      </span>
+      <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center
+                      font-heading font-black text-sm text-white"
+           style={{ background: `linear-gradient(135deg, ${color}bb, ${color})` }}>
+        {driver.driver_code?.slice(0,3) || driver.driver_name.slice(0,2).toUpperCase()}
       </div>
-
-      {/* Name + bar */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-1">
-          <div className="w-1 h-3.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-          <span className={`font-heading font-bold text-sm truncate leading-none
-            ${eliminated ? "text-muted-foreground/50 line-through" : ""}`}>
-            {driver.driver_name}
-          </span>
+        <p className={`font-heading font-black text-base leading-tight truncate
+          ${eliminated ? "line-through text-gray-300" : ""}`}>
+          {driver.driver_name}
+        </p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+          <p className="text-xs text-muted-foreground font-body truncate">{driver.team}</p>
           {eliminated && (
-            <span className="tag bg-destructive/10 text-destructive border border-destructive/20 shrink-0">
-              OUT
-            </span>
+            <span className="tag bg-red-50 text-red-400 border border-red-100">OUT</span>
           )}
         </div>
-        <div className="relative h-1 bg-secondary rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min(barWidth, 100)}%` }}
-            transition={{ duration: 0.7, delay: index * 0.04, ease: "easeOut" }}
-            className="absolute inset-y-0 left-0 rounded-full"
-            style={{ backgroundColor: eliminated ? "#333" : color }}
-          />
-        </div>
       </div>
-
-      {/* Points + gap */}
-      <div className="text-right shrink-0 min-w-[52px]">
-        <span className={`font-mono font-bold text-sm block
-          ${isLeader ? "text-primary" : eliminated ? "text-muted-foreground/40" : ""}`}>
-          {driver.points}
-        </span>
-        {!isLeader && (
-          <span className="font-mono text-[10px] text-muted-foreground/60 block">
-            −{gap}
-          </span>
-        )}
+      <div className="text-right shrink-0">
+        <span className="font-heading font-black text-xl leading-none">{driver.points}</span>
+        <p className="text-[10px] text-muted-foreground font-body mt-0.5">
+          {isLeader ? "PTI" : `−${gap}`}
+        </p>
       </div>
     </motion.div>
   );
@@ -76,22 +56,19 @@ export default function ChampionshipBattle({ drivers, config }) {
   const maxAvailable = calculateMaxAvailablePoints(config);
 
   return (
-    <div className="rounded-2xl bg-card border border-border overflow-hidden">
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border/60">
+    <div className="app-card overflow-hidden">
+      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-primary" />
-          <h2 className="font-heading font-black text-lg uppercase tracking-wide">
-            Classifica Piloti
-          </h2>
+          <Trophy className="w-4 h-4 text-primary" strokeWidth={2} />
+          <h2 className="font-heading font-black text-base uppercase tracking-wide">Classifica Piloti</h2>
         </div>
-        <span className="font-mono text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-lg">
-          {config?.races_completed ?? 0}/{config?.total_races ?? 0} GP
-        </span>
+        <Link to="/calculator" className="flex items-center gap-0.5 text-xs text-primary font-body font-semibold">
+          Scenari <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
-      <div className="px-4 py-1">
-        {drivers.slice(0, 10).map((d, i) => (
-          <DriverRow key={d.id} driver={d} leader={leader}
-                     maxAvailable={maxAvailable} index={i} />
+      <div className="px-4">
+        {drivers.slice(0, 8).map((d, i) => (
+          <DriverRow key={d.id} driver={d} leader={leader} maxAvailable={maxAvailable} index={i} />
         ))}
       </div>
     </div>

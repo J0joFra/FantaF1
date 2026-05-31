@@ -24,7 +24,7 @@ function StatBox({ label, value }) {
 }
 
 const tooltipStyle = {
-  background: "hsl(20 8% 9%)",
+  background: "white",
   border: "1px solid hsl(20 8% 15%)",
   borderRadius: "10px",
   fontSize: "12px",
@@ -61,7 +61,8 @@ export default function Ferrari() {
   }));
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="space-y-4 px-4 pt-14 pb-4 relative">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
       <div className="flex items-center gap-2 pt-1">
         <div className="w-6 h-6 rounded flex items-center justify-center"
              style={{ backgroundColor: RED }}>
@@ -100,7 +101,7 @@ export default function Ferrari() {
 
           {ferrariDrivers.map(d => (
             <div key={d.id}
-              className="mx-4 mb-3 flex items-center justify-between rounded-xl bg-secondary/40 px-3 py-2.5">
+              className="mx-4 mb-3 flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5">
               <div>
                 <p className="font-heading font-bold text-sm">{d.driver_name}</p>
                 <p className="font-mono text-[10px] text-muted-foreground">P{d.position} mondiale</p>
@@ -119,7 +120,7 @@ export default function Ferrari() {
       {/* Archive stats */}
       {archiveStats && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          className="rounded-2xl bg-card border border-border p-4">
+          className="app-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <Flag className="w-4 h-4 text-primary" />
             <h2 className="font-heading font-black text-lg uppercase tracking-wide">Storia</h2>
@@ -136,7 +137,7 @@ export default function Ferrari() {
       {/* Points trend chart */}
       {chartData.length > 1 && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="rounded-2xl bg-card border border-border p-4">
+          className="app-card p-4">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-4 h-4 text-primary" />
             <h2 className="font-heading font-black text-lg uppercase tracking-wide">Punti per stagione</h2>
@@ -150,7 +151,7 @@ export default function Ferrari() {
                     <stop offset="95%" stopColor={RED} stopOpacity={0}    />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(20 8% 13%)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 14% 94%)" />
                 <XAxis dataKey="year" tick={{ fontSize: 10, fill: "hsl(20 8% 40%)" }} />
                 <YAxis tick={{ fontSize: 10, fill: "hsl(20 8% 40%)" }} width={30} />
                 <Tooltip contentStyle={tooltipStyle} />
@@ -165,12 +166,12 @@ export default function Ferrari() {
       {/* Wins bar chart */}
       {chartData.length > 1 && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-          className="rounded-2xl bg-card border border-border p-4">
+          className="app-card p-4">
           <h2 className="font-heading font-black text-lg uppercase tracking-wide mb-4">Vittorie per stagione</h2>
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(20 8% 13%)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 14% 94%)" />
                 <XAxis dataKey="year" tick={{ fontSize: 10, fill: "hsl(20 8% 40%)" }} />
                 <YAxis tick={{ fontSize: 10, fill: "hsl(20 8% 40%)" }} allowDecimals={false} width={20} />
                 <Tooltip contentStyle={tooltipStyle} />
@@ -184,7 +185,7 @@ export default function Ferrari() {
       {/* Top Ferrari drivers */}
       {topDrivers.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="rounded-2xl bg-card border border-border p-4">
+          className="app-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <Users className="w-4 h-4 text-primary" />
             <h2 className="font-heading font-black text-lg uppercase tracking-wide">Piloti storici</h2>
@@ -192,7 +193,7 @@ export default function Ferrari() {
           <div className="space-y-1.5">
             {topDrivers.slice(0, 10).map((d, i) => (
               <div key={i}
-                className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
+                className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-xs text-muted-foreground/50 w-4">{i + 1}</span>
                   <span className="font-heading font-bold text-sm">

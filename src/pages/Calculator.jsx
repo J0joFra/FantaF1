@@ -86,7 +86,7 @@ function InfoModal({ onClose }) {
       <motion.div
         initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         exit={{ y: 60, opacity: 0 }} transition={{ type: "spring", damping: 20 }}
-        className="w-full max-w-lg rounded-2xl bg-card border border-border p-5"
+        className="w-full max-w-lg app-card p-5"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -96,7 +96,7 @@ function InfoModal({ onClose }) {
           </button>
         </div>
         <div className="space-y-3 text-sm text-muted-foreground">
-          <div className="bg-secondary/60 rounded-xl p-3 font-mono text-xs space-y-1.5">
+          <div className="bg-gray-100 rounded-xl p-3 font-mono text-xs space-y-1.5">
             <p>Max rivale  = punti + (gare × <b className="text-white">25</b>) + (sprint × 8)</p>
             <p>Serve       = Max rivale − punti_pilota + 1</p>
           </div>
@@ -116,13 +116,13 @@ function Stepper({ value, onChange, min = 0 }) {
   return (
     <div className="flex items-center gap-1.5">
       <button onClick={() => onChange(Math.max(min, value - 1))}
-        className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center
+        className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center
                    text-muted-foreground hover:text-foreground transition-colors active:scale-95">
         <ChevronDown className="w-4 h-4" />
       </button>
       <span className="font-mono font-black text-xl w-8 text-center tabular-nums select-none">{value}</span>
       <button onClick={() => onChange(value + 1)}
-        className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center
+        className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center
                    text-muted-foreground hover:text-foreground transition-colors active:scale-95">
         <ChevronUp className="w-4 h-4" />
       </button>
@@ -134,8 +134,8 @@ function Stepper({ value, onChange, min = 0 }) {
 function FinishBreakdown({ needed, racesLeft, driverName, driverColor }) {
   const combo = finishCombo(needed, racesLeft);
   return (
-    <div className="rounded-2xl bg-card border border-border overflow-hidden">
-      <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-border/60">
+    <div className="app-card overflow-hidden">
+      <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-gray-100">
         <span className="text-base">🏁</span>
         <span className="font-heading font-black text-xs uppercase tracking-widest text-muted-foreground">
           Combinazione minima di risultati
@@ -179,7 +179,7 @@ function FinishBreakdown({ needed, racesLeft, driverName, driverColor }) {
                       ))}
                       {r.count > 8 && (
                         <div className="w-5 h-5 rounded-md flex items-center justify-center
-                                        text-[9px] font-mono font-bold bg-secondary text-muted-foreground">
+                                        text-[9px] font-mono font-bold bg-gray-100 text-muted-foreground">
                           +{r.count - 8}
                         </div>
                       )}
@@ -194,7 +194,7 @@ function FinishBreakdown({ needed, racesLeft, driverName, driverColor }) {
               ))}
             </div>
             {/* Summary line */}
-            <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between">
+            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
               <span className="font-heading font-bold text-xs text-muted-foreground uppercase tracking-wide">
                 {combo.rows.map(r => `${r.count}×${r.label}`).join(", ")}
               </span>
@@ -216,8 +216,8 @@ function FinishGrid({ driver, rival, racesLeft, sprintsLeft, driverColor, rivalC
   const cutoff = grid.findIndex(r => r.driverWins);
 
   return (
-    <div className="rounded-2xl bg-card border border-border overflow-hidden">
-      <div className="px-4 pt-4 pb-3 border-b border-border/60">
+    <div className="app-card overflow-hidden">
+      <div className="px-4 pt-4 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-base">📊</span>
           <span className="font-heading font-black text-xs uppercase tracking-widest text-muted-foreground">
@@ -230,16 +230,16 @@ function FinishGrid({ driver, rival, racesLeft, sprintsLeft, driverColor, rivalC
       </div>
 
       {/* Column headers */}
-      <div className="grid grid-cols-[44px_1fr_1fr_52px] gap-x-2 px-4 py-2 border-b border-border/40">
-        <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-muted-foreground/60">Pos</span>
+      <div className="grid grid-cols-[44px_1fr_1fr_52px] gap-x-2 px-4 py-2 border-b border-gray-100">
+        <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-gray-300">Pos</span>
         <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-right"
               style={{ color: driverColor }}>{driver.driver_code || driver.driver_name.split(" ")[1]}</span>
         <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-right"
               style={{ color: rivalColor }}>{rival.driver_code || rival.driver_name.split(" ")[1]}</span>
-        <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-muted-foreground/60 text-right">Esito</span>
+        <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-gray-300 text-right">Esito</span>
       </div>
 
-      <div className="divide-y divide-border/30">
+      <div className="divide-y divide-gray-100">
         {grid.map((row, i) => (
           <motion.div
             key={i}
@@ -268,7 +268,7 @@ function FinishGrid({ driver, rival, racesLeft, sprintsLeft, driverColor, rivalC
               {row.driverWins ? (
                 <span className="tag bg-green-500/12 text-green-400 border border-green-500/20">✓ WIN</span>
               ) : (
-                <span className="tag bg-secondary text-muted-foreground">✗</span>
+                <span className="tag bg-gray-100 text-muted-foreground">✗</span>
               )}
             </div>
           </motion.div>
@@ -276,7 +276,7 @@ function FinishGrid({ driver, rival, racesLeft, sprintsLeft, driverColor, rivalC
       </div>
 
       {cutoff >= 0 && (
-        <div className="px-4 py-2.5 border-t border-border/40 bg-green-500/4">
+        <div className="px-4 py-2.5 border-t border-gray-100 bg-green-500/4">
           <p className="text-xs font-heading font-bold text-green-400">
             ✓ Basta finire {grid[cutoff].label} o meglio in ogni gara
           </p>
@@ -292,22 +292,22 @@ function RivalsTable({ allRivals, driverColor, driver, racesLeft, sprintsLeft, o
   const sorted = [...allRivals].sort((a, b) => b.needed - a.needed);
 
   return (
-    <div className="rounded-2xl bg-card border border-border overflow-hidden">
-      <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-border/60">
+    <div className="app-card overflow-hidden">
+      <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-gray-100">
         <span className="text-base">📋</span>
         <span className="font-heading font-black text-xs uppercase tracking-widest text-muted-foreground">
           Tutti i rivali · tocca per dettaglio
         </span>
       </div>
 
-      <div className="grid grid-cols-[1fr_52px_64px_44px] gap-x-2 px-4 py-2 border-b border-border/40">
+      <div className="grid grid-cols-[1fr_52px_64px_44px] gap-x-2 px-4 py-2 border-b border-gray-100">
         {["Rivale", "Max", "Serve", ""].map((h, i) => (
           <span key={i} className="font-heading font-bold text-[10px] uppercase tracking-widest
-                                   text-muted-foreground/60 text-right first:text-left">{h}</span>
+                                   text-gray-300 text-right first:text-left">{h}</span>
         ))}
       </div>
 
-      <div className="divide-y divide-border/30">
+      <div className="divide-y divide-gray-100">
         {sorted.map((r, i) => {
           const done        = r.needed <= 0;
           const rivalColor  = getTeamColor(r.rival.team);
@@ -325,7 +325,7 @@ function RivalsTable({ allRivals, driverColor, driver, racesLeft, sprintsLeft, o
                 className={`w-full grid grid-cols-[1fr_52px_64px_44px] gap-x-2 items-center px-4 py-2.5
                   transition-colors text-left
                   ${done ? "opacity-40" : ""}
-                  ${isSelected ? "bg-secondary/60" : "hover:bg-secondary/30"}`}
+                  ${isSelected ? "bg-gray-100" : "hover:bg-gray-50"}`}
               >
                 {/* Name */}
                 <div className="flex items-center gap-2 min-w-0">
@@ -353,7 +353,7 @@ function RivalsTable({ allRivals, driverColor, driver, racesLeft, sprintsLeft, o
                   ) : r.needed <= 25 ? (
                     <span className="tag bg-primary/10 text-primary border border-primary/20">HOT</span>
                   ) : (
-                    <ChevronRight className={`w-3.5 h-3.5 transition-transform text-muted-foreground/40
+                    <ChevronRight className={`w-3.5 h-3.5 transition-transform text-gray-300
                       ${isSelected ? "rotate-90" : ""}`} />
                   )}
                 </div>
@@ -369,7 +369,7 @@ function RivalsTable({ allRivals, driverColor, driver, racesLeft, sprintsLeft, o
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-4 pb-3 pt-1 space-y-2 border-t border-border/40 bg-secondary/20">
+                    <div className="px-4 pb-3 pt-1 space-y-2 border-t border-gray-100 bg-gray-100/20">
                       {/* Finish combo */}
                       {combo && !combo.impossible && (
                         <div>
@@ -379,7 +379,7 @@ function RivalsTable({ allRivals, driverColor, driver, racesLeft, sprintsLeft, o
                           <div className="flex flex-wrap gap-1.5">
                             {combo.rows.map((cr, j) => (
                               <div key={j}
-                                className="flex items-center gap-1 bg-card rounded-lg px-2 py-1 border border-border/60">
+                                className="flex items-center gap-1 bg-card rounded-lg px-2 py-1 border border-gray-100">
                                 <span className="text-xs">{cr.emoji}</span>
                                 <span className="font-heading font-bold text-xs">{cr.label}</span>
                                 <span className="font-mono text-[10px] text-muted-foreground">×{cr.count}</span>
@@ -406,7 +406,7 @@ function RivalsTable({ allRivals, driverColor, driver, racesLeft, sprintsLeft, o
                                 className={`rounded-lg p-1.5 text-center border
                                   ${row.driverWins
                                     ? "bg-green-500/10 border-green-500/20"
-                                    : "bg-card border-border/60"}`}
+                                    : "bg-card border-gray-100"}`}
                               >
                                 <p className="text-sm">{row.emoji}</p>
                                 <p className={`font-mono font-bold text-xs
@@ -430,7 +430,7 @@ function RivalsTable({ allRivals, driverColor, driver, racesLeft, sprintsLeft, o
         })}
       </div>
 
-      <div className="flex items-center gap-4 px-4 py-2.5 border-t border-border/40">
+      <div className="flex items-center gap-4 px-4 py-2.5 border-t border-gray-100">
         <div className="flex items-center gap-1.5">
           <span className="tag bg-green-500/10 text-green-400 border border-green-500/20">GIÀ</span>
           <span className="text-[10px] text-muted-foreground">clinchato</span>
@@ -494,7 +494,8 @@ export default function Calculator() {
     : "";
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="space-y-4 px-4 pt-14 pb-4 relative">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
       {/* ── Header ── */}
       <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-2">
@@ -502,19 +503,19 @@ export default function Calculator() {
           <h1 className="font-heading font-black text-2xl uppercase tracking-wide">Calcolatore</h1>
         </div>
         <button onClick={() => setShowInfo(true)}
-          className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center
+          className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center
                      text-muted-foreground hover:text-foreground transition-colors">
           <Info style={{ width: 18, height: 18 }} />
         </button>
       </div>
 
       {/* ── Driver selector ── */}
-      <div className="rounded-2xl bg-card border border-border px-4 py-3">
+      <div className="app-card px-4 py-3">
         <p className="font-heading font-bold text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
           Pilota
         </p>
         <Select value={driverId || ""} onValueChange={v => { setDriverId(v); setSelectedRivalId(null); }}>
-          <SelectTrigger className="w-full font-heading font-bold h-10 rounded-xl bg-secondary/60 border-0 px-3">
+          <SelectTrigger className="w-full font-heading font-bold h-10 rounded-xl bg-gray-100 border-0 px-3">
             <SelectValue placeholder="Seleziona un pilota..." />
           </SelectTrigger>
           <SelectContent>
@@ -546,7 +547,7 @@ export default function Calculator() {
       </div>
 
       {/* ── Counters ── */}
-      <div className="rounded-2xl bg-card border border-border px-4 py-3 space-y-3">
+      <div className="app-card px-4 py-3 space-y-3">
         {[
           { label: "Gare rimanenti",   value: effRaces,   set: setRacesLeft   },
           { label: "Sprint rimanenti", value: effSprints, set: setSprintsLeft },
@@ -654,9 +655,9 @@ export default function Calculator() {
                     ? navigator.share({ title: "FantaF1", text: shareText })
                     : navigator.clipboard.writeText(shareText)
                 }
-                className="flex items-center justify-center gap-2 rounded-xl bg-secondary
-                           border border-border py-3 font-heading font-bold text-sm
-                           hover:bg-secondary/80 transition-colors active:scale-95"
+                className="flex items-center justify-center gap-2 rounded-xl bg-gray-100
+                           border border-gray-200 py-3 font-heading font-bold text-sm
+                           hover:bg-gray-100/80 transition-colors active:scale-95"
               >
                 <Share2 className="w-4 h-4" />
                 Condividi
@@ -687,7 +688,7 @@ export default function Calculator() {
           <p className="font-heading font-bold text-sm text-muted-foreground uppercase tracking-wide">
             Seleziona un pilota
           </p>
-          <p className="text-xs text-muted-foreground/60 max-w-[240px]">
+          <p className="text-xs text-gray-300 max-w-[240px]">
             Calcola i punti necessari e i risultati minimi vs ogni rivale in classifica
           </p>
         </div>

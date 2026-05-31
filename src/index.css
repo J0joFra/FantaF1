@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Formula1:wght@400;700;900&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,69 +8,60 @@
 @layer base {
   :root {
     --font-heading: 'Barlow Condensed', sans-serif;
-    --font-body: 'Barlow', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-body:    'DM Sans', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
 
-    /* Deep carbon black with warm undertone */
-    --background: 20 8% 6%;
-    --foreground: 30 15% 94%;
+    /* Light theme — clean white app */
+    --background:         0 0% 96%;
+    --foreground:         220 20% 10%;
 
-    --card: 20 8% 9%;
-    --card-foreground: 30 15% 94%;
+    --card:               0 0% 100%;
+    --card-foreground:    220 20% 10%;
 
-    --popover: 20 8% 9%;
-    --popover-foreground: 30 15% 94%;
+    --popover:            0 0% 100%;
+    --popover-foreground: 220 20% 10%;
 
-    /* F1 Red — vivid, saturated */
-    --primary: 3 90% 52%;
+    /* F1 Red */
+    --primary:            3 90% 48%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 20 8% 13%;
-    --secondary-foreground: 30 10% 75%;
+    --secondary:          220 14% 94%;
+    --secondary-foreground: 220 14% 40%;
 
-    --muted: 20 8% 13%;
-    --muted-foreground: 20 8% 45%;
+    --muted:              220 14% 94%;
+    --muted-foreground:   220 10% 52%;
 
-    --accent: 3 90% 52%;
-    --accent-foreground: 0 0% 100%;
+    --accent:             3 90% 48%;
+    --accent-foreground:  0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive:        0 84% 56%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 20 8% 15%;
-    --input: 20 8% 15%;
-    --ring: 3 90% 52%;
+    --border:             220 14% 90%;
+    --input:              220 14% 90%;
+    --ring:               3 90% 48%;
 
-    /* Gold accent for P1 */
-    --gold: 43 96% 56%;
+    /* Dark card (for "punti necessari" style) */
+    --dark-card:          220 25% 12%;
+    --dark-card-fg:       0 0% 98%;
 
-    --radius: 1rem;
+    --radius: 1.25rem;
   }
 }
 
 @layer base {
-  * { @apply border-border outline-ring/50; }
+  * { @apply border-border outline-ring/50; box-sizing: border-box; }
 
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
-    /* Subtle carbon-fiber texture */
-    background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, hsl(3 90% 52% / 0.08) 0%, transparent 60%),
-      repeating-linear-gradient(
-        45deg,
-        transparent,
-        transparent 2px,
-        hsl(20 8% 8% / 0.4) 2px,
-        hsl(20 8% 8% / 0.4) 4px
-      );
-    background-attachment: fixed;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4 {
     font-family: var(--font-heading);
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
   }
 }
 
@@ -77,46 +69,43 @@
   .font-heading { font-family: var(--font-heading); }
   .font-mono    { font-family: var(--font-mono); }
 
-  /* Speed-line shimmer for special elements */
-  .speed-lines {
-    position: relative;
-    overflow: hidden;
-  }
-  .speed-lines::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      100deg,
-      transparent 0%,
-      transparent 96%,
-      hsl(3 90% 52% / 0.06) 97%,
-      transparent 98%
-    );
-    pointer-events: none;
+  /* App card — white with soft shadow */
+  .app-card {
+    @apply bg-white rounded-2xl;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
   }
 
-  /* Glowing red border */
-  .glow-border {
-    box-shadow: 0 0 0 1px hsl(3 90% 52% / 0.3), 0 0 20px hsl(3 90% 52% / 0.1);
+  /* Dark card */
+  .dark-card {
+    background: hsl(var(--dark-card));
+    color: hsl(var(--dark-card-fg));
+    @apply rounded-2xl;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
   }
 
-  /* Gold shine for leader */
-  .gold-glow {
-    box-shadow: 0 0 0 1px hsl(43 96% 56% / 0.4), 0 0 16px hsl(43 96% 56% / 0.12);
-  }
-
-  /* Pill tag */
+  /* Red pill tag */
   .tag {
     @apply text-[10px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full;
     font-family: var(--font-heading);
   }
 
   /* Bottom nav safe area */
-  .pb-safe { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
-}
+  .pb-nav { padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 
-/* Safe area for iOS */
-@supports (padding: env(safe-area-inset-bottom)) {
-  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  /* Horizontal scroll snap */
+  .scroll-snap-x {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .snap-start { scroll-snap-align: start; }
+
+  /* Red left accent bar */
+  .accent-bar {
+    @apply relative pl-3;
+  }
+  .accent-bar::before {
+    content: '';
+    @apply absolute left-0 top-0 bottom-0 w-1 rounded-full bg-primary;
+  }
 }
