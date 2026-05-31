@@ -16,84 +16,73 @@ export default function ThisWeekend({ config, drivers }) {
     : MAX_POINTS_WEEKEND_NO_SPRINT;
 
   const leader = drivers?.[0];
-
-  // Calculate elimination risks AFTER this weekend.
-  // A driver is at risk if — even assuming they score max points this weekend
-  // AND max points in all remaining rounds after it — they still can't beat
-  // the leader who scores the minimum (0) this weekend and onwards.
-  //
-  // Previous logic was wrong: it added maxWeekendPoints to the leader's score
-  // (best case for leader) while also adding it to the driver's score
-  // (best case for driver), making the threshold way too strict and showing
-  // false eliminations.
   const eliminationRisks = (leader && drivers?.length > 1)
     ? drivers.slice(1).filter(d => {
-        // Remaining points AFTER this race weekend
-        const remainingAfterThis = calculateMaxAvailablePoints({
+        const remaining = calculateMaxAvailablePoints({
           ...config,
-          races_completed:  (config.races_completed  || 0) + 1,
+          races_completed:   (config.races_completed  || 0) + 1,
           sprints_completed: (config.sprints_completed || 0) + (config.next_race_has_sprint ? 1 : 0),
         });
-
-        // Best possible total for the challenger: max this weekend + max all remaining
-        const challengerBestCase = d.points + maxWeekendPoints + remainingAfterThis;
-
-        // Minimum total the leader could finish the season with (scores 0 from here)
-        const leaderCurrentPoints = leader.points;
-
-        return challengerBestCase < leaderCurrentPoints;
+        return d.points + maxWeekendPoints + remaining < leader.points;
       })
     : [];
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-      className="rounded-2xl bg-card border border-border p-5"
+      transition={{ delay: 0.05 }}
+      className="rounded-2xl bg-card border border-border overflow-hidden"
     >
-      <div className="flex items-center gap-2 mb-4">
-        <Calendar className="w-5 h-5 text-primary" />
-        <h2 className="font-heading font-bold text-lg">Questo Weekend</h2>
+      <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-border/60">
+        <Calendar className="w-4 h-4 text-primary" />
+        <h2 className="font-heading font-black text-lg uppercase tracking-wide">Questo Weekend</h2>
       </div>
 
-      <div className="bg-secondary/50 rounded-xl p-4 mb-4">
-        <div className="flex items-start justify-between">
+      <div className="p-4 space-y-3">
+        {/* Race name + date */}
+        <div className="flex items-start justify-between gap-2">
           <div>
-            <h3 className="font-heading font-bold text-base">{config.next_race_name}</h3>
-            <div className="flex items-center gap-1.5 mt-1 text-muted-foreground">
-              <MapPin className="w-3.5 h-3.5" />
-              <span className="text-sm">{config.next_race_circuit}</span>
-            </div>
+            <h3 className="font-heading font-black text-xl uppercase leading-tight">
+              {config.next_race_name}
+            </h3>
+            {config.next_race_circuit && (
+              <div className="flex items-center gap-1 mt-1 text-muted-foreground">
+                <MapPin className="w-3 h-3" />
+                <span className="text-xs">{config.next_race_circuit}</span>
+              </div>
+            )}
           </div>
-          <div className="text-right">
+          <div className="shrink-0 text-right">
             {config.next_race_date && (
-              <span className="text-sm font-medium">
+              <span className="font-heading font-bold text-sm">
                 {format(new Date(config.next_race_date), "d MMM", { locale: it })}
               </span>
             )}
             {config.next_race_has_sprint && (
-              <div className="flex items-center gap-1 mt-1 text-primary">
+              <div className="flex items-center gap-1 mt-1 text-amber-400">
                 <Zap className="w-3 h-3" />
-                <span className="text-xs font-semibold">SPRINT</span>
+                <span className="font-heading font-bold text-xs tracking-widest">SPRINT</span>
               </div>
             )}
           </div>
         </div>
-      </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Punti max disponibili</span>
-          <span className="font-mono font-bold">{maxWeekendPoints}</span>
+        {/* Max points */}
+        <div className="flex items-center justify-between rounded-xl bg-secondary/50 px-3 py-2.5">
+          <span className="font-heading text-sm text-muted-foreground">Punti max weekend</span>
+          <span className="font-mono font-bold text-sm">{maxWeekendPoints} pts</span>
         </div>
 
+        {/* Elimination risk */}
         {eliminationRisks.length > 0 && (
-          <div className="bg-destructive/5 rounded-lg p-3 border border-destructive/10">
-            <p className="text-xs font-semibold text-destructive mb-1">Rischio eliminazione</p>
+          <div className="rounded-xl bg-destructive/8 border border-destructive/15 px-3 py-2.5">
+            <p className="font-heading font-bold text-xs text-destructive tracking-widest uppercase mb-1">
+              ⚠ Rischio eliminazione
+            </p>
             <p className="text-xs text-muted-foreground">
-              {eliminationRisks.map(d => d.driver_name).join(", ")} potrebbero essere
-              matematicamente eliminati dopo questo weekend
+              {eliminationRisks.map(d => d.driver_name).join(", ")} potrebbero uscire
+              dalla lotta titolo dopo questo GP
             </p>
           </div>
         )}

@@ -1,110 +1,90 @@
 import { motion } from "framer-motion";
 import {
-  calculateMaxAvailablePoints,
-  pointsNeededPerRace,
-  isMathematicallyEliminated,
-  pointsToClinch,
+  calculateMaxAvailablePoints, pointsNeededPerRace,
+  isMathematicallyEliminated, pointsToClinch,
 } from "@/lib/f1Utils";
-import { ChevronRight, Zap } from "lucide-react";
+import { Zap, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function QuickScenarios({ drivers, config }) {
   if (!drivers?.length || !config) return null;
 
-  const leader      = drivers[0];
+  const leader       = drivers[0];
   const maxAvailable = calculateMaxAvailablePoints(config);
-  const racesLeft   = config.total_races - config.races_completed;
+  const racesLeft    = config.total_races - config.races_completed;
+  const scenarios    = [];
 
-  const scenarios = [];
-
-  // Title contender scenarios
-  const contenders = drivers
-    .slice(1, 5)
-    .filter(d => !isMathematicallyEliminated(d.points, leader.points, maxAvailable));
-
-  contenders.forEach(d => {
-    const gap       = leader.points - d.points;
-    const avgNeeded = pointsNeededPerRace(gap, racesLeft);
-    scenarios.push({
-      emoji:   "🏆",
-      question: `Cosa serve a ${d.driver_name} per il titolo?`,
-      answer:   `Deve recuperare ${gap} punti in ${racesLeft} GP (media ${avgNeeded.toFixed(1)} pts/gara)`,
-      urgency:  avgNeeded > 15 ? "high" : avgNeeded > 8 ? "medium" : "low",
-    });
-  });
-
-  // Drivers close to the mathematical elimination threshold
-  const almostEliminated = drivers.filter(d => {
-    const gap = leader.points - d.points;
-    return gap > maxAvailable * 0.8 && gap <= maxAvailable;
-  });
-
-  almostEliminated.forEach(d => {
-    scenarios.push({
-      emoji:   "⚠️",
-      question: `${d.driver_name} rischia l'eliminazione?`,
-      answer:   `A ${Math.round(((leader.points - d.points) / maxAvailable) * 100)}% dal limite matematico`,
-      urgency:  "high",
-    });
-  });
-
-  // Title clinch tracker — uses the fixed pointsToClinch helper
-  if (maxAvailable > 0 && drivers[1]) {
-    const p2Points        = drivers[1].points;
-    const clinchThreshold = pointsToClinch(leader.points, p2Points, maxAvailable);
-    const gapToSecond     = leader.points - p2Points;
-    const clinchPct       = Math.round((gapToSecond / maxAvailable) * 100);
-
-    if (clinchPct > 50) {
+  // Top contenders
+  drivers.slice(1, 4)
+    .filter(d => !isMathematicallyEliminated(d.points, leader.points, maxAvailable))
+    .forEach(d => {
+      const gap       = leader.points - d.points;
+      const avgNeeded = pointsNeededPerRace(gap, racesLeft);
       scenarios.push({
-        emoji:   "🎯",
-        question: `${leader.driver_name} può chiudere il titolo presto?`,
-        answer:
-          clinchThreshold <= 0
-            ? `${leader.driver_name} ha già vinto il campionato matematicamente! 🏆`
-            : `Mancano ${clinchThreshold} punti di vantaggio per il titolo matematico (${clinchPct}% del massimo)`,
-        urgency: "medium",
+        emoji: "🏆",
+        q: `${d.driver_name} per il titolo`,
+        a: `−${gap} pts · media ${avgNeeded.toFixed(1)} pts/GP · ${racesLeft} gare`,
+        hot: avgNeeded > 18,
+      });
+    });
+
+  // Clinch tracker
+  if (drivers[1]) {
+    const clinch = pointsToClinch(leader.points, drivers[1].points, maxAvailable);
+    if (clinch > 0) {
+      scenarios.push({
+        emoji: "🎯",
+        q: `${leader.driver_name} chiude il titolo?`,
+        a: `Serve ancora +${clinch} pts su P2 (${drivers[1].driver_name})`,
+        hot: false,
+      });
+    } else {
+      scenarios.push({
+        emoji: "🏆",
+        q: `${leader.driver_name} campione!`,
+        a: `Titolo matematicamente conquistato`,
+        hot: true,
       });
     }
   }
 
-  if (scenarios.length === 0) return null;
+  if (!scenarios.length) return null;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.15 }}
-      className="rounded-2xl bg-card border border-border p-5"
+      transition={{ delay: 0.08 }}
+      className="rounded-2xl bg-card border border-border overflow-hidden"
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border/60">
         <div className="flex items-center gap-2">
-          <Zap className="w-5 h-5 text-primary" />
-          <h2 className="font-heading font-bold text-lg">Scenari</h2>
+          <Zap className="w-4 h-4 text-primary" />
+          <h2 className="font-heading font-black text-lg uppercase tracking-wide">Scenari</h2>
         </div>
-        <Link to="/calculator" className="text-xs text-primary flex items-center gap-1 hover:underline">
-          Calcola <ChevronRight className="w-3 h-3" />
+        <Link to="/calculator"
+          className="flex items-center gap-0.5 text-xs font-heading font-bold text-primary uppercase tracking-wider">
+          Calcola <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
-      <div className="space-y-3">
-        {scenarios.slice(0, 4).map((s, i) => (
+      <div className="p-4 space-y-2">
+        {scenarios.slice(0, 3).map((s, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, x: -10 }}
+            initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 + i * 0.05 }}
-            className={`rounded-xl p-3 border ${
-              s.urgency === "high"   ? "border-destructive/20 bg-destructive/5" :
-              s.urgency === "medium" ? "border-primary/20 bg-primary/5" :
-                                       "border-border bg-secondary/30"
-            }`}
+            transition={{ delay: 0.12 + i * 0.04 }}
+            className={`rounded-xl px-3 py-2.5 border
+              ${s.hot
+                ? "bg-primary/8 border-primary/20"
+                : "bg-secondary/40 border-transparent"
+              }`}
           >
-            <p className="text-sm font-semibold flex items-center gap-1.5">
-              <span>{s.emoji}</span>
-              {s.question}
+            <p className="font-heading font-bold text-sm flex items-center gap-1.5">
+              <span>{s.emoji}</span>{s.q}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">{s.answer}</p>
+            <p className="font-mono text-xs text-muted-foreground mt-0.5">{s.a}</p>
           </motion.div>
         ))}
       </div>

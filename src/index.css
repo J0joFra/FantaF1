@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,86 +6,117 @@
 
 @layer base {
   :root {
-    --font-heading: 'Inter', sans-serif;
+    --font-heading: 'Barlow Condensed', sans-serif;
+    --font-body: 'Barlow', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
-    --background: 220 15% 6%;
-    --foreground: 0 0% 95%;
-    --card: 220 14% 9%;
-    --card-foreground: 0 0% 95%;
-    --popover: 220 14% 9%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 0 72% 51%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 14%;
-    --secondary-foreground: 0 0% 90%;
-    --muted: 220 14% 14%;
-    --muted-foreground: 220 10% 50%;
-    --accent: 0 72% 51%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 14% 16%;
-    --input: 220 14% 16%;
-    --ring: 0 72% 51%;
-    --chart-1: 0 72% 51%;
-    --chart-2: 220 70% 55%;
-    --chart-3: 45 93% 58%;
-    --chart-4: 160 60% 45%;
-    --chart-5: 280 65% 60%;
-    --radius: 0.75rem;
-    --sidebar-background: 220 15% 6%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 0 72% 51%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 14%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 14% 16%;
-    --sidebar-ring: 0 72% 51%;
-  }
+    /* Deep carbon black with warm undertone */
+    --background: 20 8% 6%;
+    --foreground: 30 15% 94%;
 
-  .dark {
-    --background: 220 15% 6%;
-    --foreground: 0 0% 95%;
-    --card: 220 14% 9%;
-    --card-foreground: 0 0% 95%;
-    --popover: 220 14% 9%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 0 72% 51%;
+    --card: 20 8% 9%;
+    --card-foreground: 30 15% 94%;
+
+    --popover: 20 8% 9%;
+    --popover-foreground: 30 15% 94%;
+
+    /* F1 Red — vivid, saturated */
+    --primary: 3 90% 52%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 14%;
-    --secondary-foreground: 0 0% 90%;
-    --muted: 220 14% 14%;
-    --muted-foreground: 220 10% 50%;
-    --accent: 0 72% 51%;
+
+    --secondary: 20 8% 13%;
+    --secondary-foreground: 30 10% 75%;
+
+    --muted: 20 8% 13%;
+    --muted-foreground: 20 8% 45%;
+
+    --accent: 3 90% 52%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84.2% 60.2%;
+
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 220 14% 16%;
-    --input: 220 14% 16%;
-    --ring: 0 72% 51%;
-    --chart-1: 0 72% 51%;
-    --chart-2: 220 70% 55%;
-    --chart-3: 45 93% 58%;
-    --chart-4: 160 60% 45%;
-    --chart-5: 280 65% 60%;
-    --sidebar-background: 220 15% 6%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 0 72% 51%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 14%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 14% 16%;
-    --sidebar-ring: 0 72% 51%;
+
+    --border: 20 8% 15%;
+    --input: 20 8% 15%;
+    --ring: 3 90% 52%;
+
+    /* Gold accent for P1 */
+    --gold: 43 96% 56%;
+
+    --radius: 1rem;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+  * { @apply border-border outline-ring/50; }
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    /* Subtle carbon-fiber texture */
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -10%, hsl(3 90% 52% / 0.08) 0%, transparent 60%),
+      repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 2px,
+        hsl(20 8% 8% / 0.4) 2px,
+        hsl(20 8% 8% / 0.4) 4px
+      );
+    background-attachment: fixed;
   }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    letter-spacing: 0.02em;
+  }
+}
+
+@layer utilities {
+  .font-heading { font-family: var(--font-heading); }
+  .font-mono    { font-family: var(--font-mono); }
+
+  /* Speed-line shimmer for special elements */
+  .speed-lines {
+    position: relative;
+    overflow: hidden;
+  }
+  .speed-lines::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      100deg,
+      transparent 0%,
+      transparent 96%,
+      hsl(3 90% 52% / 0.06) 97%,
+      transparent 98%
+    );
+    pointer-events: none;
+  }
+
+  /* Glowing red border */
+  .glow-border {
+    box-shadow: 0 0 0 1px hsl(3 90% 52% / 0.3), 0 0 20px hsl(3 90% 52% / 0.1);
+  }
+
+  /* Gold shine for leader */
+  .gold-glow {
+    box-shadow: 0 0 0 1px hsl(43 96% 56% / 0.4), 0 0 16px hsl(43 96% 56% / 0.12);
+  }
+
+  /* Pill tag */
+  .tag {
+    @apply text-[10px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full;
+    font-family: var(--font-heading);
+  }
+
+  /* Bottom nav safe area */
+  .pb-safe { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
+}
+
+/* Safe area for iOS */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 }
