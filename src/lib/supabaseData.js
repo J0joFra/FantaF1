@@ -5,146 +5,110 @@ function throwIfError(error, context) {
   if (error) throw new Error(`${context}: ${error.message}`);
 }
 
-function currentYear() {
-  return new Date().getFullYear();
+// ─── DRIVER STANDINGS ────────────────────────────────────────────────────────
+// View: current_season_driver_standings (9 cols)
+// Known columns from error messages + original code:
+//   position_number, driver_id, points, wins, driver_name/first_name/last_name,
+//   constructor_name, abbreviation, fastest_laps, etc.
+export async function getDriverStandings() {
+  const { data, error } = await supabase
+    .from('current_season_driver_standings')
+    .select('*')
+    .order('position_number', { ascending: true });
+
+  throwIfError(error, 'Driver standings');
+  return (data || []).map(normalizeDriver);
 }
 
-// ─── DRIVER STANDINGS ────────────────────────────────────────────────────────
-export async function getDriverStandings(season = currentYear()) {
-  // Load standings + driver info in parallel
-  const [{ data: standings, error: stErr }, { data: drivers, error: drErr }] =
-    await Promise.all([
-      supabase
-        .from('season_driver_standing')
-        .select('*')
-        .eq('year', season)
-        .order('position_number', { ascending: true }),
-      supabase
-        .from('driver')
-        .select('id, first_name, last_name, abbreviation, nationality_country_id'),
-    ]);
-
-  throwIfError(stErr, 'Driver standings');
-  throwIfError(drErr, 'Drivers lookup');
-
-  const driverMap = {};
-  (drivers || []).forEach(d => { driverMap[d.id] = d; });
-
-  return (standings || [])
-    .filter(s => s.position_number)
-    .map(s => {
-      const dr = driverMap[s.driver_id] || {};
-      return {
-        id:           String(s.driver_id ?? s.id ?? ''),
-        driver_name:  dr.first_name && dr.last_name
-                        ? `${dr.first_name} ${dr.last_name}`
-                        : s.driver_name || String(s.driver_id || ''),
-        driver_code:  dr.abbreviation || s.abbreviation || '',
-        team:         s.constructor_name || s.team_name || s.team || '',
-        points:       s.points              ?? 0,
-        position:     s.position_number     ?? 0,
-        wins:         s.wins                ?? 0,
-        podiums:      s.podiums             ?? 0,
-        poles:        s.poles               ?? s.pole_positions ?? 0,
-        fastest_laps: s.fastest_laps        ?? 0,
-        dnfs:         s.dnfs                ?? s.retirements    ?? 0,
-      };
-    });
+function normalizeDriver(row) {
+  return {
+    id:           String(row.driver_id ?? row.id ?? ''),
+    driver_name:  row.driver_name
+                    || (row.first_name && row.last_name ? `${row.first_name} ${row.last_name}` : '')
+                    || String(row.driver_id ?? ''),
+    driver_code:  row.abbreviation  || row.driver_code  || row.code || '',
+    team:         row.constructor_name || row.team_name || row.team || '',
+    points:       row.points          ?? 0,
+    position:     row.position_number ?? row.position   ?? 0,
+    wins:         row.wins            ?? 0,
+    podiums:      row.podiums         ?? 0,
+    poles:        row.poles           ?? row.pole_positions ?? 0,
+    fastest_laps: row.fastest_laps    ?? 0,
+    dnfs:         row.dnfs            ?? row.retirements    ?? 0,
+  };
 }
 
 // ─── CONSTRUCTOR STANDINGS ───────────────────────────────────────────────────
-export async function getConstructorStandings(season = currentYear()) {
-  const [{ data: standings, error: stErr }, { data: constructors, error: coErr }] =
-    await Promise.all([
-      supabase
-        .from('season_constructor_standing')
-        .select('*')
-        .eq('year', season)
-        .order('position_number', { ascending: true }),
-      supabase
-        .from('constructor')
-        .select('id, name, color'),
-    ]);
+// View: current_season_constructor_standings (7 cols)
+export async function getConstructorStandings() {
+  const { data, error } = await supabase
+    .from('current_season_constructor_standings')
+    .select('*')
+    .order('position_number', { ascending: true });
 
-  throwIfError(stErr, 'Constructor standings');
-  throwIfError(coErr, 'Constructors lookup');
+  throwIfError(error, 'Constructor standings');
+  return (data || []).map(normalizeConstructor);
+}
 
-  const coMap = {};
-  (constructors || []).forEach(c => { coMap[c.id] = c; });
-
-  return (standings || [])
-    .filter(s => s.position_number)
-    .map(s => {
-      const co = coMap[s.constructor_id] || {};
-      return {
-        id:         String(s.constructor_id ?? s.id ?? ''),
-        team_name:  co.name || s.constructor_name || s.name || '',
-        team_color: co.color || s.color || null,
-        points:     s.points          ?? 0,
-        position:   s.position_number ?? 0,
-        wins:       s.wins            ?? 0,
-        podiums:    s.podiums         ?? 0,
-      };
-    });
+function normalizeConstructor(row) {
+  return {
+    id:         String(row.constructor_id ?? row.id ?? ''),
+    team_name:  row.constructor_name || row.name || '',
+    team_color: row.color            || null,
+    points:     row.points           ?? 0,
+    position:   row.position_number  ?? row.position ?? 0,
+    wins:       row.wins             ?? 0,
+    podiums:    row.podiums          ?? 0,
+  };
 }
 
 // ─── SEASON CONFIG ────────────────────────────────────────────────────────────
-export async function getSeasonConfig(season = currentYear()) {
-  const { data: races, error } = await supabase
-    .from('race')
-    .select('id, round, date, sprint_race_date, official_name, circuit_id, grand_prix_id')
-    .eq('year', season)
+// View: race_calendar_with_results (14 cols)
+export async function getSeasonConfig() {
+  const { data, error } = await supabase
+    .from('race_calendar_with_results')
+    .select('*')
     .order('round', { ascending: true });
 
   throwIfError(error, 'Season config');
 
-  const all  = races || [];
-  const now  = new Date();
+  const races = data || [];
+  const now   = new Date();
 
-  const completed = all.filter(r => r.date && new Date(r.date) < now);
-  const upcoming  = all.find(r  => r.date && new Date(r.date) >= now);
+  const completed = races.filter(r => {
+    const d = r.race_date || r.date;
+    return d && new Date(d) < now;
+  });
 
-  const sprintRaces      = all.filter(r => r.sprint_race_date);
-  const completedSprints = completed.filter(r => r.sprint_race_date);
+  const upcoming = races.find(r => {
+    const d = r.race_date || r.date;
+    return d && new Date(d) >= now;
+  });
 
-  // Fetch grand_prix name for the next race if available
-  let nextRaceName    = upcoming?.official_name || null;
-  let nextRaceCircuit = null;
-
-  if (upcoming?.grand_prix_id) {
-    const { data: gp } = await supabase
-      .from('grand_prix')
-      .select('name, circuit_id')
-      .eq('id', upcoming.grand_prix_id)
-      .single();
-    if (gp) {
-      nextRaceName    = gp.name || nextRaceName;
-      nextRaceCircuit = gp.circuit_id || null;
-    }
-  }
+  const sprintRaces      = races.filter(r => r.sprint_race_date || r.has_sprint_race);
+  const completedSprints = completed.filter(r => r.sprint_race_date || r.has_sprint_race);
 
   return {
-    season,
-    total_races:          all.length,
+    season:               upcoming?.year || upcoming?.season || new Date().getFullYear(),
+    total_races:          races.length,
     races_completed:      completed.length,
     total_sprints:        sprintRaces.length,
     sprints_completed:    completedSprints.length,
-    next_race_name:       nextRaceName,
-    next_race_circuit:    nextRaceCircuit,
-    next_race_date:       upcoming?.date || null,
-    next_race_has_sprint: !!(upcoming?.sprint_race_date),
+    next_race_name:       upcoming?.grand_prix_name || upcoming?.official_name || upcoming?.race_name || upcoming?.name || null,
+    next_race_circuit:    upcoming?.circuit_name    || upcoming?.circuit       || '',
+    next_race_date:       upcoming?.race_date       || upcoming?.date          || null,
+    next_race_has_sprint: !!(upcoming?.sprint_race_date || upcoming?.has_sprint_race),
   };
 }
 
 // ─── NEXT GRAND PRIX ─────────────────────────────────────────────────────────
-export async function getNextGrandPrix(season = currentYear()) {
+export async function getNextGrandPrix() {
   const today = new Date().toISOString().split('T')[0];
 
   const { data, error } = await supabase
-    .from('race')
+    .from('race_calendar_with_results')
     .select('*')
-    .eq('year', season)
-    .gte('date', today)
+    .gte('race_date', today)
     .order('round', { ascending: true })
     .limit(1)
     .single();
@@ -154,26 +118,11 @@ export async function getNextGrandPrix(season = currentYear()) {
 }
 
 // ─── LATEST RACE RESULTS ─────────────────────────────────────────────────────
-export async function getLatestRaceResults(season = currentYear()) {
-  // Get the most recently completed race
-  const today = new Date().toISOString().split('T')[0];
-
-  const { data: races, error: raceErr } = await supabase
-    .from('race')
-    .select('id, official_name, round')
-    .eq('year', season)
-    .lt('date', today)
-    .order('round', { ascending: false })
-    .limit(1);
-
-  if (raceErr || !races?.length) return [];
-
-  const raceId = races[0].id;
-
+// View: latest_race_results (18 cols)
+export async function getLatestRaceResults() {
   const { data, error } = await supabase
-    .from('race_driver_standing')
+    .from('latest_race_results')
     .select('*')
-    .eq('race_id', raceId)
     .order('position_number', { ascending: true });
 
   if (error) {
@@ -184,22 +133,11 @@ export async function getLatestRaceResults(season = currentYear()) {
 }
 
 // ─── FERRARI DATA ─────────────────────────────────────────────────────────────
+// View: ferrari_season_summary (9 cols)
 export async function getFerrariSeasonSummary() {
-  // Pull Ferrari constructor standings across all seasons
-  const { data: coRows, error: coErr } = await supabase
-    .from('constructor')
-    .select('id')
-    .ilike('name', '%ferrari%')
-    .limit(1);
-
-  if (coErr || !coRows?.length) return [];
-
-  const ferrariId = coRows[0].id;
-
   const { data, error } = await supabase
-    .from('season_constructor_standing')
-    .select('year, points, position_number, wins')
-    .eq('constructor_id', ferrariId)
+    .from('ferrari_season_summary')
+    .select('*')
     .order('year', { ascending: false })
     .limit(30);
 
@@ -209,30 +147,22 @@ export async function getFerrariSeasonSummary() {
   }
 
   return (data || []).map(row => ({
-    season:   row.year,
-    points:   row.points          ?? 0,
-    position: row.position_number ?? null,
-    wins:     row.wins            ?? 0,
-    podiums:  row.podiums         ?? 0,
-    poles:    row.poles           ?? 0,
-    drivers_champion:      false,
-    constructors_champion: row.position_number === 1,
+    season:                row.year              ?? row.season,
+    points:                row.points            ?? row.total_points    ?? 0,
+    position:              row.position_number   ?? row.final_position  ?? row.position ?? null,
+    wins:                  row.wins              ?? row.race_wins        ?? 0,
+    podiums:               row.podiums           ?? 0,
+    poles:                 row.poles             ?? row.pole_positions   ?? 0,
+    drivers_champion:      row.drivers_champion      ?? false,
+    constructors_champion: row.constructors_champion ?? (row.position_number === 1) ?? false,
   }));
 }
 
+// View: ferrari_points_by_year (4 cols)
 export async function getFerrariPointsByYear() {
-  const { data: coRows } = await supabase
-    .from('constructor')
-    .select('id')
-    .ilike('name', '%ferrari%')
-    .limit(1);
-
-  if (!coRows?.length) return [];
-
   const { data, error } = await supabase
-    .from('season_constructor_standing')
-    .select('year, points')
-    .eq('constructor_id', coRows[0].id)
+    .from('ferrari_points_by_year')
+    .select('*')
     .order('year', { ascending: true });
 
   if (error) {
@@ -242,85 +172,31 @@ export async function getFerrariPointsByYear() {
   return data || [];
 }
 
+// View: driver_ferrari_stats (9 cols)
 export async function getFerrariDriverStats() {
-  // Drivers who scored points with Ferrari, ranked by wins
-  const { data: coRows } = await supabase
-    .from('constructor')
-    .select('id')
-    .ilike('name', '%ferrari%')
-    .limit(1);
-
-  if (!coRows?.length) return [];
-
   const { data, error } = await supabase
-    .from('season_driver_standing')
-    .select('driver_id, points, wins, position_number')
-    .eq('constructor_id', coRows[0].id)
+    .from('driver_ferrari_stats')
+    .select('*')
     .order('wins', { ascending: false })
-    .limit(40);
+    .limit(20);
 
   if (error) {
     console.error('Ferrari driver stats:', error.message);
     return [];
   }
-
-  // Aggregate across seasons per driver
-  const totals = {};
-  (data || []).forEach(row => {
-    const id = row.driver_id;
-    if (!totals[id]) totals[id] = { driver_id: id, points: 0, wins: 0 };
-    totals[id].points += row.points || 0;
-    totals[id].wins   += row.wins   || 0;
-  });
-
-  // Enrich with driver names
-  const ids = Object.keys(totals);
-  if (!ids.length) return [];
-
-  const { data: drivers } = await supabase
-    .from('driver')
-    .select('id, first_name, last_name')
-    .in('id', ids);
-
-  (drivers || []).forEach(d => {
-    if (totals[d.id]) {
-      totals[d.id].driver_name = `${d.first_name} ${d.last_name}`;
-    }
-  });
-
-  return Object.values(totals)
-    .sort((a, b) => b.wins - a.wins)
-    .slice(0, 20);
+  return data || [];
 }
 
+// View: ferrari_archive_stats (3 cols)
 export async function getFerrariArchiveStats() {
-  const { data: coRows } = await supabase
-    .from('constructor')
-    .select('id')
-    .ilike('name', '%ferrari%')
-    .limit(1);
-
-  if (!coRows?.length) return null;
-
-  const ferrariId = coRows[0].id;
-
   const { data, error } = await supabase
-    .from('season_constructor_standing')
-    .select('year, points, wins, position_number')
-    .eq('constructor_id', ferrariId);
+    .from('ferrari_archive_stats')
+    .select('*')
+    .limit(1);
 
   if (error) {
     console.error('Ferrari archive stats:', error.message);
     return null;
   }
-
-  const rows = data || [];
-  return {
-    seasons:              rows.length,
-    total_wins:           rows.reduce((s, r) => s + (r.wins   || 0), 0),
-    total_points:         rows.reduce((s, r) => s + (r.points || 0), 0),
-    constructors_titles:  rows.filter(r => r.position_number === 1).length,
-    // drivers_titles requires a separate table — leave as unknown
-    drivers_titles:       '–',
-  };
+  return data?.[0] || null;
 }
