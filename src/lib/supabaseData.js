@@ -10,37 +10,48 @@ function throwIfError(error, context) {
 // Known columns from error messages + original code:
 //   position_number, driver_id, points, wins, driver_name/first_name/last_name,
 //   constructor_name, abbreviation, fastest_laps, etc.
-export async function getDriverStandings() {
-  const { data, error } = await supabase
-    .from('current_season_driver_standings')
-    .select('*')
-    .order('position_number', { ascending: true });
+export async function getDriverStandings(season = currentYear()) {
+  // Query standings + driver info + constructor info all at once
+  const [
+    { data: standings, error: stErr },
+    { data: drivers,   error: drErr },
+    { data: constructors, error: coErr },
+  ] = await Promise.all([
+    supabase
+      .from('season_driver_standing')
+      .select('*')
+      .eq('year', season)
+      .order('position_number', { ascending: true }),
+    supabase
+      .from('driver')
+      .select('id, first_name, last_name, abbreviation'),
+    supabase
+      .from('constructor')
+      .select('id, name'),
+  ]);
 
-  throwIfError(error, 'Driver standings');
+  throwIfError(stErr, 'Driver standings');
 
-  const rows = data || [];
+  const driverMap = {};
+  (drivers || []).forEach(d => { driverMap[d.id] = d; });
+  const constructorMap = {};
+  (constructors || []).forEach(c => { constructorMap[c.id] = c; });
 
-  // If constructor_name is missing, enrich by joining the constructor table
-  const needsConstructor = rows.some(r => !r.constructor_name && !r.team_name && !r.team);
-  let coMap = {};
-  if (needsConstructor) {
-    const ids = [...new Set(rows.map(r => r.constructor_id).filter(Boolean))];
-    if (ids.length) {
-      const { data: cos } = await supabase
-        .from('constructor')
-        .select('id, name, color')
-        .in('id', ids);
-      (cos || []).forEach(c => { coMap[c.id] = c; });
-    }
-  }
-
-  return rows.map(row => {
-    const co = coMap[row.constructor_id] || {};
-    return normalizeDriver({
-      ...row,
-      constructor_name: row.constructor_name || row.team_name || row.team || co.name || '',
+  return (standings || [])
+    .filter(s => s.position_number)
+    .map(s => {
+      const dr = driverMap[s.driver_id]      || {};
+      const co = constructorMap[s.constructor_id] || {};
+      return normalizeDriver({
+        ...s,
+        driver_name:      s.driver_name
+                          || (dr.first_name && dr.last_name
+                              ? \`\${dr.first_name} \${dr.last_name}\`
+                              : ''),
+        abbreviation:     dr.abbreviation || s.abbreviation || '',
+        constructor_name: s.constructor_name || co.name || '',
+      });
     });
-  });
 }
 
 function normalizeDriver(row) {
