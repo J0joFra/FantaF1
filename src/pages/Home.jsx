@@ -240,7 +240,7 @@ export default function Home() {
         {config?.next_race_name && (
           <div className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
             <FlagImg iso={nextRaceIso} size="h80"
-              className="h-9 w-auto object-cover rounded-md shadow-sm shrink-0" />
+              className="h-9 w-auto object-cover rounded-md shrink-0" style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.12)" }} />
             <GpCountdown targetDate={config.next_race_date} compact />
             {config.next_race_has_sprint && (
               <span className="tag bg-amber-100 text-amber-700 shrink-0 ml-auto">Sprint</span>
@@ -395,7 +395,7 @@ export default function Home() {
                       <img
                         src={flagSrc}
                         alt={r.name}
-                        className="h-6 w-auto object-cover rounded-sm shadow-sm mb-2"
+                        className="h-6 w-auto object-cover rounded-sm mb-2" style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.12)" }}
                         onError={e => { e.target.style.display = "none"; }}
                       />
                     ) : (
