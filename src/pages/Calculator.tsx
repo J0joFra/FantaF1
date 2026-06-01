@@ -2,13 +2,12 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calculator, Info, X, Share2, Bookmark, ChevronDown, ChevronUp,
-  Trophy, RotateCcw, AlertTriangle, Sparkles, Target, Users
+  Trophy, RotateCcw, AlertTriangle, Sparkles, Target, Users, CheckCircle2, HelpCircle
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
 
 // ─── Costanti F1 2026 ──────────────────────────────────────────────────────
-// Regolamento 2026: niente punto giro veloce, max 25 punti a GP, 8 a Sprint
 const MAX_RACE_PTS = 25;
 const MAX_SPRINT_PTS = 8;
 const RACE_POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
@@ -16,7 +15,7 @@ const SPRINT_POINTS = [8, 7, 6, 5, 4, 3, 2, 1];
 const POSITION_LABELS = ["1°", "2°", "3°", "4°", "5°", "6°", "7°", "8°", "9°", "10°", "11°+"];
 const POSITION_EMOJI = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟", "💤"];
 
-const TEAM_COLORS = {
+const TEAM_COLORS: Record<string, string> = {
   "Mercedes": "#27F4D2",
   "Red Bull Racing": "#3671C6",
   "Ferrari": "#E8002D",
@@ -27,8 +26,6 @@ const TEAM_COLORS = {
   "Racing Bulls": "#6692FF",
   "Haas F1 Team": "#B6BABD",
 };
-
-// ─── LOGICA CORRETTA DI CALCOLO ────────────────────────────────────────────
 
 interface Driver {
   id: string;
@@ -55,25 +52,9 @@ interface ChampionshipAnalysis {
   isMathematicallyOut: boolean;
   mainRival: RivalAnalysis | null;
   allRivals: RivalAnalysis[];
-  magicNumber: number; // Punti che il pilota deve ancora fare
+  magicNumber: number;
 }
 
-/**
- * Calcola l'analisi completa del campionato per un pilota
- * 
- * Formula corretta:
- * Per ogni rivale R, calcoliamo i punti massimi che R può ancora ottenere:
- *   R_max_finale = R.points + (racesLeft * 25) + (sprintsLeft * 8)
- * 
- * Il pilota P deve superare TUTTI i rivali.
- * Per superare un rivale specifico, P deve fare almeno:
- *   needed_vs_R = R_max_finale - P.points + 1
- * 
- * Ma attenzione: in caso di PAREGGIO, vince chi ha più vittorie!
- * Quindi se P e R arrivano a pari punti, P vince solo se ha più vittorie.
- * 
- * Il numero magico è il massimo dei needed_vs_R
- */
 function calculateChampionshipAnalysis(
   driver: Driver,
   allDrivers: Driver[],
@@ -83,31 +64,22 @@ function calculateChampionshipAnalysis(
   const maxRemainingPoints = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
   const driverMaxPossible = driver.points + maxRemainingPoints;
 
-  // Analizza ogni rivale
   const rivalsAnalysis: RivalAnalysis[] = allDrivers
     .filter(d => d.id !== driver.id)
     .map(rival => {
       const rivalMaxPossible = rival.points + maxRemainingPoints;
       
-      // Punti che il driver deve fare per superare QUESTO rivale
-      // Considera anche lo scenario di pareggio
       let pointsNeeded: number;
       
       if (driverMaxPossible <= rival.points) {
-        // Già matematicamente dietro (impossibile recuperare)
         pointsNeeded = Infinity;
       } else if (driver.points > rivalMaxPossible) {
-        // Già avanti, non serve nulla
         pointsNeeded = 0;
       } else {
-        // Calcolo base: serve almeno rivalMaxPossible - driver.points + 1
         pointsNeeded = rivalMaxPossible - driver.points + 1;
         
-        // Se il pareggio è possibile, verifica le vittorie
         const possibleTie = (driver.points + pointsNeeded) === rivalMaxPossible;
         if (possibleTie && driver.victories <= rival.victories) {
-          // In caso di pareggio, chi ha più vittorie vince
-          // Se driver ha meno vittorie, serve 1 punto in più
           pointsNeeded += 1;
         }
       }
@@ -122,18 +94,15 @@ function calculateChampionshipAnalysis(
       };
     });
 
-  // Filtra rivali che sono già stati battuti matematicamente
   const activeRivals = rivalsAnalysis.filter(r => r.pointsNeeded > 0 && !r.isMathematicallyEliminated);
   
-  // Il rivale più pericoloso è quello che richiede più punti
   const mainRival = activeRivals.length > 0
     ? activeRivals.reduce((a, b) => a.pointsNeeded > b.pointsNeeded ? a : b)
     : null;
 
-  const isAlreadyChampion = activeRivals.length === 0 && driverMaxPossible > 0;
+  const isAlreadyChampion = activeRivals.length === 0 && driverMaxPossible > 0 && driver.points > Math.max(...allDrivers.map(d => d.points));
   const isMathematicallyOut = driverMaxPossible < Math.max(...allDrivers.map(d => d.points));
   
-  // Numero magico: punti che il driver deve ancora fare per essere certo campione
   const magicNumber = mainRival?.pointsNeeded ?? 0;
 
   return {
@@ -148,9 +117,6 @@ function calculateChampionshipAnalysis(
   };
 }
 
-/**
- * Trova la combinazione minima di piazzamenti per raggiungere X punti
- */
 function findMinimumFinishes(pointsNeeded: number, racesLeft: number): {
   possible: boolean;
   finishes: { position: string; emoji: string; points: number; count: number }[];
@@ -168,12 +134,10 @@ function findMinimumFinishes(pointsNeeded: number, racesLeft: number): {
   let racesUsed = 0;
   const finishes: { position: string; emoji: string; points: number; count: number }[] = [];
 
-  // Greedy: usa i piazzamenti migliori prima
   for (let i = 0; i < RACE_POINTS.length && remaining > 0 && racesUsed < racesLeft; i++) {
     const pts = RACE_POINTS[i];
     if (pts === 0) continue;
     
-    // Quante di queste posizioni servono?
     const maxPossible = Math.floor(remaining / pts);
     const count = Math.min(maxPossible, racesLeft - racesUsed);
     
@@ -199,14 +163,17 @@ function findMinimumFinishes(pointsNeeded: number, racesLeft: number): {
 
 // ─── UI COMPONENTS ─────────────────────────────────────────────────────────
 
-function MagicNumberCard({ analysis, driverColor }: { analysis: ChampionshipAnalysis; driverColor: string }) {
+function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverColor: string }) {
   if (analysis.isAlreadyChampion) {
     return (
-      <div className="bg-gradient-to-br from-green-600 to-green-700 text-white rounded-2xl p-6 text-center">
-        <Sparkles className="w-12 h-12 mx-auto mb-3 text-yellow-300" />
-        <h3 className="font-bold text-2xl">Campione del Mondo!</h3>
-        <p className="text-green-100 text-sm mt-2">
-          {analysis.driver.driver_name} ha già vinto il campionato matematicamente.
+      <div className="bg-gradient-to-br from-green-500 to-green-700 text-white rounded-2xl p-6 text-center">
+        <div className="relative inline-block mb-3">
+          <Sparkles className="w-16 h-16 text-yellow-300 animate-pulse" />
+          <Trophy className="w-8 h-8 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-yellow-400" />
+        </div>
+        <h3 className="font-bold text-2xl mb-2">Campione del Mondo! 🏆</h3>
+        <p className="text-green-100 text-sm">
+          {analysis.driver.driver_name} ha già vinto matematicamente il campionato.
         </p>
       </div>
     );
@@ -214,10 +181,10 @@ function MagicNumberCard({ analysis, driverColor }: { analysis: ChampionshipAnal
 
   if (analysis.isMathematicallyOut) {
     return (
-      <div className="bg-gradient-to-br from-gray-700 to-gray-800 text-white rounded-2xl p-6 text-center">
-        <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-        <h3 className="font-bold text-2xl">Matematicamente Fuori</h3>
-        <p className="text-gray-300 text-sm mt-2">
+      <div className="bg-gradient-to-br from-gray-600 to-gray-800 text-white rounded-2xl p-6 text-center">
+        <AlertTriangle className="w-16 h-16 mx-auto mb-3 text-gray-400" />
+        <h3 className="font-bold text-2xl mb-2">Matematicamente Fuori ❌</h3>
+        <p className="text-gray-300 text-sm">
           {analysis.driver.driver_name} non può più vincere il campionato.
         </p>
       </div>
@@ -227,38 +194,53 @@ function MagicNumberCard({ analysis, driverColor }: { analysis: ChampionshipAnal
   const combo = findMinimumFinishes(analysis.magicNumber, analysis.racesLeft);
 
   return (
-    <div className="bg-gradient-to-br from-red-600 to-red-700 text-white rounded-2xl p-6">
+    <div className="bg-gradient-to-br from-red-500 to-red-700 text-white rounded-2xl p-6 shadow-lg">
       <div className="text-center mb-4">
-        <p className="text-red-100 text-sm uppercase tracking-wider">Numero Magico</p>
-        <p className="text-6xl font-black mt-1">{analysis.magicNumber}</p>
-        <p className="text-red-100 text-xs mt-1">punti da conquistare</p>
+        <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 mb-3">
+          <Target className="w-4 h-4" />
+          <span className="text-xs font-medium">OBIETTIVO</span>
+        </div>
+        <p className="text-7xl font-black mt-1">{analysis.magicNumber}</p>
+        <p className="text-red-100 text-sm mt-2">punti da conquistare per essere campione</p>
       </div>
 
       {analysis.mainRival && (
         <div className="bg-white/10 rounded-xl p-3 mb-4">
-          <p className="text-xs text-red-100 mb-1">📊 RIVALE PRINCIPALE</p>
+          <p className="text-xs text-red-100 mb-2 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            RIVALE PIÙ PERICOLOSO
+          </p>
           <div className="flex justify-between items-center">
-            <span className="font-bold">{analysis.mainRival.driver.driver_name}</span>
-            <span className="text-sm font-mono">
-              {analysis.mainRival.driver.points} pt → max {analysis.mainRival.maxPossible} pt
-            </span>
+            <div>
+              <span className="font-bold text-lg">{analysis.mainRival.driver.driver_name}</span>
+              <p className="text-xs text-red-100">{analysis.mainRival.driver.team}</p>
+            </div>
+            <div className="text-right">
+              <span className="text-sm font-mono">{analysis.mainRival.driver.points} pt</span>
+              <p className="text-xs text-red-100">max {analysis.mainRival.maxPossible} pt</p>
+            </div>
           </div>
         </div>
       )}
 
       {combo.possible && combo.finishes.length > 0 && (
         <div className="bg-white/10 rounded-xl p-3">
-          <p className="text-xs text-red-100 mb-2">🎯 COMBINAZIONE MINIMA</p>
-          <div className="flex flex-wrap gap-2">
+          <p className="text-xs text-red-100 mb-2 flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" />
+            COMBINAZIONE MINIMA RICHIESTA
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
             {combo.finishes.map((f, i) => (
-              <div key={i} className="bg-white/20 rounded-lg px-2 py-1 text-sm">
-                {f.emoji} ×{f.count}
+              <div key={i} className="bg-white/20 rounded-lg px-3 py-1.5 text-sm font-medium">
+                {f.emoji} {f.count}× {f.position}
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-red-100 mt-2">
-            * Nei weekend Sprint si possono ottenere +8 punti il sabato
-          </p>
+          {analysis.sprintsLeft > 0 && (
+            <p className="text-[10px] text-red-100 mt-2 text-center">
+              💡 Nei weekend Sprint si possono ottenere +8 punti il sabato
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -266,28 +248,30 @@ function MagicNumberCard({ analysis, driverColor }: { analysis: ChampionshipAnal
 }
 
 function RivalCard({ rival, driverName, isMain }: { rival: RivalAnalysis; driverName: string; isMain?: boolean }) {
-  const borderClass = isMain ? "border-l-4 border-l-red-500" : "";
-  
   return (
-    <div className={`bg-white rounded-xl p-4 shadow-sm border border-gray-100 ${borderClass}`}>
+    <div className={`bg-white rounded-xl p-4 shadow-sm border ${isMain ? 'border-red-300 bg-red-50/30' : 'border-gray-100'}`}>
       <div className="flex justify-between items-start">
         <div>
           <p className="font-bold text-gray-900">{rival.driver.driver_name}</p>
           <p className="text-xs text-gray-500">{rival.driver.team}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-gray-600">{rival.driver.points} pt</p>
+          <p className="text-lg font-bold text-gray-900">{rival.driver.points} pt</p>
           <p className="text-xs text-gray-400">max {rival.maxPossible} pt</p>
         </div>
       </div>
       
-      <div className="mt-3 pt-3 border-t border-gray-50">
+      <div className="mt-3 pt-3 border-t border-gray-100">
         {rival.pointsNeeded === 0 ? (
-          <p className="text-green-600 text-sm font-medium">✓ Già battuto</p>
+          <p className="text-green-600 text-sm font-medium flex items-center gap-1">
+            <CheckCircle2 className="w-4 h-4" /> Già superato
+          </p>
+        ) : rival.isMathematicallyEliminated ? (
+          <p className="text-gray-400 text-sm">Non può più raggiungerti</p>
         ) : (
           <p className="text-sm">
-            {driverName} deve fare{" "}
-            <span className="font-bold text-red-600">{rival.pointsNeeded} pt</span>{" "}
+            Devi fare{" "}
+            <span className="font-bold text-red-600 text-lg">{rival.pointsNeeded} pt</span>{" "}
             per superarlo
           </p>
         )}
@@ -308,14 +292,12 @@ export default function ScenariosPage() {
   const [showInfo, setShowInfo] = useState(false);
   const [savedScenarios, setSavedScenarios] = useState<any[]>([]);
 
-  // Fetch data
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       setError(null);
       
       try {
-        // Fetch drivers
         const { data: driversData, error: driversError } = await supabase
           .from("current_season_driver_standings")
           .select("*")
@@ -323,7 +305,6 @@ export default function ScenariosPage() {
         
         if (driversError) throw driversError;
         
-        // Fetch calendar for remaining races
         const today = new Date().toISOString().slice(0, 10);
         const { data: calendarData, error: calendarError } = await supabase
           .from("race_calendar_with_results")
@@ -334,7 +315,6 @@ export default function ScenariosPage() {
         
         if (calendarError) throw calendarError;
         
-        // Process drivers
         const processedDrivers: Driver[] = (driversData || []).map((row: any, idx: number) => ({
           id: row.driver_id ?? String(idx),
           position: row.position_number ?? idx + 1,
@@ -347,10 +327,13 @@ export default function ScenariosPage() {
         
         setDrivers(processedDrivers);
         
-        // Process calendar
         const sprintWeekends = (calendarData || []).filter((r: any) => r.sprint_race_date != null).length;
         setRacesLeft(calendarData?.length ?? 0);
         setSprintsLeft(sprintWeekends);
+        
+        if (processedDrivers.length > 0) {
+          setSelectedDriverId(processedDrivers[0].id);
+        }
         
       } catch (err: any) {
         console.error("Fetch error:", err);
@@ -364,27 +347,29 @@ export default function ScenariosPage() {
   }, []);
 
   const selectedDriver = drivers.find(d => d.id === selectedDriverId);
+  
   const analysis = useMemo(() => {
-    if (!selectedDriver || racesLeft === 0) return null;
+    if (!selectedDriver || racesLeft === 0 || drivers.length === 0) return null;
     return calculateChampionshipAnalysis(selectedDriver, drivers, racesLeft, sprintsLeft);
   }, [selectedDriver, drivers, racesLeft, sprintsLeft]);
 
   const maxPossiblePoints = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
+  const leader = drivers.length > 0 ? drivers.reduce((a, b) => a.points > b.points ? a : b) : null;
 
   const handleShare = () => {
     if (!analysis) return;
     
     const text = analysis.isAlreadyChampion
-      ? `🏆 ${analysis.driver.driver_name} è già Campione del Mondo F1 2026!`
+      ? `🏆 ${analysis.driver.driver_name} è già Campione del Mondo F1 2026! #F1 #Champion`
       : analysis.isMathematicallyOut
-      ? `❌ ${analysis.driver.driver_name} è matematicamente fuori dalla corsa al titolo F1 2026`
-      : `🎯 ${analysis.driver.driver_name} deve fare ${analysis.magicNumber} punti per vincere il titolo F1 2026\n\nGare rimaste: ${analysis.racesLeft} GP, ${analysis.sprintsLeft} Sprint`;
+      ? `❌ ${analysis.driver.driver_name} è matematicamente fuori dalla corsa al titolo F1 2026 #F1`
+      : `🎯 ${analysis.driver.driver_name} deve fare ${analysis.magicNumber} punti per vincere il titolo F1 2026\n\n📊 Gare rimaste: ${analysis.racesLeft} GP, ${analysis.sprintsLeft} Sprint\n#F1 #Championship`;
     
     if (navigator.share) {
       navigator.share({ title: "Analisi Campionato F1 2026", text });
     } else {
       navigator.clipboard.writeText(text);
-      alert("Copiato negli appunti!");
+      alert("📋 Copiato negli appunti!");
     }
   };
 
@@ -395,27 +380,42 @@ export default function ScenariosPage() {
       id: Date.now(),
       date: new Date().toLocaleTimeString(),
       driverName: analysis.driver.driver_name,
+      driverTeam: analysis.driver.team,
       magicNumber: analysis.magicNumber,
       isChampion: analysis.isAlreadyChampion,
       isOut: analysis.isMathematicallyOut,
     }, ...prev].slice(0, 5));
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Caricamento dati F1 2026...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
         <div className="max-w-md mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Trophy className="w-6 h-6 text-red-500" />
+            <div className="relative">
+              <Trophy className="w-7 h-7 text-red-500" />
+              <Sparkles className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />
+            </div>
             <h1 className="font-black text-xl text-gray-900">F1 2026</h1>
-            <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Campioni</span>
+            <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Scenario Campionato</span>
           </div>
           <button
             onClick={() => setShowInfo(true)}
-            className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500"
+            className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
           >
-            <Info className="w-5 h-5" />
+            <HelpCircle className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -427,17 +427,17 @@ export default function ScenariosPage() {
             <p className="text-red-600 text-sm">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="mt-2 text-xs text-red-600 font-medium"
+              className="mt-2 text-xs text-red-600 font-medium hover:text-red-700"
             >
               Riprova ↻
             </button>
           </div>
         )}
 
-        {/* Driver selector */}
+        {/* Driver selector with info */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-            Pilota
+            Seleziona Pilota
           </label>
           {loading ? (
             <div className="h-12 bg-gray-100 rounded-xl animate-pulse" />
@@ -445,15 +445,19 @@ export default function ScenariosPage() {
             <select
               value={selectedDriverId}
               onChange={(e) => setSelectedDriverId(e.target.value)}
-              className="w-full h-12 bg-gray-50 border-0 rounded-xl px-4 text-gray-900 font-medium outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full h-12 bg-gray-50 border-0 rounded-xl px-4 text-gray-900 font-medium outline-none focus:ring-2 focus:ring-red-500 cursor-pointer"
             >
-              <option value="">Seleziona un pilota...</option>
               {drivers.map(d => (
                 <option key={d.id} value={d.id}>
-                  P{d.position} — {d.driver_name} ({d.points} pt)
+                  {d.position === 1 ? "👑 " : ""}{d.driver_name} — {d.points} pts
                 </option>
               ))}
             </select>
+          )}
+          {leader && (
+            <p className="text-xs text-gray-500 mt-2">
+              Leader attuale: <span className="font-bold">{leader.driver_name}</span> ({leader.points} pts)
+            </p>
           )}
         </div>
 
@@ -461,20 +465,20 @@ export default function ScenariosPage() {
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <p className="text-sm font-bold text-gray-900">GP rimanenti</p>
-              <p className="text-xs text-gray-500">Weekend principali</p>
+              <p className="text-sm font-bold text-gray-900">🏁 GP rimanenti</p>
+              <p className="text-xs text-gray-500">Gare della domenica</p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setRacesLeft(Math.max(0, racesLeft - 1))}
-                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center"
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
-              <span className="w-12 text-center font-mono font-bold text-lg">{racesLeft}</span>
+              <span className="w-12 text-center font-mono font-bold text-2xl text-gray-900">{racesLeft}</span>
               <button
                 onClick={() => setRacesLeft(racesLeft + 1)}
-                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center"
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
               >
                 <ChevronUp className="w-4 h-4" />
               </button>
@@ -483,20 +487,20 @@ export default function ScenariosPage() {
           
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-sm font-bold text-gray-900">Sprint rimanenti</p>
+              <p className="text-sm font-bold text-gray-900">⚡ Sprint rimanenti</p>
               <p className="text-xs text-gray-500">Gare del sabato</p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setSprintsLeft(Math.max(0, sprintsLeft - 1))}
-                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center"
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
-              <span className="w-12 text-center font-mono font-bold text-lg">{sprintsLeft}</span>
+              <span className="w-12 text-center font-mono font-bold text-2xl text-gray-900">{sprintsLeft}</span>
               <button
                 onClick={() => setSprintsLeft(sprintsLeft + 1)}
-                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center"
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
               >
                 <ChevronUp className="w-4 h-4" />
               </button>
@@ -504,15 +508,16 @@ export default function ScenariosPage() {
           </div>
 
           <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-3 text-center">
               <p className="text-xs text-gray-500">Punti massimi ancora disponibili</p>
-              <p className="text-2xl font-black text-gray-900">{maxPossiblePoints}</p>
+              <p className="text-3xl font-black text-gray-900">{maxPossiblePoints}</p>
+              <p className="text-xs text-gray-400 mt-1">(25 a GP + 8 a Sprint)</p>
             </div>
           </div>
         </div>
 
         {/* Analysis results */}
-        {!loading && selectedDriver && analysis && (
+        {selectedDriver && analysis && (
           <motion.div
             key={selectedDriverId}
             initial={{ opacity: 0, y: 20 }}
@@ -523,14 +528,19 @@ export default function ScenariosPage() {
 
             {/* Rivals section */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Rivali
-              </h3>
-              <div className="space-y-2">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Rivali da superare
+                </h3>
+                <span className="text-xs text-gray-400">
+                  {analysis.allRivals.filter(r => r.pointsNeeded > 0 && !r.isMathematicallyEliminated).length} attivi
+                </span>
+              </div>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
                 {analysis.allRivals
+                  .filter(r => r.pointsNeeded > 0 && !r.isMathematicallyEliminated)
                   .sort((a, b) => a.pointsNeeded - b.pointsNeeded)
-                  .slice(0, 5)
                   .map(rival => (
                     <RivalCard
                       key={rival.driver.id}
@@ -539,6 +549,12 @@ export default function ScenariosPage() {
                       isMain={analysis.mainRival?.driver.id === rival.driver.id}
                     />
                   ))}
+                {analysis.allRivals.filter(r => r.pointsNeeded > 0 && !r.isMathematicallyEliminated).length === 0 && (
+                  <div className="text-center py-6">
+                    <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
+                    <p className="text-gray-600">Nessun rivale da superare! 🎉</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -546,48 +562,57 @@ export default function ScenariosPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={handleShare}
-                className="flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 rounded-xl font-medium text-gray-700"
+                className="flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Share2 className="w-4 h-4" /> Condividi
               </button>
               <button
                 onClick={handleSave}
-                className="flex items-center justify-center gap-2 py-3 bg-red-50 border border-red-200 rounded-xl font-medium text-red-600"
+                className="flex items-center justify-center gap-2 py-3 bg-red-50 border border-red-200 rounded-xl font-medium text-red-600 hover:bg-red-100 transition-colors"
               >
-                <Bookmark className="w-4 h-4" /> Salva
+                <Bookmark className="w-4 h-4" /> Salva scenario
               </button>
             </div>
 
             {/* Saved scenarios */}
             {savedScenarios.length > 0 && (
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  Ultime simulazioni
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
+              >
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Bookmark className="w-3 h-3" />
+                  Ultime simulazioni salvate
                 </p>
                 <div className="space-y-2">
                   {savedScenarios.map(s => (
-                    <div key={s.id} className="flex justify-between items-center text-sm">
-                      <span className="font-medium text-gray-900">{s.driverName}</span>
-                      <span className="font-mono text-gray-500">
+                    <div key={s.id} className="flex justify-between items-center text-sm py-2 border-b border-gray-50 last:border-0">
+                      <div>
+                        <span className="font-medium text-gray-900">{s.driverName}</span>
+                        <p className="text-xs text-gray-400">{s.driverTeam}</p>
+                      </div>
+                      <span className={`font-mono text-sm font-bold ${s.isChampion ? 'text-green-600' : s.isOut ? 'text-gray-400' : 'text-red-600'}`}>
                         {s.isChampion ? "🏆 Campione" : s.isOut ? "❌ Fuori" : `+${s.magicNumber} pt`}
                       </span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
           </motion.div>
         )}
 
-        {!loading && !selectedDriver && (
+        {!selectedDriver && drivers.length > 0 && (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-            <Calculator className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <Calculator className="w-16 h-16 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">Seleziona un pilota per iniziare</p>
+            <p className="text-xs text-gray-400 mt-2">Analizza le possibilità di vittoria del campionato</p>
           </div>
         )}
       </div>
 
-      {/* Info modal */}
+      {/* Info modal - migliorato */}
       <AnimatePresence>
         {showInfo && (
           <motion.div
@@ -601,28 +626,65 @@ export default function ScenariosPage() {
               initial={{ y: 100 }}
               animate={{ y: 0 }}
               exit={{ y: 100 }}
-              className="bg-white w-full max-w-md rounded-t-3xl p-6"
+              className="bg-white w-full max-w-md rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-black text-lg">Come funziona</h3>
-                <button onClick={() => setShowInfo(false)} className="w-8 h-8 rounded-full bg-gray-100">
+              <div className="flex justify-between items-center mb-4 sticky top-0 bg-white pt-2 pb-4">
+                <h3 className="font-black text-xl">Come funziona</h3>
+                <button onClick={() => setShowInfo(false)} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
                   <X className="w-4 h-4 mx-auto" />
                 </button>
               </div>
-              <div className="space-y-4 text-sm text-gray-600">
-                <p>
-                  <strong className="text-gray-900">Numero Magico</strong> = punti che il pilota deve ancora conquistare
-                  per essere certo campione, indipendentemente dai risultati altrui.
-                </p>
-                <div className="bg-gray-50 p-3 rounded-xl font-mono text-xs">
-                  <p className="text-gray-400">// Formula</p>
-                  <p>Punti Necessari = (Punti Rivale + MaxRimanenti) − Punti Pilota + 1</p>
+              <div className="space-y-6 text-sm text-gray-600">
+                <div className="bg-blue-50 p-4 rounded-xl">
+                  <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                    <Target className="w-4 h-4 text-red-500" />
+                    Cos'è il "Numero Magico"?
+                  </h4>
+                  <p>
+                    È il numero di punti che un pilota deve ancora conquistare per essere <strong className="text-gray-900">matematicamente certo</strong> di vincere il campionato, 
+                    indipendentemente dai risultati degli altri.
+                  </p>
                 </div>
-                <p className="text-xs text-gray-400">
-                  * In caso di parità, vince chi ha più vittorie.<br />
-                  * Regolamento 2026: niente punto giro veloce.
-                </p>
+
+                <div className="bg-gray-50 p-3 rounded-xl font-mono text-xs">
+                  <p className="text-gray-400 mb-1">// Formula di calcolo</p>
+                  <p className="text-gray-700">
+                    Per ogni rivale: <strong>punti_needed = (punti_rivale + punti_max_rivale) − punti_pilota + 1</strong>
+                  </p>
+                  <p className="text-gray-500 mt-2 text-[10px]">
+                    * Il "Numero Magico" è il valore più alto tra tutti i rivali
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                    Pareggio in classifica
+                  </h4>
+                  <p>
+                    In caso di parità di punti, vince chi ha più <strong className="text-gray-900">vittorie</strong> in stagione.
+                    Il nostro calcolo tiene conto di questo aspetto.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    Regolamento 2026
+                  </h4>
+                  <ul className="list-disc list-inside space-y-1 text-gray-600">
+                    <li>✔️ 25 punti per la vittoria del GP</li>
+                    <li>✔️ 8 punti per la vittoria della Sprint Race</li>
+                    <li>❌ Nessun punto aggiuntivo per il giro più veloce</li>
+                  </ul>
+                </div>
+
+                <div className="bg-green-50 p-3 rounded-xl">
+                  <p className="text-xs text-green-800">
+                    💡 <strong className="font-bold">Suggerimento:</strong> Puoi modificare il numero di GP e Sprint rimanenti per simulare diversi scenari e capire meglio la situazione del campionato!
+                  </p>
+                </div>
               </div>
             </motion.div>
           </motion.div>
