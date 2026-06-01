@@ -26,8 +26,10 @@ const TEAM_COLORS = {
 };
 function getTeamColor(t) { return TEAM_COLORS[t] || "#B6BABD"; }
 
-// ─── F1 scoring ───────────────────────────────────────────────────────────────
-const MAX_RACE   = 25;
+// ─── F1 2025/2026 scoring ─────────────────────────────────────────────────────
+// Fast lap bonus point ABOLISHED from 2025 season onwards.
+// Max per race = 25 (win only). Max per sprint = 8.
+const MAX_RACE   = 25; // NO fast-lap bonus
 const MAX_SPRINT = 8;
 const RACE_PTS   = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1, 0];
 const SPRINT_PTS = [8,  7,  6,  5,  4,  3, 2, 1, 0, 0, 0];
@@ -37,14 +39,20 @@ const F_EMOJI    = ["🥇","🥈","🥉","4️⃣","5️⃣","6️⃣","7️⃣"
 // ─── Pure maths ───────────────────────────────────────────────────────────────
 function clinchAnalysis(sel, all, races, sprints) {
   if (!sel) return null;
-  const avail   = races * MAX_RACE + sprints * MAX_SPRINT;
-  const selMax  = sel.points + avail;
-  const topPts  = Math.max(...all.map(d => d.points));
+
+  // Maximum points the selected driver can still reach
+  const avail  = races * MAX_RACE + sprints * MAX_SPRINT;
+  const selMax = sel.points + avail;
 
   const rivals = all
     .filter(d => d.id !== sel.id)
     .map(r => {
-      const rMax   = r.points + races * MAX_RACE + sprints * MAX_SPRINT;
+      // Worst case: rival scores MAX every remaining race/sprint
+      const rMax = r.points + races * MAX_RACE + sprints * MAX_SPRINT;
+      // Points the selected driver needs to guarantee beating this rival.
+      // We need strictly MORE than the rival's theoretical max because ties
+      // are broken by number of wins — we can't guarantee that tiebreak,
+      // so we require at least +1 over the rival's theoretical ceiling.
       const needed = Math.max(0, rMax - sel.points + 1);
       return { rival: r, rivalMax: rMax, needed, done: sel.points > rMax };
     });
@@ -54,9 +62,14 @@ function clinchAnalysis(sel, all, races, sprints) {
     ? active.reduce((a, b) => a.needed > b.needed ? a : b)
     : null;
 
+  // Mathematically out: even with max points the driver can't outscore
+  // every rival's current total (no remaining scenarios can help)
+  const topCurrentPts = Math.max(...all.map(d => d.points));
+  const mathematicallyOut = selMax < topCurrentPts;
+
   return {
-    alreadyClinched:  rivals.every(r => r.done),
-    mathematicallyOut: selMax < topPts,
+    alreadyClinched: rivals.every(r => r.done),
+    mathematicallyOut,
     hardest: hardest ?? { rival: all[0], needed: 0, rivalMax: all[0].points },
     allRivals: rivals,
   };
@@ -229,8 +242,9 @@ function InfoModal({ onClose }) {
             <p className="text-gray-400">// Peggior scenario per il pilota selezionato</p>
             <p><span className="text-red-500 font-bold">Max Rivale</span> = Punti + (Gare × 25) + (Sprint × 8)</p>
             <p><span className="text-red-500 font-bold">Punti Necessari</span> = Max Rivale − Punti Pilota + 1</p>
+            <p className="text-gray-500 pt-1 border-t border-gray-200">// Giro veloce NON incluso — abolito 2025/2026</p>
           </div>
-          <p>Il punto addizionale per il giro veloce è stato <b className="text-black">abolito dal regolamento 2025/2026</b>. Punteggio massimo per gara: <b className="text-black">25 pt</b>.</p>
+          <p>Massimo per GP: <b className="text-black">25 pt</b>. Massimo per Sprint: <b className="text-black">8 pt</b>. Il punto giro veloce è <b className="text-black">abolito dal 2025</b> — nessun bonus aggiuntivo.</p>
           <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200/60">
             <p className="text-amber-700 font-heading font-black text-[11px] uppercase tracking-widest mb-1">⚠ Criterio di Parità</p>
             <p className="text-xs text-amber-900">In caso di pareggio punti, il titolo va al pilota con più vittorie.</p>
