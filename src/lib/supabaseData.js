@@ -17,7 +17,30 @@ export async function getDriverStandings() {
     .order('position_number', { ascending: true });
 
   throwIfError(error, 'Driver standings');
-  return (data || []).map(normalizeDriver);
+
+  const rows = data || [];
+
+  // If constructor_name is missing, enrich by joining the constructor table
+  const needsConstructor = rows.some(r => !r.constructor_name && !r.team_name && !r.team);
+  let coMap = {};
+  if (needsConstructor) {
+    const ids = [...new Set(rows.map(r => r.constructor_id).filter(Boolean))];
+    if (ids.length) {
+      const { data: cos } = await supabase
+        .from('constructor')
+        .select('id, name, color')
+        .in('id', ids);
+      (cos || []).forEach(c => { coMap[c.id] = c; });
+    }
+  }
+
+  return rows.map(row => {
+    const co = coMap[row.constructor_id] || {};
+    return normalizeDriver({
+      ...row,
+      constructor_name: row.constructor_name || row.team_name || row.team || co.name || '',
+    });
+  });
 }
 
 function normalizeDriver(row) {
