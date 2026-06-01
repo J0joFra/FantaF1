@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Calculator, Info, X, Share2, Bookmark, ChevronDown, ChevronUp,
   Trophy, AlertTriangle, Sparkles, Target, TrendingUp, Award, Eye, HelpCircle,
-  ChevronRight, Filter
+  ChevronRight, Filter, ListChecks
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
@@ -41,11 +41,24 @@ interface RivalAnalysis {
   isMathematicallyEliminated: boolean;
 }
 
+interface RaceResult {
+  raceNumber: number;
+  yourPosition: number;
+  yourPoints: number;
+  rivalPosition: number;
+  rivalPoints: number;
+  yourTotalAfter: number;
+  rivalTotalAfter: number;
+  isOvertake: boolean;
+}
+
 interface Combination {
-  yourFinishes: { position: number; label: string; emoji: string; count: number }[];
-  rivalFinishes: { position: number; label: string; emoji: string; count: number }[];
-  yourTotalPoints: number;
-  rivalTotalPoints: number;
+  id: string;
+  results: RaceResult[];
+  totalRacesUsed: number;
+  overtakeAtRace: number;
+  finalYourPoints: number;
+  finalRivalPoints: number;
   finalGap: number;
 }
 
@@ -108,189 +121,225 @@ function calculateChampionshipAnalysis(
   };
 }
 
-// 🔥 GENERA TUTTE LE COMBINAZIONI POSSIBILI DI PIACCIAMENTI
-function generateAllCombinations(
+// 🔥 GENERA TUTTE LE COMBINAZIONI DI PIACCIAMENTI PER TUTTE LE GARE
+function generateAllPossibleCombinations(
   yourDriver: Driver,
   rival: Driver,
-  racesLeft: number
+  totalRaces: number
 ): Combination[] {
   const combinations: Combination[] = [];
-  const pointsNeeded = rival.points - yourDriver.points + 1;
+  const startYourPoints = yourDriver.points;
+  const startRivalPoints = rival.points;
   
-  if (pointsNeeded <= 0) return [];
-  
-  // Genera tutte le possibili distribuzioni di piazzamenti
-  // Usiamo un approccio ricorsivo per generare tutte le combinazioni
-  const yourDistributions: { position: number; count: number }[][] = [];
-  const rivalDistributions: { position: number; count: number }[][] = [];
-  
-  // Genera tutte le possibili distribuzioni di piazzamenti per un pilota
-  function generateDistributions(
-    remainingRaces: number,
-    currentDist: { position: number; count: number }[],
-    startPos: number,
-    results: { position: number; count: number }[][]
+  // Funzione ricorsiva per generare tutte le sequenze di risultati
+  function generateSequence(
+    raceIndex: number,
+    currentYourPoints: number,
+    currentRivalPoints: number,
+    currentResults: RaceResult[],
+    hasOvertaken: boolean
   ) {
-    if (remainingRaces === 0) {
-      results.push([...currentDist]);
+    // Se abbiamo già superato prima, questa combinazione è valida
+    if (hasOvertaken) {
+      combinations.push({
+        id: `${Date.now()}-${combinations.length}`,
+        results: [...currentResults],
+        totalRacesUsed: raceIndex,
+        overtakeAtRace: currentResults.find(r => r.isOvertake)?.raceNumber || raceIndex,
+        finalYourPoints: currentYourPoints,
+        finalRivalPoints: currentRivalPoints,
+        finalGap: currentYourPoints - currentRivalPoints
+      });
       return;
     }
     
-    for (let pos = startPos; pos <= SCORING_POSITIONS.length; pos++) {
-      const positionData = SCORING_POSITIONS[pos - 1];
-      const maxCount = remainingRaces;
-      
-      for (let count = 1; count <= maxCount; count++) {
-        const newDist = [...currentDist, { position: positionData.position, count }];
-        generateDistributions(remainingRaces - count, newDist, pos + 1, results);
-      }
-    }
-  }
-  
-  // Genera distribuzioni per entrambi i piloti
-  generateDistributions(racesLeft, [], 1, yourDistributions);
-  generateDistributions(racesLeft, [], 1, rivalDistributions);
-  
-  // Calcola i punti per ogni distribuzione
-  for (const yourDist of yourDistributions) {
-    const yourPoints = calculatePointsFromDistribution(yourDist);
-    const yourTotal = yourDriver.points + yourPoints;
-    
-    for (const rivalDist of rivalDistributions) {
-      const rivalPoints = calculatePointsFromDistribution(rivalDist);
-      const rivalTotal = rival.points + rivalPoints;
-      const finalGap = yourTotal - rivalTotal;
-      
-      // Solo combinazioni dove vinciamo
-      if (finalGap > 0) {
+    // Se siamo all'ultima gara, registra la combinazione solo se abbiamo superato
+    if (raceIndex >= totalRaces) {
+      if (currentYourPoints > currentRivalPoints) {
         combinations.push({
-          yourFinishes: yourDist.map(d => ({
-            position: d.position,
-            label: POSITION_LABELS[d.position - 1],
-            emoji: POSITION_EMOJI[d.position - 1],
-            count: d.count
-          })),
-          rivalFinishes: rivalDist.map(d => ({
-            position: d.position,
-            label: POSITION_LABELS[d.position - 1],
-            emoji: POSITION_EMOJI[d.position - 1],
-            count: d.count
-          })),
-          yourTotalPoints: yourTotal,
-          rivalTotalPoints: rivalTotal,
-          finalGap
+          id: `${Date.now()}-${combinations.length}`,
+          results: [...currentResults],
+          totalRacesUsed: totalRaces,
+          overtakeAtRace: totalRaces,
+          finalYourPoints: currentYourPoints,
+          finalRivalPoints: currentRivalPoints,
+          finalGap: currentYourPoints - currentRivalPoints
         });
       }
+      return;
+    }
+    
+    // Genera tutte le possibili coppie di posizioni per questa gara
+    // Il rivale prende SEMPRE punti (posizioni 1-10, mai 11+)
+    for (const yourPos of SCORING_POSITIONS) {
+      for (const rivalPos of SCORING_POSITIONS) {
+        const newYourPoints = currentYourPoints + yourPos.points;
+        const newRivalPoints = currentRivalPoints + rivalPos.points;
+        const isOvertake = !hasOvertaken && (newYourPoints > newRivalPoints);
+        
+        const newResult: RaceResult = {
+          raceNumber: raceIndex + 1,
+          yourPosition: yourPos.position,
+          yourPoints: yourPos.points,
+          rivalPosition: rivalPos.position,
+          rivalPoints: rivalPos.points,
+          yourTotalAfter: newYourPoints,
+          rivalTotalAfter: newRivalPoints,
+          isOvertake
+        };
+        
+        generateSequence(
+          raceIndex + 1,
+          newYourPoints,
+          newRivalPoints,
+          [...currentResults, newResult],
+          hasOvertaken || isOvertake
+        );
+      }
     }
   }
   
-  // Ordina per miglior risultato (minor numero di gare necessarie o maggior gap)
-  return combinations
-    .sort((a, b) => {
-      const aRaces = a.yourFinishes.reduce((sum, f) => sum + f.count, 0);
-      const bRaces = b.yourFinishes.reduce((sum, f) => sum + f.count, 0);
-      if (aRaces !== bRaces) return aRaces - bRaces;
-      return b.finalGap - a.finalGap;
-    })
-    .slice(0, 50); // Limita a 50 combinazioni per performance
+  generateSequence(0, startYourPoints, startRivalPoints, [], false);
+  
+  // Ordina per numero di gare usate (meno gare prima) e poi per gap
+  return combinations.sort((a, b) => {
+    if (a.totalRacesUsed !== b.totalRacesUsed) return a.totalRacesUsed - b.totalRacesUsed;
+    return b.finalGap - a.finalGap;
+  });
 }
 
-function calculatePointsFromDistribution(dist: { position: number; count: number }[]): number {
-  return dist.reduce((sum, item) => {
-    const positionData = SCORING_POSITIONS.find(p => p.position === item.position);
-    return sum + (positionData?.points || 0) * item.count;
-  }, 0);
-}
-
-// 🔥 VERSIONE OTTIMIZZATA PER NON ESPLODERE CON TANTE GARE
+// 🔥 VERSIONE OTTIMIZZATA PER TANTE GARE (USA STRATEGIE PRE-CALCOLATE)
 function generateOptimizedCombinations(
   yourDriver: Driver,
   rival: Driver,
-  racesLeft: number
+  totalRaces: number
 ): Combination[] {
   const combinations: Combination[] = [];
-  const pointsNeeded = rival.points - yourDriver.points + 1;
+  const startYourPoints = yourDriver.points;
+  const startRivalPoints = rival.points;
+  const needed = rival.points - yourDriver.points + 1;
   
-  if (pointsNeeded <= 0) return [];
-  
-  // Strategie pre-calcolate invece di generare tutte le combinazioni
-  
-  // Strategia 1: Vittorie pure
-  const winsNeeded = Math.ceil(pointsNeeded / 25);
-  if (winsNeeded <= racesLeft) {
-    combinations.push({
-      yourFinishes: [{ position: 1, label: "1°", emoji: "🥇", count: winsNeeded }],
-      rivalFinishes: [{ position: 11, label: "11°+", emoji: "💤", count: racesLeft }],
-      yourTotalPoints: yourDriver.points + (winsNeeded * 25),
-      rivalTotalPoints: rival.points,
-      finalGap: (yourDriver.points + (winsNeeded * 25)) - rival.points
-    });
-  }
-  
-  // Strategia 2: Podi costanti
-  const podiumsNeeded = Math.ceil(pointsNeeded / 15);
-  if (podiumsNeeded <= racesLeft) {
-    combinations.push({
-      yourFinishes: [{ position: 3, label: "3°", emoji: "🥉", count: podiumsNeeded }],
-      rivalFinishes: [{ position: 6, label: "6°", emoji: "6️⃣", count: racesLeft }],
-      yourTotalPoints: yourDriver.points + (podiumsNeeded * 15),
-      rivalTotalPoints: rival.points + (racesLeft * 8),
-      finalGap: (yourDriver.points + (podiumsNeeded * 15)) - (rival.points + (racesLeft * 8))
-    });
-  }
-  
-  // Strategia 3: Top 5 costanti
-  const top5Needed = Math.ceil(pointsNeeded / 10);
-  if (top5Needed <= racesLeft) {
-    combinations.push({
-      yourFinishes: [{ position: 5, label: "5°", emoji: "5️⃣", count: top5Needed }],
-      rivalFinishes: [{ position: 8, label: "8°", emoji: "8️⃣", count: racesLeft }],
-      yourTotalPoints: yourDriver.points + (top5Needed * 10),
-      rivalTotalPoints: rival.points + (racesLeft * 4),
-      finalGap: (yourDriver.points + (top5Needed * 10)) - (rival.points + (racesLeft * 4))
-    });
-  }
-  
-  // Strategia 4: Vittorie + piazzamenti
-  for (let wins = 1; wins <= Math.min(winsNeeded, racesLeft); wins++) {
-    const remainingPoints = pointsNeeded - (wins * 25);
-    if (remainingPoints <= 0) continue;
+  // Strategia 1: Vittorie costanti del pilota, piazzamenti medi del rivale
+  for (let wins = 1; wins <= Math.min(totalRaces, Math.ceil(needed / 25) + 5); wins++) {
+    const yourPointsFromWins = wins * 25;
+    const remainingRaces = totalRaces - wins;
     
-    const remainingRaces = racesLeft - wins;
-    const avgNeeded = remainingPoints / remainingRaces;
+    // Il rivale fa piazzamenti medi (esempio: 4° posto = 12pt)
+    const rivalAvgPoints = Math.min(12, Math.floor(18 / (remainingRaces + 1)) + 8);
+    const rivalPointsTotal = remainingRaces * rivalAvgPoints;
     
-    let position = 10;
-    for (let i = 0; i < SCORING_POSITIONS.length; i++) {
-      if (SCORING_POSITIONS[i].points >= avgNeeded) {
-        position = SCORING_POSITIONS[i].position;
-        break;
+    let currentYourPoints = startYourPoints;
+    let currentRivalPoints = startRivalPoints;
+    const results: RaceResult[] = [];
+    let overtakeAtRace = -1;
+    let overtaken = false;
+    
+    for (let i = 0; i < totalRaces; i++) {
+      let yourPos = 1;
+      let yourPts = 25;
+      let rivalPos = 4;
+      let rivalPts = 12;
+      
+      if (i < wins) {
+        yourPos = 1;
+        yourPts = 25;
+      } else {
+        yourPos = 3;
+        yourPts = 15;
+        rivalPts = rivalAvgPoints;
+      }
+      
+      currentYourPoints += yourPts;
+      currentRivalPoints += rivalPts;
+      
+      const isOvertake = !overtaken && (currentYourPoints > currentRivalPoints);
+      if (isOvertake) {
+        overtaken = true;
+        overtakeAtRace = i + 1;
+      }
+      
+      results.push({
+        raceNumber: i + 1,
+        yourPosition: yourPos,
+        yourPoints: yourPts,
+        rivalPosition: rivalPos,
+        rivalPoints: rivalPts,
+        yourTotalAfter: currentYourPoints,
+        rivalTotalAfter: currentRivalPoints,
+        isOvertake
+      });
+      
+      if (overtaken && i + 1 < totalRaces) {
+        // Continua con risultati neutrali
+        continue;
       }
     }
     
-    const positionData = SCORING_POSITIONS.find(p => p.position === position);
-    if (positionData && positionData.points * remainingRaces >= remainingPoints) {
+    if (overtaken) {
       combinations.push({
-        yourFinishes: [
-          { position: 1, label: "1°", emoji: "🥇", count: wins },
-          { position: position, label: positionData.label, emoji: positionData.emoji, count: remainingRaces }
-        ],
-        rivalFinishes: [{ position: 11, label: "11°+", emoji: "💤", count: racesLeft }],
-        yourTotalPoints: yourDriver.points + (wins * 25) + (positionData.points * remainingRaces),
-        rivalTotalPoints: rival.points,
-        finalGap: (yourDriver.points + (wins * 25) + (positionData.points * remainingRaces)) - rival.points
+        id: `opt-${wins}`,
+        results,
+        totalRacesUsed: overtakeAtRace,
+        overtakeAtRace,
+        finalYourPoints: currentYourPoints,
+        finalRivalPoints: currentRivalPoints,
+        finalGap: currentYourPoints - currentRivalPoints
       });
     }
   }
   
-  // Filtra solo quelle valide e ordina
-  return combinations
-    .filter(c => c.finalGap > 0)
-    .sort((a, b) => {
-      const aRaces = a.yourFinishes.reduce((sum, f) => sum + f.count, 0);
-      const bRaces = b.yourFinishes.reduce((sum, f) => sum + f.count, 0);
-      if (aRaces !== bRaces) return aRaces - bRaces;
-      return b.finalGap - a.finalGap;
-    });
+  // Strategia 2: Progressione graduale
+  const gainPerRace = 5; // Recupero medio di 5 punti a gara
+  const racesNeeded = Math.ceil(needed / gainPerRace);
+  
+  if (racesNeeded <= totalRaces) {
+    let currentYourPoints = startYourPoints;
+    let currentRivalPoints = startRivalPoints;
+    const results: RaceResult[] = [];
+    let overtaken = false;
+    let overtakeAtRace = -1;
+    
+    for (let i = 0; i < totalRaces; i++) {
+      let yourPos = i < racesNeeded ? 2 : 4;
+      let yourPts = i < racesNeeded ? 18 : 12;
+      let rivalPos = i < racesNeeded ? 4 : 6;
+      let rivalPts = i < racesNeeded ? 12 : 8;
+      
+      currentYourPoints += yourPts;
+      currentRivalPoints += rivalPts;
+      
+      const isOvertake = !overtaken && (currentYourPoints > currentRivalPoints);
+      if (isOvertake && !overtaken) {
+        overtaken = true;
+        overtakeAtRace = i + 1;
+      }
+      
+      results.push({
+        raceNumber: i + 1,
+        yourPosition: yourPos,
+        yourPoints: yourPts,
+        rivalPosition: rivalPos,
+        rivalPoints: rivalPts,
+        yourTotalAfter: currentYourPoints,
+        rivalTotalAfter: currentRivalPoints,
+        isOvertake
+      });
+    }
+    
+    if (overtaken) {
+      combinations.push({
+        id: `grad-${racesNeeded}`,
+        results,
+        totalRacesUsed: overtakeAtRace,
+        overtakeAtRace,
+        finalYourPoints: currentYourPoints,
+        finalRivalPoints: currentRivalPoints,
+        finalGap: currentYourPoints - currentRivalPoints
+      });
+    }
+  }
+  
+  return combinations.sort((a, b) => a.totalRacesUsed - b.totalRacesUsed);
 }
 
 // ─── UI COMPONENTS ─────────────────────────────────────────────────────────
@@ -348,7 +397,7 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
   );
 }
 
-// 🔥 MODAL CON COMBINAZIONI STILE TABELLA
+// 🔥 MODAL CON TABELLA DELLE COMBINAZIONI
 function RivalDetailModal({ 
   isOpen, 
   onClose, 
@@ -362,26 +411,25 @@ function RivalDetailModal({
   rival: Driver; 
   racesLeft: number;
 }) {
-  const [showOnlyBest, setShowOnlyBest] = useState(true);
+  const [showDetails, setShowDetails] = useState<string | null>(null);
   
   const combinations = useMemo(() => {
-    if (racesLeft > 8) {
+    if (racesLeft > 6) {
       // Per tante gare, usa versione ottimizzata
       return generateOptimizedCombinations(yourDriver, rival, racesLeft);
     } else {
       // Per poche gare, genera tutte le combinazioni
-      return generateAllCombinations(yourDriver, rival, racesLeft);
+      return generateAllPossibleCombinations(yourDriver, rival, racesLeft);
     }
   }, [yourDriver, rival, racesLeft]);
   
   const pointsNeeded = rival.points - yourDriver.points + 1;
-  const displayedCombinations = showOnlyBest ? combinations.slice(0, 10) : combinations;
   
-  // Raggruppa per numero di gare usate
-  const groupedByRaces = displayedCombinations.reduce((acc, combo) => {
-    const racesUsed = combo.yourFinishes.reduce((sum, f) => sum + f.count, 0);
-    if (!acc[racesUsed]) acc[racesUsed] = [];
-    acc[racesUsed].push(combo);
+  // Raggruppa per gara di sorpasso
+  const groupedByOvertake = combinations.reduce((acc, combo) => {
+    const race = combo.overtakeAtRace;
+    if (!acc[race]) acc[race] = [];
+    acc[race].push(combo);
     return acc;
   }, {} as Record<number, Combination[]>);
   
@@ -399,7 +447,7 @@ function RivalDetailModal({
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+            className="bg-white w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -423,127 +471,141 @@ function RivalDetailModal({
               </div>
             </div>
 
-            {/* Controls */}
-            <div className="px-6 pt-4 pb-2 border-b border-gray-100 flex justify-between items-center">
+            {/* Stats */}
+            <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-600">Filtri:</span>
-                <button
-                  onClick={() => setShowOnlyBest(!showOnlyBest)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    showOnlyBest ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {showOnlyBest ? "📊 Solo migliori" : "🔽 Tutte"}
-                </button>
+                <ListChecks className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-600">
+                  {combinations.length} combinazioni trovate
+                </span>
               </div>
-              <span className="text-xs text-gray-400">
-                {combinations.length} combinazioni trovate
-              </span>
+              <div className="text-xs text-gray-400">
+                {Object.keys(groupedByOvertake).length} diversi tempi di sorpasso
+              </div>
             </div>
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
               <div className="space-y-6">
-                {Object.entries(groupedByRaces).sort((a, b) => Number(a[0]) - Number(b[0])).map(([racesUsed, combos]) => (
-                  <div key={racesUsed}>
-                    <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                      <span className="bg-gray-200 rounded-full px-3 py-1 text-sm">
-                        📍 {racesUsed} gare utilizzate
-                      </span>
-                    </h3>
-                    <div className="space-y-3">
-                      {combos.slice(0, 3).map((combo, idx) => (
-                        <motion.div
-                          key={idx}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="border border-gray-200 rounded-xl overflow-hidden"
-                        >
-                          {/* Intestazione della combinazione */}
-                          <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                            <span className="text-sm font-medium text-gray-600">
-                              Combinazione {idx + 1} • Guadagno finale: +{combo.finalGap} pt
-                            </span>
-                          </div>
-                          
-                          {/* Tabella dei risultati */}
-                          <div className="grid grid-cols-2 divide-x divide-gray-200">
-                            {/* Tuoi risultati */}
-                            <div className="p-4">
-                              <div className="flex items-center gap-2 mb-3">
-                                <Trophy className="w-5 h-5 text-green-600" />
-                                <h4 className="font-bold text-green-800">{yourDriver.driver_name}</h4>
+                {Object.entries(groupedByOvertake)
+                  .sort((a, b) => Number(a[0]) - Number(b[0]))
+                  .map(([raceNumber, combos]) => (
+                    <div key={raceNumber} className="border border-gray-200 rounded-xl overflow-hidden">
+                      {/* Header del gruppo */}
+                      <div className="bg-green-100 px-4 py-2 border-b border-green-200">
+                        <div className="flex items-center gap-2">
+                          <Trophy className="w-4 h-4 text-green-700" />
+                          <span className="font-bold text-green-800">
+                            Sorpasso alla Gara {raceNumber}
+                          </span>
+                          <span className="text-xs text-green-600">
+                            ({combos.length} combinazioni)
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Tabella delle combinazioni */}
+                      <div className="divide-y divide-gray-100">
+                        {combos.slice(0, 5).map((combo, idx) => (
+                          <div key={combo.id} className="p-4 hover:bg-gray-50">
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-sm font-medium text-gray-500">
+                                Combinazione {idx + 1}
+                              </span>
+                              <button
+                                onClick={() => setShowDetails(showDetails === combo.id ? null : combo.id)}
+                                className="text-xs text-red-500 hover:text-red-700"
+                              >
+                                {showDetails === combo.id ? "Nascondi dettagli" : "Mostra dettagli"}
+                              </button>
+                            </div>
+                            
+                            {/* Riepilogo compatto */}
+                            <div className="grid grid-cols-2 gap-4 mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-600 font-bold">📊 {yourDriver.driver_name}</span>
+                                <span className="text-sm">
+                                  {combo.results.slice(0, combo.overtakeAtRace).reduce((sum, r) => sum + r.yourPoints, 0)} pt
+                                </span>
                               </div>
-                              <div className="space-y-2">
-                                {combo.yourFinishes.map((finish, i) => (
-                                  <div key={i} className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xl">{finish.emoji}</span>
-                                      <span className="font-medium">{finish.label}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-gray-500">×{finish.count}</span>
-                                      <span className="font-mono font-bold">
-                                        {SCORING_POSITIONS.find(p => p.position === finish.position)?.points || 0 * finish.count} pt
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
-                                <div className="border-t border-green-200 mt-2 pt-2">
-                                  <div className="flex justify-between font-bold">
-                                    <span>Totale:</span>
-                                    <span className="text-green-700">{combo.yourTotalPoints} pt</span>
-                                  </div>
-                                </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-red-600 font-bold">📊 {rival.driver_name}</span>
+                                <span className="text-sm">
+                                  {combo.results.slice(0, combo.overtakeAtRace).reduce((sum, r) => sum + r.rivalPoints, 0)} pt
+                                </span>
                               </div>
                             </div>
                             
-                            {/* Risultati rivale */}
-                            <div className="p-4">
-                              <div className="flex items-center gap-2 mb-3">
-                                <AlertTriangle className="w-5 h-5 text-red-600" />
-                                <h4 className="font-bold text-red-800">{rival.driver_name}</h4>
-                              </div>
-                              <div className="space-y-2">
-                                {combo.rivalFinishes.map((finish, i) => (
-                                  <div key={i} className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xl">{finish.emoji}</span>
-                                      <span className="font-medium">{finish.label}</span>
+                            <div className="text-xs text-gray-400">
+                              Guadagno finale: +{combo.finalGap} punti
+                            </div>
+                            
+                            {/* Dettaglio delle gare */}
+                            {showDetails === combo.id && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="mt-4 pt-4 border-t border-gray-200"
+                              >
+                                <h4 className="font-bold text-sm mb-3">Dettaglio gare:</h4>
+                                <div className="space-y-2">
+                                  {combo.results.map((result, i) => (
+                                    <div 
+                                      key={i}
+                                      className={`grid grid-cols-2 gap-4 p-2 rounded-lg ${
+                                        result.isOvertake ? 'bg-green-100 border border-green-300' : 'bg-gray-50'
+                                      }`}
+                                    >
+                                      {/* Tuoi risultati */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-lg">
+                                            {SCORING_POSITIONS.find(p => p.position === result.yourPosition)?.emoji}
+                                          </span>
+                                          <span className="font-mono">
+                                            Gara {result.raceNumber}: {result.yourPosition}°
+                                          </span>
+                                        </div>
+                                        <span className="font-bold text-green-600">
+                                          +{result.yourPoints} pt
+                                        </span>
+                                      </div>
+                                      
+                                      {/* Risultati rivale */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-lg">
+                                            {SCORING_POSITIONS.find(p => p.position === result.rivalPosition)?.emoji}
+                                          </span>
+                                          <span className="font-mono text-gray-600">
+                                            {result.rivalPosition}°
+                                          </span>
+                                        </div>
+                                        <span className="font-bold text-red-600">
+                                          +{result.rivalPoints} pt
+                                        </span>
+                                      </div>
+                                      
+                                      {/* Punteggio totale dopo la gara */}
+                                      <div className="col-span-2 text-xs text-center text-gray-500 mt-1">
+                                        Punteggio: {result.yourTotalAfter} - {result.rivalTotalAfter}
+                                        {result.isOvertake && (
+                                          <span className="ml-2 text-green-600 font-bold">
+                                            ✅ SORPASSO!
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-gray-500">×{finish.count}</span>
-                                      <span className="font-mono font-bold">
-                                        {SCORING_POSITIONS.find(p => p.position === finish.position)?.points || 0 * finish.count} pt
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
-                                <div className="border-t border-red-200 mt-2 pt-2">
-                                  <div className="flex justify-between font-bold">
-                                    <span>Totale:</span>
-                                    <span className="text-red-700">{combo.rivalTotalPoints} pt</span>
-                                  </div>
+                                  ))}
                                 </div>
-                              </div>
-                            </div>
+                              </motion.div>
+                            )}
                           </div>
-                          
-                          {/* Footer della combinazione */}
-                          <div className="bg-green-50 px-4 py-2 border-t border-green-200">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">Risultato finale:</span>
-                              <span className="font-bold text-green-600">
-                                ✅ {yourDriver.driver_name} supera {rival.driver_name} di {combo.finalGap} punti
-                              </span>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
                 
                 {combinations.length === 0 && (
                   <div className="text-center py-12">
@@ -558,7 +620,7 @@ function RivalDetailModal({
             {/* Footer */}
             <div className="border-t border-gray-100 p-4 bg-gray-50">
               <p className="text-xs text-gray-500 text-center">
-                💡 Sono mostrate solo le combinazioni con posizioni che danno punti (1°-10°)
+                💡 Il rivale prende sempre punti (posizioni 1°-10°). Il sorpasso può avvenire prima della fine delle gare.
               </p>
             </div>
           </motion.div>
@@ -942,15 +1004,11 @@ export default function ScenariosPage() {
                 </p>
                 <div className="bg-gray-50 p-3 rounded-xl">
                   <p className="font-mono text-xs">
-                    Per ogni combinazione vedrai:<br />
-                    • I tuoi piazzamenti (es: 5× 1°)<br />
-                    • I piazzamenti del rivale (es: 5× 2°)<br />
-                    • Il risultato finale
+                    • Il rivale prende SEMPRE punti (1°-10° posto)<br />
+                    • Il sorpasso può avvenire prima della fine delle gare<br />
+                    • Per ogni combinazione vedrai il dettaglio gara per gara
                   </p>
                 </div>
-                <p className="text-xs text-gray-400">
-                  * Sono considerate solo le posizioni che danno punti (1°-10°)
-                </p>
               </div>
             </motion.div>
           </motion.div>
