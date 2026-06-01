@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Calculator, Info, X, Share2, Bookmark, ChevronDown, ChevronUp,
   Trophy, AlertTriangle, Sparkles, Target, TrendingUp, Award, Eye, HelpCircle,
-  ChevronRight, Filter, ListChecks
+  ChevronRight, Filter, Grid3x3, Maximize2, Minimize2
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
@@ -12,17 +12,15 @@ import { supabase } from "../lib/supabase";
 const MAX_RACE_PTS = 25;
 const MAX_SPRINT_PTS = 8;
 const RACE_POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
-const SPRINT_POINTS = [8, 7, 6, 5, 4, 3, 2, 1];
-const POSITION_LABELS = ["1°", "2°", "3°", "4°", "5°", "6°", "7°", "8°", "9°", "10°", "11°+"];
-const POSITION_EMOJI = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟", "💤"];
+const POSITION_LABELS = ["1°", "2°", "3°", "4°", "5°", "6°", "7°", "8°", "9°", "10°"];
+const POSITION_EMOJI = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
 
-// Solo posizioni che danno punti (1°-10°)
 const SCORING_POSITIONS = RACE_POINTS.map((pts, idx) => ({
   position: idx + 1,
   label: POSITION_LABELS[idx],
   emoji: POSITION_EMOJI[idx],
   points: pts
-})).filter(p => p.points > 0);
+}));
 
 interface Driver {
   id: string;
@@ -41,31 +39,20 @@ interface RivalAnalysis {
   isMathematicallyEliminated: boolean;
 }
 
-interface RaceResult {
-  raceNumber: number;
-  yourPosition: number;
+interface MosaicCell {
+  yourPos: number;
+  rivalPos: number;
   yourPoints: number;
-  rivalPosition: number;
   rivalPoints: number;
-  yourTotalAfter: number;
-  rivalTotalAfter: number;
-  isOvertake: boolean;
-}
-
-interface Combination {
-  id: string;
-  results: RaceResult[];
-  totalRacesUsed: number;
-  overtakeAtRace: number;
-  finalYourPoints: number;
-  finalRivalPoints: number;
-  finalGap: number;
+  gain: number;
+  isPossible: boolean;
+  racesNeeded: number;
+  overtakeRace: number | null;
 }
 
 interface ChampionshipAnalysis {
   driver: Driver;
   racesLeft: number;
-  sprintsLeft: number;
   isAlreadyChampion: boolean;
   isMathematicallyOut: boolean;
   mainRival: RivalAnalysis | null;
@@ -121,225 +108,131 @@ function calculateChampionshipAnalysis(
   };
 }
 
-// 🔥 GENERA TUTTE LE COMBINAZIONI DI PIACCIAMENTI PER TUTTE LE GARE
-function generateAllPossibleCombinations(
+// 🔥 GENERA IL MOSAICO DELLE COMBINAZIONI
+function generateMosaic(
   yourDriver: Driver,
   rival: Driver,
-  totalRaces: number
-): Combination[] {
-  const combinations: Combination[] = [];
-  const startYourPoints = yourDriver.points;
-  const startRivalPoints = rival.points;
+  racesLeft: number
+): {
+  cells: MosaicCell[];
+  maxRacesNeeded: number;
+  bestCombination: MosaicCell | null;
+} {
+  const cells: MosaicCell[] = [];
+  const startGap = rival.points - yourDriver.points;
+  let maxRacesNeeded = 0;
+  let bestCombination: MosaicCell | null = null;
   
-  // Funzione ricorsiva per generare tutte le sequenze di risultati
-  function generateSequence(
-    raceIndex: number,
-    currentYourPoints: number,
-    currentRivalPoints: number,
-    currentResults: RaceResult[],
-    hasOvertaken: boolean
-  ) {
-    // Se abbiamo già superato prima, questa combinazione è valida
-    if (hasOvertaken) {
-      combinations.push({
-        id: `${Date.now()}-${combinations.length}`,
-        results: [...currentResults],
-        totalRacesUsed: raceIndex,
-        overtakeAtRace: currentResults.find(r => r.isOvertake)?.raceNumber || raceIndex,
-        finalYourPoints: currentYourPoints,
-        finalRivalPoints: currentRivalPoints,
-        finalGap: currentYourPoints - currentRivalPoints
-      });
-      return;
-    }
-    
-    // Se siamo all'ultima gara, registra la combinazione solo se abbiamo superato
-    if (raceIndex >= totalRaces) {
-      if (currentYourPoints > currentRivalPoints) {
-        combinations.push({
-          id: `${Date.now()}-${combinations.length}`,
-          results: [...currentResults],
-          totalRacesUsed: totalRaces,
-          overtakeAtRace: totalRaces,
-          finalYourPoints: currentYourPoints,
-          finalRivalPoints: currentRivalPoints,
-          finalGap: currentYourPoints - currentRivalPoints
-        });
-      }
-      return;
-    }
-    
-    // Genera tutte le possibili coppie di posizioni per questa gara
-    // Il rivale prende SEMPRE punti (posizioni 1-10, mai 11+)
-    for (const yourPos of SCORING_POSITIONS) {
-      for (const rivalPos of SCORING_POSITIONS) {
-        const newYourPoints = currentYourPoints + yourPos.points;
-        const newRivalPoints = currentRivalPoints + rivalPos.points;
-        const isOvertake = !hasOvertaken && (newYourPoints > newRivalPoints);
-        
-        const newResult: RaceResult = {
-          raceNumber: raceIndex + 1,
-          yourPosition: yourPos.position,
+  // Per ogni possibile posizione del pilota
+  for (const yourPos of SCORING_POSITIONS) {
+    // Per ogni possibile posizione del rivale
+    for (const rivalPos of SCORING_POSITIONS) {
+      const gainPerRace = yourPos.points - rivalPos.points;
+      
+      // Se il guadagno per gara è <= 0, non si può recuperare
+      if (gainPerRace <= 0) {
+        cells.push({
+          yourPos: yourPos.position,
+          rivalPos: rivalPos.position,
           yourPoints: yourPos.points,
-          rivalPosition: rivalPos.position,
           rivalPoints: rivalPos.points,
-          yourTotalAfter: newYourPoints,
-          rivalTotalAfter: newRivalPoints,
-          isOvertake
-        };
-        
-        generateSequence(
-          raceIndex + 1,
-          newYourPoints,
-          newRivalPoints,
-          [...currentResults, newResult],
-          hasOvertaken || isOvertake
-        );
-      }
-    }
-  }
-  
-  generateSequence(0, startYourPoints, startRivalPoints, [], false);
-  
-  // Ordina per numero di gare usate (meno gare prima) e poi per gap
-  return combinations.sort((a, b) => {
-    if (a.totalRacesUsed !== b.totalRacesUsed) return a.totalRacesUsed - b.totalRacesUsed;
-    return b.finalGap - a.finalGap;
-  });
-}
-
-// 🔥 VERSIONE OTTIMIZZATA PER TANTE GARE (USA STRATEGIE PRE-CALCOLATE)
-function generateOptimizedCombinations(
-  yourDriver: Driver,
-  rival: Driver,
-  totalRaces: number
-): Combination[] {
-  const combinations: Combination[] = [];
-  const startYourPoints = yourDriver.points;
-  const startRivalPoints = rival.points;
-  const needed = rival.points - yourDriver.points + 1;
-  
-  // Strategia 1: Vittorie costanti del pilota, piazzamenti medi del rivale
-  for (let wins = 1; wins <= Math.min(totalRaces, Math.ceil(needed / 25) + 5); wins++) {
-    const yourPointsFromWins = wins * 25;
-    const remainingRaces = totalRaces - wins;
-    
-    // Il rivale fa piazzamenti medi (esempio: 4° posto = 12pt)
-    const rivalAvgPoints = Math.min(12, Math.floor(18 / (remainingRaces + 1)) + 8);
-    const rivalPointsTotal = remainingRaces * rivalAvgPoints;
-    
-    let currentYourPoints = startYourPoints;
-    let currentRivalPoints = startRivalPoints;
-    const results: RaceResult[] = [];
-    let overtakeAtRace = -1;
-    let overtaken = false;
-    
-    for (let i = 0; i < totalRaces; i++) {
-      let yourPos = 1;
-      let yourPts = 25;
-      let rivalPos = 4;
-      let rivalPts = 12;
-      
-      if (i < wins) {
-        yourPos = 1;
-        yourPts = 25;
-      } else {
-        yourPos = 3;
-        yourPts = 15;
-        rivalPts = rivalAvgPoints;
-      }
-      
-      currentYourPoints += yourPts;
-      currentRivalPoints += rivalPts;
-      
-      const isOvertake = !overtaken && (currentYourPoints > currentRivalPoints);
-      if (isOvertake) {
-        overtaken = true;
-        overtakeAtRace = i + 1;
-      }
-      
-      results.push({
-        raceNumber: i + 1,
-        yourPosition: yourPos,
-        yourPoints: yourPts,
-        rivalPosition: rivalPos,
-        rivalPoints: rivalPts,
-        yourTotalAfter: currentYourPoints,
-        rivalTotalAfter: currentRivalPoints,
-        isOvertake
-      });
-      
-      if (overtaken && i + 1 < totalRaces) {
-        // Continua con risultati neutrali
+          gain: gainPerRace,
+          isPossible: false,
+          racesNeeded: 0,
+          overtakeRace: null
+        });
         continue;
       }
-    }
-    
-    if (overtaken) {
-      combinations.push({
-        id: `opt-${wins}`,
-        results,
-        totalRacesUsed: overtakeAtRace,
-        overtakeAtRace,
-        finalYourPoints: currentYourPoints,
-        finalRivalPoints: currentRivalPoints,
-        finalGap: currentYourPoints - currentRivalPoints
-      });
-    }
-  }
-  
-  // Strategia 2: Progressione graduale
-  const gainPerRace = 5; // Recupero medio di 5 punti a gara
-  const racesNeeded = Math.ceil(needed / gainPerRace);
-  
-  if (racesNeeded <= totalRaces) {
-    let currentYourPoints = startYourPoints;
-    let currentRivalPoints = startRivalPoints;
-    const results: RaceResult[] = [];
-    let overtaken = false;
-    let overtakeAtRace = -1;
-    
-    for (let i = 0; i < totalRaces; i++) {
-      let yourPos = i < racesNeeded ? 2 : 4;
-      let yourPts = i < racesNeeded ? 18 : 12;
-      let rivalPos = i < racesNeeded ? 4 : 6;
-      let rivalPts = i < racesNeeded ? 12 : 8;
       
-      currentYourPoints += yourPts;
-      currentRivalPoints += rivalPts;
+      // Calcola quante gare servono per recuperare il gap
+      const racesNeeded = Math.ceil((startGap + 1) / gainPerRace);
       
-      const isOvertake = !overtaken && (currentYourPoints > currentRivalPoints);
-      if (isOvertake && !overtaken) {
-        overtaken = true;
-        overtakeAtRace = i + 1;
+      if (racesNeeded <= racesLeft) {
+        maxRacesNeeded = Math.max(maxRacesNeeded, racesNeeded);
+        
+        const cell: MosaicCell = {
+          yourPos: yourPos.position,
+          rivalPos: rivalPos.position,
+          yourPoints: yourPos.points,
+          rivalPoints: rivalPos.points,
+          gain: gainPerRace,
+          isPossible: true,
+          racesNeeded: racesNeeded,
+          overtakeRace: racesNeeded
+        };
+        
+        cells.push(cell);
+        
+        // Trova la migliore combinazione (minor numero di gare)
+        if (!bestCombination || racesNeeded < bestCombination.racesNeeded) {
+          bestCombination = cell;
+        }
+      } else {
+        cells.push({
+          yourPos: yourPos.position,
+          rivalPos: rivalPos.position,
+          yourPoints: yourPos.points,
+          rivalPoints: rivalPos.points,
+          gain: gainPerRace,
+          isPossible: false,
+          racesNeeded: racesNeeded,
+          overtakeRace: null
+        });
       }
-      
-      results.push({
-        raceNumber: i + 1,
-        yourPosition: yourPos,
-        yourPoints: yourPts,
-        rivalPosition: rivalPos,
-        rivalPoints: rivalPts,
-        yourTotalAfter: currentYourPoints,
-        rivalTotalAfter: currentRivalPoints,
-        isOvertake
-      });
-    }
-    
-    if (overtaken) {
-      combinations.push({
-        id: `grad-${racesNeeded}`,
-        results,
-        totalRacesUsed: overtakeAtRace,
-        overtakeAtRace,
-        finalYourPoints: currentYourPoints,
-        finalRivalPoints: currentRivalPoints,
-        finalGap: currentYourPoints - currentRivalPoints
-      });
     }
   }
   
-  return combinations.sort((a, b) => a.totalRacesUsed - b.totalRacesUsed);
+  return { cells, maxRacesNeeded, bestCombination };
+}
+
+// 🔥 GENERA DETTAGLIO PER UNA CELLA SPECIFICA
+function generateDetailedCombination(
+  yourDriver: Driver,
+  rival: Driver,
+  yourPos: number,
+  rivalPos: number,
+  racesLeft: number
+): {
+  results: { raceNumber: number; yourTotal: number; rivalTotal: number; isOvertake: boolean }[];
+  overtakeAtRace: number;
+  finalYourPoints: number;
+  finalRivalPoints: number;
+} {
+  const startYourPoints = yourDriver.points;
+  const startRivalPoints = rival.points;
+  const yourPointsPerRace = SCORING_POSITIONS.find(p => p.position === yourPos)!.points;
+  const rivalPointsPerRace = SCORING_POSITIONS.find(p => p.position === rivalPos)!.points;
+  const gainPerRace = yourPointsPerRace - rivalPointsPerRace;
+  const racesNeeded = Math.ceil((rival.points - yourDriver.points + 1) / gainPerRace);
+  
+  const results = [];
+  let currentYour = startYourPoints;
+  let currentRival = startRivalPoints;
+  let overtakeAtRace = -1;
+  
+  for (let i = 1; i <= Math.min(racesNeeded, racesLeft); i++) {
+    currentYour += yourPointsPerRace;
+    currentRival += rivalPointsPerRace;
+    const isOvertake = overtakeAtRace === -1 && currentYour > currentRival;
+    
+    if (isOvertake) {
+      overtakeAtRace = i;
+    }
+    
+    results.push({
+      raceNumber: i,
+      yourTotal: currentYour,
+      rivalTotal: currentRival,
+      isOvertake
+    });
+  }
+  
+  return {
+    results,
+    overtakeAtRace,
+    finalYourPoints: currentYour,
+    finalRivalPoints: currentRival
+  };
 }
 
 // ─── UI COMPONENTS ─────────────────────────────────────────────────────────
@@ -397,41 +290,215 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
   );
 }
 
-// 🔥 MODAL CON TABELLA DELLE COMBINAZIONI
-function RivalDetailModal({ 
-  isOpen, 
-  onClose, 
-  yourDriver, 
-  rival, 
-  racesLeft 
+// 🔥 COMPONENTE MOSAICO INTERATTIVO
+function MosaicDiagram({ 
+  cells, 
+  bestCombination,
+  yourDriver,
+  rival,
+  racesLeft,
+  onCellClick 
 }: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  yourDriver: Driver; 
-  rival: Driver; 
+  cells: MosaicCell[];
+  bestCombination: MosaicCell | null;
+  yourDriver: Driver;
+  rival: Driver;
+  racesLeft: number;
+  onCellClick: (yourPos: number, rivalPos: number) => void;
+}) {
+  const [hoveredCell, setHoveredCell] = useState<MosaicCell | null>(null);
+  
+  // Organizza le celle in matrice 10x10
+  const matrix: (MosaicCell | null)[][] = Array(10).fill(null).map(() => Array(10).fill(null));
+  
+  cells.forEach(cell => {
+    matrix[cell.yourPos - 1][cell.rivalPos - 1] = cell;
+  });
+  
+  const getCellColor = (cell: MosaicCell | null) => {
+    if (!cell) return "bg-gray-100";
+    if (!cell.isPossible) return "bg-red-200 hover:bg-red-300";
+    if (cell.racesNeeded <= 3) return "bg-green-500 hover:bg-green-600 text-white";
+    if (cell.racesNeeded <= 5) return "bg-green-400 hover:bg-green-500 text-white";
+    if (cell.racesNeeded <= 7) return "bg-yellow-400 hover:bg-yellow-500";
+    return "bg-orange-400 hover:bg-orange-500";
+  };
+  
+  const getCellTooltip = (cell: MosaicCell | null) => {
+    if (!cell) return "";
+    if (!cell.isPossible) return `❌ Impossibile recuperare (guadagno: ${cell.gain} pt/gara)`;
+    return `✅ Possibile in ${cell.racesNeeded} gare\n📈 Guadagno: ${cell.gain} pt/gara\n🎯 Sorpasso alla gara ${cell.overtakeRace}`;
+  };
+  
+  const isBest = (cell: MosaicCell | null) => {
+    return cell && bestCombination && 
+           cell.yourPos === bestCombination.yourPos && 
+           cell.rivalPos === bestCombination.rivalPos;
+  };
+  
+  return (
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 overflow-x-auto">
+      <div className="flex items-center gap-2 mb-4">
+        <Grid3x3 className="w-5 h-5 text-red-500" />
+        <h3 className="font-bold text-gray-900">Diagramma a Mosaico</h3>
+        <span className="text-xs text-gray-400">Clicca su una cella per i dettagli</span>
+      </div>
+      
+      {/* Legenda */}
+      <div className="flex flex-wrap gap-3 mb-4 text-xs">
+        <div className="flex items-center gap-1">
+          <div className="w-4 h-4 bg-green-500 rounded"></div>
+          <span>Facile (≤3 gare)</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-4 h-4 bg-green-400 rounded"></div>
+          <span>Medio (4-5 gare)</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-4 h-4 bg-yellow-400 rounded"></div>
+          <span>Difficile (6-7 gare)</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-4 h-4 bg-orange-400 rounded"></div>
+          <span>Molto difficile (≥8 gare)</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-4 h-4 bg-red-200 rounded"></div>
+          <span>Impossibile</span>
+        </div>
+      </div>
+      
+      {/* Tabella Mosaico */}
+      <div className="inline-block min-w-full">
+        {/* Intestazione colonne (risultati rivale) */}
+        <div className="grid grid-cols-11 gap-1 mb-1">
+          <div className="text-center text-xs font-bold text-gray-500 p-2"></div>
+          {SCORING_POSITIONS.map(pos => (
+            <div key={`header-${pos.position}`} className="text-center">
+              <div className="text-lg">{pos.emoji}</div>
+              <div className="text-xs font-bold text-gray-600">{pos.label}</div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Righe della matrice */}
+        {SCORING_POSITIONS.map(yourPos => (
+          <div key={`row-${yourPos.position}`} className="grid grid-cols-11 gap-1 mb-1">
+            {/* Intestazione riga (risultati pilota) */}
+            <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-1">
+              <div className="text-lg">{yourPos.emoji}</div>
+              <div className="text-xs font-bold text-gray-600">{yourPos.label}</div>
+            </div>
+            
+            {/* Celle */}
+            {SCORING_POSITIONS.map(rivalPos => {
+              const cell = matrix[yourPos.position - 1][rivalPos.position - 1];
+              return (
+                <motion.button
+                  key={`cell-${yourPos.position}-${rivalPos.position}`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => cell?.isPossible && onCellClick(cell.yourPos, cell.rivalPos)}
+                  onMouseEnter={() => setHoveredCell(cell)}
+                  onMouseLeave={() => setHoveredCell(null)}
+                  className={`
+                    relative rounded-lg p-2 text-center transition-all min-h-[60px]
+                    ${getCellColor(cell)}
+                    ${isBest(cell) ? 'ring-2 ring-red-500 ring-offset-2' : ''}
+                    ${cell?.isPossible ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}
+                  `}
+                  disabled={!cell?.isPossible}
+                >
+                  {cell && (
+                    <>
+                      <div className="text-sm font-bold">
+                        {cell.isPossible ? `✅ ${cell.racesNeeded}g` : '❌'}
+                      </div>
+                      <div className="text-xs">
+                        ±{Math.abs(cell.gain)} pt/g
+                      </div>
+                      {isBest(cell) && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                      )}
+                    </>
+                  )}
+                </motion.button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      
+      {/* Tooltip hover */}
+      {hoveredCell && (
+        <div className="mt-4 p-3 bg-gray-100 rounded-lg text-sm">
+          <div className="font-bold mb-1">
+            {hoveredCell.isPossible ? '✅ Combinazione Possibile' : '❌ Combinazione Impossibile'}
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <span className="text-gray-500">Il tuo piazzamento:</span>
+              <span className="ml-2 font-bold">{hoveredCell.yourPos}° ({hoveredCell.yourPoints} pt)</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Piazzamento rivale:</span>
+              <span className="ml-2 font-bold">{hoveredCell.rivalPos}° ({hoveredCell.rivalPoints} pt)</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Guadagno a gara:</span>
+              <span className="ml-2 font-bold text-green-600">+{hoveredCell.gain} pt</span>
+            </div>
+            {hoveredCell.isPossible && (
+              <>
+                <div>
+                  <span className="text-gray-500">Gare necessarie:</span>
+                  <span className="ml-2 font-bold text-blue-600">{hoveredCell.racesNeeded}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-500">Sorpasso alla gara:</span>
+                  <span className="ml-2 font-bold text-green-600">{hoveredCell.overtakeRace}</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Best combination highlight */}
+      {bestCombination && (
+        <div className="mt-3 p-2 bg-green-50 rounded-lg text-xs text-center">
+          ⭐ Migliore combinazione: {bestCombination.yourPos}° vs {bestCombination.rivalPos}° → 
+          sorpasso in {bestCombination.racesNeeded} gare
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 🔥 MODAL CON DETTAGLIO DELLA CELLA SELEZIONATA
+function CellDetailModal({
+  isOpen,
+  onClose,
+  yourDriver,
+  rival,
+  yourPos,
+  rivalPos,
+  racesLeft
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  yourDriver: Driver;
+  rival: Driver;
+  yourPos: number;
+  rivalPos: number;
   racesLeft: number;
 }) {
-  const [showDetails, setShowDetails] = useState<string | null>(null);
+  const yourPosData = SCORING_POSITIONS.find(p => p.position === yourPos)!;
+  const rivalPosData = SCORING_POSITIONS.find(p => p.position === rivalPos)!;
+  const gainPerRace = yourPosData.points - rivalPosData.points;
+  const racesNeeded = Math.ceil((rival.points - yourDriver.points + 1) / gainPerRace);
   
-  const combinations = useMemo(() => {
-    if (racesLeft > 6) {
-      // Per tante gare, usa versione ottimizzata
-      return generateOptimizedCombinations(yourDriver, rival, racesLeft);
-    } else {
-      // Per poche gare, genera tutte le combinazioni
-      return generateAllPossibleCombinations(yourDriver, rival, racesLeft);
-    }
-  }, [yourDriver, rival, racesLeft]);
-  
-  const pointsNeeded = rival.points - yourDriver.points + 1;
-  
-  // Raggruppa per gara di sorpasso
-  const groupedByOvertake = combinations.reduce((acc, combo) => {
-    const race = combo.overtakeAtRace;
-    if (!acc[race]) acc[race] = [];
-    acc[race].push(combo);
-    return acc;
-  }, {} as Record<number, Combination[]>);
+  const details = generateDetailedCombination(yourDriver, rival, yourPos, rivalPos, racesLeft);
   
   return (
     <AnimatePresence>
@@ -447,181 +514,87 @@ function RivalDetailModal({
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+            className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Combinazioni per superare {rival.driver_name}</h2>
-                  <p className="text-red-100 text-sm">
-                    Devi recuperare <span className="font-bold text-xl">{pointsNeeded}</span> punti in {racesLeft} gare
-                  </p>
-                  <p className="text-red-100 text-xs mt-1">
-                    {yourDriver.driver_name} ({yourDriver.points} pt) → {rival.driver_name} ({rival.points} pt)
+                  <h2 className="text-2xl font-bold mb-2">Dettaglio Combinazione</h2>
+                  <p className="text-red-100">
+                    {yourDriver.driver_name} <strong>{yourPosData.label}</strong> ({yourPosData.points} pt) vs 
+                    {rival.driver_name} <strong>{rivalPosData.label}</strong> ({rivalPosData.points} pt)
                   </p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+                  className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
-
-            {/* Stats */}
-            <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <ListChecks className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600">
-                  {combinations.length} combinazioni trovate
-                </span>
-              </div>
-              <div className="text-xs text-gray-400">
-                {Object.keys(groupedByOvertake).length} diversi tempi di sorpasso
-              </div>
-            </div>
-
+            
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-6">
-                {Object.entries(groupedByOvertake)
-                  .sort((a, b) => Number(a[0]) - Number(b[0]))
-                  .map(([raceNumber, combos]) => (
-                    <div key={raceNumber} className="border border-gray-200 rounded-xl overflow-hidden">
-                      {/* Header del gruppo */}
-                      <div className="bg-green-100 px-4 py-2 border-b border-green-200">
-                        <div className="flex items-center gap-2">
-                          <Trophy className="w-4 h-4 text-green-700" />
-                          <span className="font-bold text-green-800">
-                            Sorpasso alla Gara {raceNumber}
-                          </span>
-                          <span className="text-xs text-green-600">
-                            ({combos.length} combinazioni)
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Tabella delle combinazioni */}
-                      <div className="divide-y divide-gray-100">
-                        {combos.slice(0, 5).map((combo, idx) => (
-                          <div key={combo.id} className="p-4 hover:bg-gray-50">
-                            <div className="flex justify-between items-center mb-3">
-                              <span className="text-sm font-medium text-gray-500">
-                                Combinazione {idx + 1}
-                              </span>
-                              <button
-                                onClick={() => setShowDetails(showDetails === combo.id ? null : combo.id)}
-                                className="text-xs text-red-500 hover:text-red-700"
-                              >
-                                {showDetails === combo.id ? "Nascondi dettagli" : "Mostra dettagli"}
-                              </button>
-                            </div>
-                            
-                            {/* Riepilogo compatto */}
-                            <div className="grid grid-cols-2 gap-4 mb-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-green-600 font-bold">📊 {yourDriver.driver_name}</span>
-                                <span className="text-sm">
-                                  {combo.results.slice(0, combo.overtakeAtRace).reduce((sum, r) => sum + r.yourPoints, 0)} pt
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-red-600 font-bold">📊 {rival.driver_name}</span>
-                                <span className="text-sm">
-                                  {combo.results.slice(0, combo.overtakeAtRace).reduce((sum, r) => sum + r.rivalPoints, 0)} pt
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="text-xs text-gray-400">
-                              Guadagno finale: +{combo.finalGap} punti
-                            </div>
-                            
-                            {/* Dettaglio delle gare */}
-                            {showDetails === combo.id && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: "auto" }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="mt-4 pt-4 border-t border-gray-200"
-                              >
-                                <h4 className="font-bold text-sm mb-3">Dettaglio gare:</h4>
-                                <div className="space-y-2">
-                                  {combo.results.map((result, i) => (
-                                    <div 
-                                      key={i}
-                                      className={`grid grid-cols-2 gap-4 p-2 rounded-lg ${
-                                        result.isOvertake ? 'bg-green-100 border border-green-300' : 'bg-gray-50'
-                                      }`}
-                                    >
-                                      {/* Tuoi risultati */}
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-lg">
-                                            {SCORING_POSITIONS.find(p => p.position === result.yourPosition)?.emoji}
-                                          </span>
-                                          <span className="font-mono">
-                                            Gara {result.raceNumber}: {result.yourPosition}°
-                                          </span>
-                                        </div>
-                                        <span className="font-bold text-green-600">
-                                          +{result.yourPoints} pt
-                                        </span>
-                                      </div>
-                                      
-                                      {/* Risultati rivale */}
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-lg">
-                                            {SCORING_POSITIONS.find(p => p.position === result.rivalPosition)?.emoji}
-                                          </span>
-                                          <span className="font-mono text-gray-600">
-                                            {result.rivalPosition}°
-                                          </span>
-                                        </div>
-                                        <span className="font-bold text-red-600">
-                                          +{result.rivalPoints} pt
-                                        </span>
-                                      </div>
-                                      
-                                      {/* Punteggio totale dopo la gara */}
-                                      <div className="col-span-2 text-xs text-center text-gray-500 mt-1">
-                                        Punteggio: {result.yourTotalAfter} - {result.rivalTotalAfter}
-                                        {result.isOvertake && (
-                                          <span className="ml-2 text-green-600 font-bold">
-                                            ✅ SORPASSO!
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </motion.div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                
-                {combinations.length === 0 && (
-                  <div className="text-center py-12">
-                    <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">Nessuna combinazione possibile con {racesLeft} gare rimanenti</p>
-                    <p className="text-xs text-gray-400 mt-2">Il divario è troppo ampio da recuperare</p>
-                  </div>
-                )}
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-green-50 rounded-xl p-3 text-center">
+                  <div className="text-2xl mb-1">{yourPosData.emoji}</div>
+                  <div className="font-bold text-green-800">{yourDriver.driver_name}</div>
+                  <div className="text-sm">{yourPosData.points} pt a gara</div>
+                </div>
+                <div className="bg-red-50 rounded-xl p-3 text-center">
+                  <div className="text-2xl mb-1">{rivalPosData.emoji}</div>
+                  <div className="font-bold text-red-800">{rival.driver_name}</div>
+                  <div className="text-sm">{rivalPosData.points} pt a gara</div>
+                </div>
               </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-gray-100 p-4 bg-gray-50">
-              <p className="text-xs text-gray-500 text-center">
-                💡 Il rivale prende sempre punti (posizioni 1°-10°). Il sorpasso può avvenire prima della fine delle gare.
-              </p>
+              
+              <div className="bg-blue-50 rounded-xl p-4 mb-6">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Guadagno a gara:</span>
+                    <span className="ml-2 font-bold text-green-600">+{gainPerRace} pt</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Gare necessarie:</span>
+                    <span className="ml-2 font-bold">{racesNeeded}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Partenza:</span>
+                    <span className="ml-2">{yourDriver.points} - {rival.points}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Arrivo:</span>
+                    <span className="ml-2 font-bold">{details.finalYourPoints} - {details.finalRivalPoints}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <h4 className="font-bold mb-3">📊 Andamento gara per gara:</h4>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {details.results.map(result => (
+                  <div 
+                    key={result.raceNumber}
+                    className={`p-3 rounded-lg ${result.isOvertake ? 'bg-green-100 border border-green-300' : 'bg-gray-50'}`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold">Gara {result.raceNumber}</span>
+                      {result.isOvertake && (
+                        <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">SORPASSO!</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between mt-1 text-sm">
+                      <span>{yourDriver.driver_name}: {result.yourTotal} pt</span>
+                      <span>{rival.driver_name}: {result.rivalTotal} pt</span>
+                      <span className={result.yourTotal > result.rivalTotal ? 'text-green-600 font-bold' : 'text-red-600'}>
+                        {result.yourTotal > result.rivalTotal ? '👍 Avanti' : '👎 Dietro'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </motion.div>
         </motion.div>
@@ -685,6 +658,7 @@ export default function ScenariosPage() {
   const [showInfo, setShowInfo] = useState(false);
   const [savedScenarios, setSavedScenarios] = useState<any[]>([]);
   const [selectedRival, setSelectedRival] = useState<Driver | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{ yourPos: number; rivalPos: number } | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -747,6 +721,11 @@ export default function ScenariosPage() {
     return calculateChampionshipAnalysis(selectedDriver, drivers, racesLeft, sprintsLeft);
   }, [selectedDriver, drivers, racesLeft, sprintsLeft]);
 
+  const mosaicData = useMemo(() => {
+    if (!selectedDriver || !selectedRival || racesLeft === 0) return null;
+    return generateMosaic(selectedDriver, selectedRival, racesLeft);
+  }, [selectedDriver, selectedRival, racesLeft]);
+
   const maxPossiblePoints = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
   const leader = drivers.length > 0 ? drivers.reduce((a, b) => a.points > b.points ? a : b) : null;
 
@@ -803,7 +782,7 @@ export default function ScenariosPage() {
               <Sparkles className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />
             </div>
             <h1 className="font-black text-xl text-gray-900">F1 2026</h1>
-            <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Scenario Campionato</span>
+            <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Mosaico Strategie</span>
           </div>
           <button
             onClick={() => setShowInfo(true)}
@@ -918,6 +897,18 @@ export default function ScenariosPage() {
               </div>
             </div>
 
+            {/* Mosaic Diagram */}
+            {selectedRival && mosaicData && (
+              <MosaicDiagram
+                cells={mosaicData.cells}
+                bestCombination={mosaicData.bestCombination}
+                yourDriver={selectedDriver}
+                rival={selectedRival}
+                racesLeft={racesLeft}
+                onCellClick={(yourPos, rivalPos) => setSelectedCell({ yourPos, rivalPos })}
+              />
+            )}
+
             {/* Actions */}
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -963,13 +954,15 @@ export default function ScenariosPage() {
         )}
       </div>
 
-      {/* Rival Detail Modal */}
-      {selectedRival && selectedDriver && (
-        <RivalDetailModal
-          isOpen={!!selectedRival}
-          onClose={() => setSelectedRival(null)}
+      {/* Cell Detail Modal */}
+      {selectedCell && selectedDriver && selectedRival && (
+        <CellDetailModal
+          isOpen={!!selectedCell}
+          onClose={() => setSelectedCell(null)}
           yourDriver={selectedDriver}
           rival={selectedRival}
+          yourPos={selectedCell.yourPos}
+          rivalPos={selectedCell.rivalPos}
           racesLeft={racesLeft}
         />
       )}
@@ -992,23 +985,24 @@ export default function ScenariosPage() {
               onClick={e => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-black text-lg">Come funziona</h3>
+                <h3 className="font-black text-lg">Diagramma a Mosaico</h3>
                 <button onClick={() => setShowInfo(false)} className="w-8 h-8 rounded-full bg-gray-100">
                   <X className="w-4 h-4 mx-auto" />
                 </button>
               </div>
               <div className="space-y-4 text-sm text-gray-600">
                 <p>
-                  Clicca su un rivale per vedere tutte le <strong>combinazioni possibili</strong> di piazzamenti
-                  che ti permettono di superarlo.
+                  Il <strong>diagramma a mosaico</strong> mostra tutte le possibili combinazioni di piazzamenti:
                 </p>
-                <div className="bg-gray-50 p-3 rounded-xl">
-                  <p className="font-mono text-xs">
-                    • Il rivale prende SEMPRE punti (1°-10° posto)<br />
-                    • Il sorpasso può avvenire prima della fine delle gare<br />
-                    • Per ogni combinazione vedrai il dettaglio gara per gara
-                  </p>
-                </div>
+                <ul className="list-disc list-inside space-y-2">
+                  <li>🟢 <strong>Verde</strong>: Possibile in poche gare</li>
+                  <li>🟡 <strong>Giallo</strong>: Possibile in 6-7 gare</li>
+                  <li>🟠 <strong>Arancione</strong>: Possibile in 8+ gare</li>
+                  <li>🔴 <strong>Rosso</strong>: Impossibile</li>
+                </ul>
+                <p className="text-xs text-gray-400 mt-2">
+                  Clicca su una cella verde/gialla/arancione per vedere il dettaglio gara per gara!
+                </p>
               </div>
             </motion.div>
           </motion.div>
