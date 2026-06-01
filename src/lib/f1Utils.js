@@ -89,6 +89,75 @@ export function clinchAnalysis(driver, allDrivers, racesLeft, sprintsLeft) {
   };
 }
 
+// ─── DRIVER COLORS ───────────────────────────────────────────────────────────
+const DRIVER_COLORS = {
+  // Mercedes
+  rus: '#27F4D2', russell: '#27F4D2',
+  ant: '#27F4D2', antonelli: '#27F4D2',
+
+  // Red Bull Racing
+  ver: '#3671C6', verstappen: '#3671C6',
+  had: '#3671C6', hadjar: '#3671C6', // Promosso in Red Bull
+
+  // Ferrari
+  lec: '#E8002D', leclerc: '#E8002D',
+  ham: '#E8002D', hamilton: '#E8002D',
+
+  // McLaren
+  nor: '#FF8000', norris: '#FF8000',
+  pia: '#FF8000', piastri: '#FF8000',
+
+  // Aston Martin (Honda Works)
+  alo: '#358C75', alonso: '#358C75',
+  str: '#358C75', stroll: '#358C75',
+
+  // Alpine
+  gas: '#FF87BC', gasly: '#FF87BC',
+  col: '#FF87BC', colapinto: '#FF87BC', // Passato in Alpine
+
+  // Williams
+  alb: '#64C4FF', albon: '#64C4FF',
+  sai: '#64C4FF', sainz: '#64C4FF',
+
+  // Racing Bulls (VCARB)
+  law: '#6692FF', lawson: '#6692FF',
+  lin: '#6692FF', lindblad: '#6692FF', // Nuovo rookie in RB
+
+  // Haas
+  ocn: '#B6BABD', ocon: '#B6BABD',
+  bea: '#B6BABD', bearman: '#B6BABD',
+
+  // Audi F1 Team
+  hul: '#F50537', hulkenberg: '#F50537',
+  bor: '#F50537', bortoleto: '#F50537',
+
+  // Cadillac F1 Team (Colorazione Oro/Nera per staccare dai troppi blu in griglia)
+  per: '#FFD700', perez: '#FFD700',
+  bot: '#FFD700', bottas: '#FFD700',
+};
+
+/**
+ * Get a driver's colour by their 3-letter code or full name.
+ * Falls back to getTeamColor(teamName) if not found.
+ */
+export function getDriverColor(driverCode, driverName, teamName) {
+  if (driverCode) {
+    const c = DRIVER_COLORS[driverCode.toLowerCase().trim()];
+    if (c) return c;
+  }
+  if (driverName) {
+    // Try last name
+    const last = driverName.trim().split(' ').pop().toLowerCase();
+    const c = DRIVER_COLORS[last];
+    if (c) return c;
+    // Try first 3 chars of last name
+    const c3 = DRIVER_COLORS[last.slice(0, 3)];
+    if (c3) return c3;
+  }
+  // Fall back to team colour
+  return getTeamColor(teamName);
+}
+
 // ─── TEAM COLORS ─────────────────────────────────────────────────────────────
 const TEAM_COLORS = {
   // Ferrari
