@@ -11,6 +11,7 @@ import {
   MAX_POINTS_RACE,
   MAX_POINTS_SPRINT,
 } from "@/lib/f1Utils";
+import { raceFlagUrl, gpIso, flagUrl } from "@/lib/flagUtils";
 import GpCountdown from "@/components/GpCountdown";
 import { Loader2, AlertCircle, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,58 +19,84 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
-// ── Flag map ──────────────────────────────────────────────────────────────────
-const GP_FLAGS = {
-  australia: "🇦🇺", bahrain: "🇧🇭", saudi: "🇸🇦", jeddah: "🇸🇦",
-  japan: "🇯🇵", china: "🇨🇳", miami: "🇺🇸", imola: "🇮🇹",
-  monaco: "🇲🇨", canada: "🇨🇦", spain: "🇪🇸", austria: "🇦🇹",
-  britain: "🇬🇧", silverstone: "🇬🇧", hungary: "🇭🇺", belgium: "🇧🇪",
-  netherlands: "🇳🇱", zandvoort: "🇳🇱", italy: "🇮🇹", monza: "🇮🇹",
-  singapore: "🇸🇬", usa: "🇺🇸", "united states": "🇺🇸", mexico: "🇲🇽",
-  brazil: "🇧🇷", "las vegas": "🇺🇸", qatar: "🇶🇦", "abu dhabi": "🇦🇪",
-};
-function gpFlag(name = "") {
-  const n = name.toLowerCase();
-  for (const [k, v] of Object.entries(GP_FLAGS)) if (n.includes(k)) return v;
-  return "🏁";
+// ── Flag image component ──────────────────────────────────────────────────────
+function FlagImg({ iso, size = "h40", className = "w-8 h-5 object-cover rounded-sm" }) {
+  if (!iso) return <span className="text-xl">🏁</span>;
+  return (
+    <img
+      src={flagUrl(iso, size)}
+      alt={iso.toUpperCase()}
+      className={className}
+      onError={e => { e.target.style.display = "none"; }}
+    />
+  );
 }
 
-// ── Arc gauge ─────────────────────────────────────────────────────────────────
+// ── Arc gauge — fixed layout, properly centered ───────────────────────────────
 function ArcGauge({ current, needed, possible }) {
-  const R = 72, cx = 90, cy = 90;
+  const W = 200, H = 120;
+  const cx = W / 2, cy = 106;
+  const R = 80;
   const toRad = d => (d * Math.PI) / 180;
-  const startA = -210, endA = 30;
-  const arc = pct => {
-    const a = toRad(startA + (endA - startA) * Math.min(Math.max(pct, 0.001), 1));
-    const large = (endA - startA) * pct > 180 ? 1 : 0;
-    return `M ${cx + R * Math.cos(toRad(startA))} ${cy + R * Math.sin(toRad(startA))}
-            A ${R} ${R} 0 ${large} 1
-            ${cx + R * Math.cos(a)} ${cy + R * Math.sin(a)}`;
+  const startA = -180, endA = 0; // clean semicircle
+
+  const arc = (pct) => {
+    const clamped = Math.min(Math.max(pct, 0.001), 0.9999);
+    const a = toRad(startA + (endA - startA) * clamped);
+    const x1 = cx + R * Math.cos(toRad(startA));
+    const y1 = cy + R * Math.sin(toRad(startA));
+    const x2 = cx + R * Math.cos(a);
+    const y2 = cy + R * Math.sin(a);
+    const large = (endA - startA) * clamped > 180 ? 1 : 0;
+    return `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2}`;
   };
-  const currPct   = possible > 0 ? current / possible : 0;
-  const neededPct = possible > 0 ? Math.min((current + needed) / possible, 1) : 0;
-  const dotA      = toRad(startA + (endA - startA) * Math.min(currPct, 1));
+
+  const currPct   = possible > 0 ? Math.min(current / possible, 1) : 0;
+  // "needed" here means the target the leader must reach — shown as where the arc ends
+  const targetPct = possible > 0 ? Math.min((current + needed) / possible, 1) : 1;
+
+  // Dot position at current
+  const dotA = toRad(startA + (endA - startA) * Math.min(currPct, 0.9999));
+  const dotX = cx + R * Math.cos(dotA);
+  const dotY = cy + R * Math.sin(dotA);
 
   return (
-    <svg viewBox="0 0 180 118" className="w-full max-w-[190px]">
-      <path d={arc(1)} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="9" strokeLinecap="round" />
-      <path d={arc(neededPct)} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="9" strokeLinecap="round" />
-      <path d={arc(currPct)} fill="none" stroke="#E8002D" strokeWidth="9" strokeLinecap="round" />
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
+      {/* Full track (grey) */}
+      <path d={arc(1)} fill="none" stroke="rgba(255,255,255,0.12)"
+            strokeWidth="10" strokeLinecap="round" />
+      {/* Target arc (dim white — shows what's still needed) */}
+      <path d={arc(targetPct)} fill="none" stroke="rgba(255,255,255,0.22)"
+            strokeWidth="10" strokeLinecap="round" />
+      {/* Current points (red) */}
+      <path d={arc(currPct)} fill="none" stroke="#E8002D"
+            strokeWidth="10" strokeLinecap="round" />
+      {/* White dot at current */}
       {currPct > 0.02 && (
-        <circle cx={cx + R * Math.cos(dotA)} cy={cy + R * Math.sin(dotA)} r="5.5" fill="white" />
+        <circle cx={dotX} cy={dotY} r="6" fill="white"
+                style={{ filter: "drop-shadow(0 0 3px rgba(0,0,0,0.4))" }} />
       )}
-      <text x="16" y="104" textAnchor="middle" fill="rgba(255,255,255,0.45)"
-            fontSize="10" fontWeight="700" fontFamily="'JetBrains Mono',monospace">{current}</text>
-      <text x="16" y="114" textAnchor="middle" fill="rgba(255,255,255,0.3)"
-            fontSize="7" fontFamily="'DM Sans',sans-serif">ATTUALI</text>
-      <text x="90" y="76" textAnchor="middle" fill="white"
-            fontSize="22" fontWeight="700" fontFamily="'JetBrains Mono',monospace">{needed}</text>
-      <text x="90" y="88" textAnchor="middle" fill="rgba(255,255,255,0.45)"
-            fontSize="8" fontFamily="'DM Sans',sans-serif">PUNTI</text>
-      <text x="164" y="104" textAnchor="middle" fill="rgba(255,255,255,0.45)"
-            fontSize="10" fontWeight="700" fontFamily="'JetBrains Mono',monospace">{possible}</text>
-      <text x="164" y="114" textAnchor="middle" fill="rgba(255,255,255,0.3)"
-            fontSize="7" fontFamily="'DM Sans',sans-serif">POSSIBILI</text>
+      {/* Center label: needed points */}
+      <text x={cx} y={cy - 22} textAnchor="middle" fill="white"
+            fontSize="26" fontWeight="800"
+            fontFamily="'JetBrains Mono',monospace">{needed}</text>
+      <text x={cx} y={cy - 8} textAnchor="middle"
+            fill="rgba(255,255,255,0.4)" fontSize="9"
+            fontFamily="'DM Sans',sans-serif" letterSpacing="2">PUNTI</text>
+      {/* Left label: current */}
+      <text x="18" y={cy + 14} textAnchor="middle"
+            fill="rgba(255,255,255,0.5)" fontSize="11" fontWeight="700"
+            fontFamily="'JetBrains Mono',monospace">{current}</text>
+      <text x="18" y={cy + 24} textAnchor="middle"
+            fill="rgba(255,255,255,0.3)" fontSize="7"
+            fontFamily="'DM Sans',sans-serif" letterSpacing="1.5">ATTUALI</text>
+      {/* Right label: possible */}
+      <text x={W - 18} y={cy + 14} textAnchor="middle"
+            fill="rgba(255,255,255,0.5)" fontSize="11" fontWeight="700"
+            fontFamily="'JetBrains Mono',monospace">{possible}</text>
+      <text x={W - 18} y={cy + 24} textAnchor="middle"
+            fill="rgba(255,255,255,0.3)" fontSize="7"
+            fontFamily="'DM Sans',sans-serif" letterSpacing="1.5">POSSIBILI</text>
     </svg>
   );
 }
@@ -130,8 +157,8 @@ export default function Home() {
   const { data: config, isLoading: lc } = useQuery({
     queryKey: ["seasonConfig"], queryFn: getSeasonConfig, staleTime: 10 * 60 * 1000,
   });
-  const { data: upcomingRaces = [], isLoading: lr } = useQuery({
-    queryKey: ["upcomingRaces"], queryFn: () => getUpcomingRaces(5), staleTime: 60 * 60 * 1000,
+  const { data: upcomingRaces = [] } = useQuery({
+    queryKey: ["upcomingRaces"], queryFn: () => getUpcomingRaces(4), staleTime: 60 * 60 * 1000,
   });
 
   if (ld || lc) return (
@@ -149,15 +176,24 @@ export default function Home() {
     </div>
   );
 
-  const leader       = drivers[0];
-  const p2           = drivers[1];
-  const maxAvailable = calculateMaxAvailablePoints(config);
+  const leader         = drivers[0];
+  const p2             = drivers[1];
+  const maxAvailable   = calculateMaxAvailablePoints(config);
   const neededForTitle = p2
     ? Math.max(0, p2.points + maxAvailable - (leader?.points ?? 0) + 1)
     : 0;
-  const possible = (leader?.points ?? 0) + maxAvailable;
-
+  const possible       = (leader?.points ?? 0) + maxAvailable;
   const visibleDrivers = showAllDrivers ? drivers : drivers.slice(0, 5);
+
+  // Next race flag iso
+  const nextRaceIso = config?.next_race_name ? gpIso(config.next_race_name) : null;
+
+  // Calendar races: use DB data (4 races), fallback to config single race
+  const calRaces = upcomingRaces.length > 0
+    ? upcomingRaces.slice(0, 4)
+    : config?.next_race_name
+      ? [{ name: config.next_race_name, date: config.next_race_date, has_sprint: config.next_race_has_sprint }]
+      : [];
 
   return (
     <div className="space-y-0 pb-4">
@@ -166,7 +202,6 @@ export default function Home() {
       <div className="relative bg-white px-5 pt-12 pb-5">
         <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
 
-        {/* Title row */}
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="font-heading font-black leading-none">
@@ -193,15 +228,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Next race: flag + countdown only ── */}
+        {/* Next race: flag image + red countdown */}
         {config?.next_race_name && (
-          <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-            {/* Flag — large */}
-            <span className="text-3xl leading-none shrink-0">
-              {gpFlag(config.next_race_name)}
-            </span>
-            {/* Countdown in red */}
-            <GpCountdown targetDate={config.next_race_date} light compact />
+          <div className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+            <FlagImg iso={nextRaceIso} size="h80"
+              className="h-9 w-auto object-cover rounded-md shadow-sm shrink-0" />
+            <GpCountdown targetDate={config.next_race_date} compact />
             {config.next_race_has_sprint && (
               <span className="tag bg-amber-100 text-amber-700 shrink-0 ml-auto">Sprint</span>
             )}
@@ -221,7 +253,6 @@ export default function Home() {
               {config?.races_completed ?? 0}/{config?.total_races ?? 0} GP
             </span>
           </div>
-
           <div className="px-4">
             <AnimatePresence initial={false}>
               {visibleDrivers.map((d, i) => (
@@ -229,19 +260,15 @@ export default function Home() {
               ))}
             </AnimatePresence>
           </div>
-
-          {/* Expand / collapse toggle */}
           {drivers.length > 5 && (
             <button
               onClick={() => setShowAllDrivers(v => !v)}
               className="w-full flex items-center justify-center gap-1.5 py-3 border-t border-gray-100
                          text-xs font-body font-semibold text-primary hover:bg-gray-50 transition-colors"
             >
-              {showAllDrivers ? (
-                <><ChevronUp className="w-3.5 h-3.5" /> Mostra meno</>
-              ) : (
-                <><ChevronDown className="w-3.5 h-3.5" /> Vedi tutti ({drivers.length})</>
-              )}
+              {showAllDrivers
+                ? <><ChevronUp className="w-3.5 h-3.5" /> Mostra meno</>
+                : <><ChevronDown className="w-3.5 h-3.5" /> Vedi tutti ({drivers.length})</>}
             </button>
           )}
         </div>
@@ -262,10 +289,10 @@ export default function Home() {
             <div className="grid grid-cols-3 gap-3 text-center">
               {[
                 { v: (config.total_races||0) - (config.races_completed||0), l: "GARE\nRIMANENTI" },
-                { v: maxAvailable, l: "PUNTI MAX\nDISPONIBILI" },
+                { v: maxAvailable,                                           l: "PUNTI MAX\nDISPONIBILI" },
                 { v: config.next_race_has_sprint
                     ? MAX_POINTS_RACE + MAX_POINTS_SPRINT
-                    : MAX_POINTS_RACE,              l: "MAX\nPROSSIMO GP" },
+                    : MAX_POINTS_RACE,                                       l: "MAX\nPROSSIMO GP" },
               ].map(({ v, l }) => (
                 <div key={l}>
                   <p className="font-heading font-black text-3xl leading-none">{v}</p>
@@ -277,35 +304,62 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── PUNTI NECESSARI (dark card + arc gauge) ── */}
+        {/* ── PUNTI NECESSARI (dark card) ── */}
         {leader && p2 && (
-          <div className="dark-card px-5 py-5">
-            <div className="flex items-start justify-between">
-              <div className="flex-1 pr-2">
-                <h2 className="font-heading font-black text-sm uppercase tracking-wide
-                               text-white/60 mb-2">
-                  Punti necessari per vincere
-                </h2>
-                <p className="text-white/70 text-sm font-body leading-snug">
-                  {leader.driver_name} può vincere il campionato con
+          <div className="dark-card px-5 pt-4 pb-5">
+            {/* Header */}
+            <h2 className="font-heading font-black text-xs uppercase tracking-widest
+                           text-white/50 mb-3">
+              Punti necessari per vincere
+            </h2>
+
+            {/* Two-column layout: left = text, right = gauge */}
+            <div className="flex items-center gap-2">
+
+              {/* Left column */}
+              <div className="flex-1 min-w-0">
+                <p className="text-white/65 text-sm font-body leading-snug">
+                  <span className="font-heading font-black text-white">
+                    {leader.driver_name}
+                  </span>
+                  {" "}può vincere il campionato con
                 </p>
-                <div className="flex items-baseline gap-1.5 mt-2 mb-1">
-                  <span className="font-heading font-black text-5xl leading-none text-primary">
+                <div className="flex items-baseline gap-1 mt-3">
+                  <span className="font-heading font-black leading-none text-primary"
+                        style={{ fontSize: "3.5rem" }}>
                     {neededForTitle}
                   </span>
-                  <span className="font-heading font-black text-xl text-primary/70">PTI</span>
+                  <span className="font-heading font-black text-2xl text-primary/70 mb-1">
+                    PTI
+                  </span>
                 </div>
-                <p className="text-white/35 text-xs font-body">
-                  vs {p2.driver_name} ({p2.points} pts)
-                </p>
+                {/* P2 info */}
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-white/30 text-xs font-body">vs</span>
+                  <span className="font-heading font-bold text-sm text-white/60">
+                    {p2.driver_name}
+                  </span>
+                  <span className="font-mono text-xs text-white/35">
+                    ({p2.points} pts)
+                  </span>
+                </div>
               </div>
-              <ArcGauge current={leader.points} needed={neededForTitle} possible={possible} />
+
+              {/* Right column — gauge, fixed width */}
+              <div className="w-[160px] shrink-0">
+                <ArcGauge
+                  current={leader.points}
+                  needed={neededForTitle}
+                  possible={possible}
+                />
+              </div>
+
             </div>
           </div>
         )}
 
-        {/* ── CALENDARIO (next 5, flag + date only) ── */}
-        {(upcomingRaces.length > 0 || config?.next_race_name) && (
+        {/* ── PROSSIMI GP — 4 boxes, centered grid ── */}
+        {calRaces.length > 0 && (
           <div className="app-card overflow-hidden">
             <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100">
               <h2 className="font-heading font-black text-base uppercase tracking-wide">
@@ -316,40 +370,45 @@ export default function Home() {
               </span>
             </div>
 
-            <div className="flex gap-2 px-4 py-3 overflow-x-auto scroll-snap-x"
-                 style={{ scrollbarWidth: "none" }}>
-              {/* Use DB races if available, else fallback to config single race */}
-              {(upcomingRaces.length > 0
-                ? upcomingRaces
-                : [{
-                    name: config.next_race_name,
-                    date: config.next_race_date,
-                    has_sprint: config.next_race_has_sprint,
-                  }]
-              ).map((r, i) => (
-                <div key={i}
-                  className={`snap-start shrink-0 rounded-xl border p-3 min-w-[80px] text-center
-                    ${i === 0
-                      ? "border-primary/25 bg-primary/4"
-                      : "border-gray-100 bg-gray-50"}`}
-                >
-                  {/* Flag — big */}
-                  <div className="text-2xl mb-1.5">{gpFlag(r.name)}</div>
-                  {/* Date only */}
-                  {r.date && (
-                    <p className={`font-heading font-bold text-xs
-                      ${i === 0 ? "text-primary" : "text-foreground"}`}>
-                      {format(new Date(r.date), "d MMM", { locale: it })}
-                    </p>
-                  )}
-                  {/* Sprint tag */}
-                  {r.has_sprint && (
-                    <span className="tag bg-amber-100 text-amber-700 mt-1.5 inline-block">
-                      Sprint
-                    </span>
-                  )}
-                </div>
-              ))}
+            {/* 4-column grid, equal width, centered */}
+            <div className="grid grid-cols-4 gap-2 px-3 py-3">
+              {calRaces.map((r, i) => {
+                const iso = raceFlagUrl(r) ? null : null; // use raceFlagUrl directly
+                const flagSrc = raceFlagUrl(r, "h40");
+                return (
+                  <div key={i}
+                    className={`flex flex-col items-center rounded-xl border py-3 px-1
+                      ${i === 0
+                        ? "border-primary/25 bg-primary/4"
+                        : "border-gray-100 bg-gray-50"}`}
+                  >
+                    {/* Flag image */}
+                    {flagSrc ? (
+                      <img
+                        src={flagSrc}
+                        alt={r.name}
+                        className="h-6 w-auto object-cover rounded-sm shadow-sm mb-2"
+                        onError={e => { e.target.style.display = "none"; }}
+                      />
+                    ) : (
+                      <span className="text-xl mb-2">🏁</span>
+                    )}
+                    {/* Date */}
+                    {r.date && (
+                      <p className={`font-heading font-bold text-[11px] text-center leading-tight
+                        ${i === 0 ? "text-primary" : "text-foreground"}`}>
+                        {format(new Date(r.date), "d MMM", { locale: it })}
+                      </p>
+                    )}
+                    {/* Sprint tag */}
+                    {r.has_sprint && (
+                      <span className="tag bg-amber-100 text-amber-700 mt-1.5 text-[9px]">
+                        Sprint
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
