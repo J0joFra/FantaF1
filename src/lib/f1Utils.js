@@ -91,21 +91,41 @@ export function clinchAnalysis(driver, allDrivers, racesLeft, sprintsLeft) {
 
 // ─── TEAM COLORS ─────────────────────────────────────────────────────────────
 const TEAM_COLORS = {
-  ferrari:        '#E8002D',
-  'red bull':     '#3671C6',
-  mercedes:       '#27F4D2',
-  mclaren:        '#FF8000',
-  'aston martin': '#358C75',
-  alpine:         '#FF87BC',
-  williams:       '#64C4FF',
-  audi:           '#A8A8A8',
-  haas:           '#B6BABD',
-  'racing bulls': '#6692FF',
-  cadillac:       '#FFFFFF',
-  rb:             '#6692FF',
-  'alfa romeo':   '#900000',
-  sauber:         '#00E701',
-  alphatauri:     '#6692FF',
+  // Ferrari
+  ferrari:                  '#E8002D',
+  // Red Bull
+  'red bull':               '#3671C6',
+  'oracle red bull':        '#3671C6',
+  // Mercedes
+  mercedes:                 '#27F4D2',
+  'mercedes-amg':           '#27F4D2',
+  // McLaren
+  mclaren:                  '#FF8000',
+  // Aston Martin
+  'aston martin':           '#358C75',
+  // Alpine
+  alpine:                   '#FF87BC',
+  // Williams
+  williams:                 '#64C4FF',
+  // Audi
+  audi:                     '#A8A8A8',
+  // Haas
+  haas:                     '#B6BABD',
+  'moneygram haas':         '#B6BABD',
+  // Racing Bulls / RB / AlphaTauri / Visa Cash App
+  'racing bulls':           '#6692FF',
+  'visa cash app rb':       '#6692FF',
+  alphatauri:               '#6692FF',
+  'scuderia alphatauri':    '#6692FF',
+  rb:                       '#6692FF',
+  // Cadillac / Andretti
+  cadillac:                 '#6CD3BF',
+  andretti:                 '#6CD3BF',
+  // Sauber / Alfa Romeo / Stake
+  sauber:                   '#00E701',
+  'stake f1':               '#00E701',
+  'alfa romeo':             '#900000',
+  kick:                     '#00E701',
 };
 
 export function getTeamColor(teamName) {
