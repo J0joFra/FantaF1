@@ -5,6 +5,10 @@ function throwIfError(error, context) {
   if (error) throw new Error(`${context}: ${error.message}`);
 }
 
+function currentYear() {
+  return new Date().getFullYear();
+}
+
 // ─── DRIVER STANDINGS ────────────────────────────────────────────────────────
 // View: current_season_driver_standings (9 cols)
 // Known columns from error messages + original code:
