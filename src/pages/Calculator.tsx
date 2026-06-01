@@ -123,7 +123,7 @@ function calculateChampionshipAnalysis(
     });
 
   // Filtra rivali che sono già stati battuti matematicamente
-  const activeRivals = rivalsAnalysis.filter(r => r.pointsNeeded > 0 && !r.isMathematicallyEliminated);
+  const activeRivals = rivalsAnalysis.filter(r => r.driver.points > selectedDriver.points);
   
   // Il rivale più pericoloso è quello che richiede più punti
   const mainRival = activeRivals.length > 0
