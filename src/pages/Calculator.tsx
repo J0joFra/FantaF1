@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Calculator, Info, X, Share2, Bookmark, ChevronDown, ChevronUp,
   Trophy, RotateCcw, AlertTriangle, Sparkles, Target, Users, CheckCircle2, HelpCircle,
-  TrendingUp, Award, BarChart3, Eye, Clock, Equal, Zap, TrendingDown
+  TrendingUp, Award, BarChart3, Eye, Clock, Equal, Zap, TrendingDown, GitCompare
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
@@ -60,37 +60,28 @@ interface ChampionshipAnalysis {
   magicNumber: number;
 }
 
-// 🔥 LOGICA PRECISA BASATA SULLA MEDIA PUNTI PER GARA
 function calculateChampionshipAnalysis(
   driver: Driver,
   allDrivers: Driver[],
   racesLeft: number,
   sprintsLeft: number
 ): ChampionshipAnalysis {
-  // Calcola i punti massimi che il driver può ancora ottenere
   const maxRemainingPoints = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
   const driverMaxPossible = driver.points + maxRemainingPoints;
   
-  // Calcola per ogni rivale (solo quelli con più punti o pari)
   const rivalsAnalysis: RivalAnalysis[] = allDrivers
     .filter(d => d.id !== driver.id && d.points >= driver.points)
     .map(rival => {
       const currentGap = rival.points - driver.points;
-      
-      // Punti necessari per superare il rivale (considerando pareggio e vittorie)
       let pointsNeeded = currentGap + 1;
       
-      // Se c'è possibilità di pareggio, verifica le vittorie
       if (currentGap === 0 && driver.victories <= rival.victories) {
         pointsNeeded = 1;
       }
       
-      // Calcolo della media punti per gara necessaria
-      // Media = (punti necessari) / (gare totali disponibili)
       const totalRaces = racesLeft + sprintsLeft;
       let avgPointsPerRaceNeeded = pointsNeeded / totalRaces;
       
-      // Determina la difficoltà e il suggerimento basato sulla media necessaria
       let difficulty: "impossible" | "very_hard" | "hard" | "medium" | "easy";
       let difficultyLabel: string;
       let suggestion: string;
@@ -121,7 +112,6 @@ function calculateChampionshipAnalysis(
         suggestion = "Buone prestazioni regolari bastano";
       }
       
-      // Verifica se è matematicamente eliminato
       const isMathematicallyEliminated = driverMaxPossible < rival.points;
       
       return {
@@ -135,22 +125,12 @@ function calculateChampionshipAnalysis(
         isMathematicallyEliminated,
       };
     })
-    // 🔥 ORDINA DAL PIÙ DIFFICILE AL PIÙ FACILE (media più alta prima)
     .sort((a, b) => b.avgPointsPerRaceNeeded - a.avgPointsPerRaceNeeded);
   
-  // Filtra i rivali attivi (non ancora superati matematicamente)
   const activeRivals = rivalsAnalysis.filter(r => !r.isMathematicallyEliminated && r.pointsNeeded > 0);
-  
-  // Il rivale principale è il primo nella lista (quello con media più alta)
   const mainRival = activeRivals.length > 0 ? activeRivals[0] : null;
-  
-  // Verifica se è già campione
   const isAlreadyChampion = activeRivals.length === 0 && driver.points > Math.max(...allDrivers.map(d => d.points));
-  
-  // Verifica se è matematicamente fuori
   const isMathematicallyOut = driverMaxPossible < Math.max(...allDrivers.map(d => d.points));
-  
-  // Numero magico: punti totali necessari per battere il rivale principale
   const magicNumber = mainRival?.pointsNeeded ?? 0;
   
   return {
@@ -165,18 +145,26 @@ function calculateChampionshipAnalysis(
   };
 }
 
-// 🔥 CALCOLO DELLE COMBINAZIONI PRECISE
-function calculatePreciseCombinations(
-  pointsNeeded: number,
+// 🔥 CALCOLO COMPARAZIONE DIRETTA TRA TE E IL RIVALE
+function calculateHeadToHeadComparison(
+  yourDriver: Driver,
+  rival: Driver,
   racesLeft: number,
   sprintsLeft: number
 ): {
-  avgPerRace: number;
-  possibleFinishes: { position: string; emoji: string; points: number; count: number }[];
-  totalPoints: number;
-  isPossible: boolean;
-}[] {
-  const combinations = [];
+  scenarios: {
+    name: string;
+    description: string;
+    yourFinishes: { position: string; emoji: string; points: number; count: number; isSprint?: boolean }[];
+    rivalFinishes: { position: string; emoji: string; points: number; count: number; isSprint?: boolean }[];
+    yourTotalPoints: number;
+    rivalTotalPoints: number;
+    finalGap: number;
+    isEnough: boolean;
+  }[];
+} {
+  const scenarios = [];
+  const pointsNeeded = rival.points - yourDriver.points + 1;
   const totalRaces = racesLeft + sprintsLeft;
   const avgNeeded = pointsNeeded / totalRaces;
   
@@ -191,50 +179,140 @@ function calculatePreciseCombinations(
     }
   }
   
-  // Scenario 1: Media costante
-  if (avgPosition <= 10) {
-    combinations.push({
-      avgPerRace: avgNeeded,
-      possibleFinishes: [{
-        position: POSITION_LABELS[avgPosition - 1],
-        emoji: POSITION_EMOJI[avgPosition - 1],
-        points: avgPoints,
-        count: totalRaces
-      }],
-      totalPoints: avgPoints * totalRaces,
-      isPossible: avgPoints * totalRaces >= pointsNeeded
-    });
+  // Calcola la posizione media del rivale (ipotesi: mantiene la sua media attuale)
+  const rivalAvgPosition = getPositionByPointsApprox(rival.points / (racesLeft + sprintsLeft));
+  
+  // Scenario 1: Performance costante vs rivale costante
+  scenarios.push({
+    name: "📊 Confronto Costante",
+    description: `Tu mantieni una media di ${avgNeeded.toFixed(2)} pt/gara (${avgPosition}° posto), lui mantiene la sua media attuale`,
+    yourFinishes: [{ position: POSITION_LABELS[avgPosition - 1], emoji: POSITION_EMOJI[avgPosition - 1], points: avgPoints, count: totalRaces }],
+    rivalFinishes: [{ position: rivalAvgPosition.position, emoji: rivalAvgPosition.emoji, points: rivalAvgPosition.points, count: totalRaces }],
+    yourTotalPoints: yourDriver.points + (avgPoints * totalRaces),
+    rivalTotalPoints: rival.points + (rivalAvgPosition.points * totalRaces),
+    finalGap: (yourDriver.points + (avgPoints * totalRaces)) - (rival.points + (rivalAvgPosition.points * totalRaces)),
+    isEnough: (avgPoints * totalRaces) >= pointsNeeded
+  });
+  
+  // Scenario 2: Tu fai meglio in ogni gara
+  const betterPosition = Math.max(1, avgPosition - 2);
+  const betterPoints = RACE_POINTS[betterPosition - 1];
+  scenarios.push({
+    name: "⚡ Confronto Migliorativo",
+    description: `Tu fai meglio del necessario (${betterPosition}° posto), lui mantiene la sua media`,
+    yourFinishes: [{ position: POSITION_LABELS[betterPosition - 1], emoji: POSITION_EMOJI[betterPosition - 1], points: betterPoints, count: totalRaces }],
+    rivalFinishes: [{ position: rivalAvgPosition.position, emoji: rivalAvgPosition.emoji, points: rivalAvgPosition.points, count: totalRaces }],
+    yourTotalPoints: yourDriver.points + (betterPoints * totalRaces),
+    rivalTotalPoints: rival.points + (rivalAvgPosition.points * totalRaces),
+    finalGap: (yourDriver.points + (betterPoints * totalRaces)) - (rival.points + (rivalAvgPosition.points * totalRaces)),
+    isEnough: (betterPoints * totalRaces) >= pointsNeeded
+  });
+  
+  // Scenario 3: Competizione diretta - tu meglio in ogni gara
+  const directComp = calculateDirectCompetition(yourDriver, rival, racesLeft, sprintsLeft);
+  if (directComp) {
+    scenarios.push(directComp);
   }
   
-  // Scenario 2: Vittorie + risultati medi
-  const winsNeeded = Math.ceil(pointsNeeded / 25);
-  if (winsNeeded <= racesLeft) {
-    const remainingPoints = pointsNeeded - (winsNeeded * 25);
+  // Scenario 4: Vittorie vs piazzamenti
+  if (avgNeeded > 15) {
+    const winsNeeded = Math.ceil(pointsNeeded / 25);
     const remainingRaces = totalRaces - winsNeeded;
-    let remainingAvg = remainingPoints / remainingRaces;
+    const remainingAvg = (pointsNeeded - (winsNeeded * 25)) / remainingRaces;
     
-    let otherPosition = 10;
-    let otherPoints = 0;
+    let remainingPosition = 10;
+    let remainingPoints = 0;
     for (let i = 0; i < RACE_POINTS.length; i++) {
       if (RACE_POINTS[i] >= remainingAvg) {
-        otherPosition = i + 1;
-        otherPoints = RACE_POINTS[i];
+        remainingPosition = i + 1;
+        remainingPoints = RACE_POINTS[i];
         break;
       }
     }
     
-    combinations.push({
-      avgPerRace: avgNeeded,
-      possibleFinishes: [
+    scenarios.push({
+      name: "🏆 Vittorie Strategiche",
+      description: `${winsNeeded} vittorie e ${remainingRaces} piazzamenti da ${remainingPosition}° posto`,
+      yourFinishes: [
         { position: "1°", emoji: "🥇", points: 25, count: winsNeeded },
-        { position: POSITION_LABELS[otherPosition - 1], emoji: POSITION_EMOJI[otherPosition - 1], points: otherPoints, count: remainingRaces }
+        { position: POSITION_LABELS[remainingPosition - 1], emoji: POSITION_EMOJI[remainingPosition - 1], points: remainingPoints, count: remainingRaces }
       ],
-      totalPoints: (winsNeeded * 25) + (otherPoints * remainingRaces),
-      isPossible: (winsNeeded * 25) + (otherPoints * remainingRaces) >= pointsNeeded
+      rivalFinishes: [{ position: rivalAvgPosition.position, emoji: rivalAvgPosition.emoji, points: rivalAvgPosition.points, count: totalRaces }],
+      yourTotalPoints: yourDriver.points + (winsNeeded * 25) + (remainingPoints * remainingRaces),
+      rivalTotalPoints: rival.points + (rivalAvgPosition.points * totalRaces),
+      finalGap: (yourDriver.points + (winsNeeded * 25) + (remainingPoints * remainingRaces)) - (rival.points + (rivalAvgPosition.points * totalRaces)),
+      isEnough: (winsNeeded * 25) + (remainingPoints * remainingRaces) >= pointsNeeded
     });
   }
   
-  return combinations;
+  // Scenario 5: Vantaggio Sprint
+  if (sprintsLeft > 0 && avgNeeded > 10) {
+    const sprintWins = Math.min(sprintsLeft, Math.ceil(pointsNeeded / 8));
+    const remainingNeeded = pointsNeeded - (sprintWins * 8);
+    const racesNeeded = Math.ceil(remainingNeeded / 25);
+    
+    if (racesNeeded <= racesLeft) {
+      scenarios.push({
+        name: "⚡ Vantaggio Sprint",
+        description: `${sprintWins} vittorie nelle Sprint + ${racesNeeded} vittorie nei GP`,
+        yourFinishes: [
+          { position: "Sprint", emoji: "⚡", points: 8, count: sprintWins, isSprint: true },
+          { position: "1°", emoji: "🥇", points: 25, count: racesNeeded }
+        ],
+        rivalFinishes: [
+          { position: "11°+", emoji: "💤", points: 0, count: sprintWins, isSprint: true },
+          { position: rivalAvgPosition.position, emoji: rivalAvgPosition.emoji, points: rivalAvgPosition.points, count: totalRaces - sprintWins }
+        ],
+        yourTotalPoints: yourDriver.points + (sprintWins * 8) + (racesNeeded * 25),
+        rivalTotalPoints: rival.points + (rivalAvgPosition.points * (totalRaces - sprintWins)),
+        finalGap: (yourDriver.points + (sprintWins * 8) + (racesNeeded * 25)) - (rival.points + (rivalAvgPosition.points * (totalRaces - sprintWins))),
+        isEnough: (sprintWins * 8) + (racesNeeded * 25) >= pointsNeeded
+      });
+    }
+  }
+  
+  return { scenarios: scenarios.filter(s => s.isEnough) };
+}
+
+function getPositionByPointsApprox(avgPoints: number): { position: string; emoji: string; points: number } {
+  for (let i = 0; i < RACE_POINTS.length; i++) {
+    if (RACE_POINTS[i] <= avgPoints) {
+      return {
+        position: POSITION_LABELS[i],
+        emoji: POSITION_EMOJI[i],
+        points: RACE_POINTS[i]
+      };
+    }
+  }
+  return { position: "11°+", emoji: "💤", points: 0 };
+}
+
+function calculateDirectCompetition(
+  yourDriver: Driver,
+  rival: Driver,
+  racesLeft: number,
+  sprintsLeft: number
+): any {
+  const gap = rival.points - yourDriver.points;
+  const totalRaces = racesLeft + sprintsLeft;
+  
+  // Tu fai 1° (25pt), lui fa 2° (18pt) -> recuperi 7 a gara
+  const gainPerRace = 7;
+  const racesNeeded = Math.ceil((gap + 1) / gainPerRace);
+  
+  if (racesNeeded <= totalRaces) {
+    return {
+      name: "🎯 Confronto Diretto",
+      description: `In ogni gara finisci ${racesNeeded} volte davanti a ${rival.driver_name} (1° vs 2°)`,
+      yourFinishes: [{ position: "1°", emoji: "🥇", points: 25, count: racesNeeded }],
+      rivalFinishes: [{ position: "2°", emoji: "🥈", points: 18, count: racesNeeded }],
+      yourTotalPoints: yourDriver.points + (25 * racesNeeded),
+      rivalTotalPoints: rival.points + (18 * racesNeeded),
+      finalGap: (yourDriver.points + (25 * racesNeeded)) - (rival.points + (18 * racesNeeded)),
+      isEnough: true
+    };
+  }
+  return null;
 }
 
 // ─── UI COMPONENTS ─────────────────────────────────────────────────────────
@@ -268,7 +346,6 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
   }
 
   const totalRaces = analysis.racesLeft + analysis.sprintsLeft;
-  const combinations = calculatePreciseCombinations(analysis.magicNumber, analysis.racesLeft, analysis.sprintsLeft);
 
   return (
     <div className="bg-gradient-to-br from-red-500 to-red-700 text-white rounded-2xl p-6 shadow-lg">
@@ -310,28 +387,11 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
           </div>
         </div>
       )}
-
-      {/* Combinazioni possibili */}
-      {combinations.length > 0 && combinations[0].isPossible && (
-        <div className="bg-white/10 rounded-xl p-3">
-          <p className="text-xs text-red-100 mb-2">💡 COMBINAZIONE MINIMA</p>
-          <div className="flex flex-wrap gap-2">
-            {combinations[0].possibleFinishes.map((finish, idx) => (
-              <div key={idx} className="bg-white/20 rounded-lg px-2 py-1 text-sm">
-                {finish.emoji} ×{finish.count} {finish.position}
-              </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-red-100 mt-2 text-center">
-            Media di {combinations[0].avgPerRace.toFixed(2)} punti per gara
-          </p>
-        </div>
-      )}
     </div>
   );
 }
 
-// 🔥 MODAL CON ANALISI PRECISA DEL RIVALE
+// 🔥 MODAL CON COMPARAZIONE DIRETTA
 function RivalDetailModal({ 
   isOpen, 
   onClose, 
@@ -362,67 +422,7 @@ function RivalDetailModal({
     }
   }
   
-  // Calcola diverse strategie
-  const strategies = [];
-  
-  // Strategia 1: Media costante
-  strategies.push({
-    name: "Media Costante",
-    description: `Mantenere una media di ${avgNeeded.toFixed(2)} punti a gara`,
-    yourFinishes: [{ position: POSITION_LABELS[avgPosition - 1], emoji: POSITION_EMOJI[avgPosition - 1], points: avgPoints, count: totalRaces }],
-    totalPoints: avgPoints * totalRaces,
-    isEnough: avgPoints * totalRaces >= pointsNeeded
-  });
-  
-  // Strategia 2: Vittorie + risultati medi
-  const winsNeeded = Math.ceil(pointsNeeded / 25);
-  if (winsNeeded <= racesLeft) {
-    const remainingPoints = pointsNeeded - (winsNeeded * 25);
-    const remainingRaces = totalRaces - winsNeeded;
-    let remainingAvg = remainingPoints / remainingRaces;
-    
-    let otherPosition = 10;
-    let otherPoints = 0;
-    for (let i = 0; i < RACE_POINTS.length; i++) {
-      if (RACE_POINTS[i] >= remainingAvg) {
-        otherPosition = i + 1;
-        otherPoints = RACE_POINTS[i];
-        break;
-      }
-    }
-    
-    strategies.push({
-      name: "Vittorie + Costanza",
-      description: `${winsNeeded} vittorie e ${remainingRaces} piazzamenti da ${POSITION_LABELS[otherPosition - 1]} posto`,
-      yourFinishes: [
-        { position: "1°", emoji: "🥇", points: 25, count: winsNeeded },
-        { position: POSITION_LABELS[otherPosition - 1], emoji: POSITION_EMOJI[otherPosition - 1], points: otherPoints, count: remainingRaces }
-      ],
-      totalPoints: (winsNeeded * 25) + (otherPoints * remainingRaces),
-      isEnough: (winsNeeded * 25) + (otherPoints * remainingRaces) >= pointsNeeded
-    });
-  }
-  
-  // Strategia 3: Sfruttare le Sprint
-  if (sprintsLeft > 0) {
-    const sprintPoints = sprintsLeft * 8;
-    const remainingNeeded = pointsNeeded - sprintPoints;
-    if (remainingNeeded > 0) {
-      const racesNeeded = Math.ceil(remainingNeeded / 25);
-      if (racesNeeded <= racesLeft) {
-        strategies.push({
-          name: "Vantaggio Sprint",
-          description: `Vinci tutte le ${sprintsLeft} Sprint (${sprintPoints} pt) + ${racesNeeded} vittorie nei GP`,
-          yourFinishes: [
-            { position: "Sprint", emoji: "⚡", points: 8, count: sprintsLeft, isSprint: true },
-            { position: "1°", emoji: "🥇", points: 25, count: racesNeeded }
-          ],
-          totalPoints: sprintPoints + (racesNeeded * 25),
-          isEnough: sprintPoints + (racesNeeded * 25) >= pointsNeeded
-        });
-      }
-    }
-  }
+  const comparison = calculateHeadToHeadComparison(yourDriver, rival, racesLeft, sprintsLeft);
 
   return (
     <AnimatePresence>
@@ -438,14 +438,14 @@ function RivalDetailModal({
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+            className="bg-white w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Analisi {rival.driver_name}</h2>
+                  <h2 className="text-2xl font-bold mb-2">Confronto: {yourDriver.driver_name} vs {rival.driver_name}</h2>
                   <p className="text-red-100 text-sm">
                     Devi recuperare <span className="font-bold text-xl">{pointsNeeded}</span> punti
                   </p>
@@ -471,59 +471,133 @@ function RivalDetailModal({
                     <Calculator className="w-4 h-4 text-blue-600" />
                     Analisi Matematica
                   </h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Gare totali rimanenti:</span>
-                      <span className="font-bold text-gray-900">{totalRaces} ({racesLeft} GP + {sprintsLeft} Sprint)</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Gare totali</p>
+                      <p className="font-bold text-gray-900">{totalRaces} ({racesLeft} GP + {sprintsLeft} Sprint)</p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Punti da recuperare:</span>
-                      <span className="font-bold text-red-600">{pointsNeeded} pt</span>
+                    <div>
+                      <p className="text-xs text-gray-500">Punti da recuperare</p>
+                      <p className="font-bold text-red-600">{pointsNeeded} pt</p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Media punti/gara necessaria:</span>
-                      <span className="font-bold text-blue-600 text-lg">{avgNeeded.toFixed(2)} pt</span>
+                    <div>
+                      <p className="text-xs text-gray-500">Media punti/gara necessaria</p>
+                      <p className="font-bold text-blue-600 text-lg">{avgNeeded.toFixed(2)} pt</p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Posizione media necessaria:</span>
-                      <span className="font-bold text-blue-600">{avgPosition}° posto ({avgPoints} pt)</span>
+                    <div>
+                      <p className="text-xs text-gray-500">Posizione media necessaria</p>
+                      <p className="font-bold text-blue-600">{avgPosition}° posto ({avgPoints} pt)</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Strategie */}
+                {/* Scenari di confronto diretto */}
                 <div>
                   <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                    <Target className="w-4 h-4 text-red-500" />
-                    Strategie per superarlo
+                    <GitCompare className="w-4 h-4 text-red-500" />
+                    Scenari di Confronto Diretto
                   </h3>
-                  <div className="space-y-3">
-                    {strategies.filter(s => s.isEnough).map((strategy, idx) => (
+                  <div className="space-y-4">
+                    {comparison.scenarios.map((scenario, idx) => (
                       <motion.div
                         key={idx}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
-                        className="border border-gray-200 rounded-xl p-4"
+                        className="border-2 border-gray-200 rounded-xl p-4 hover:border-red-300 transition-all"
                       >
-                        <div className="mb-2">
-                          <span className="text-sm font-bold text-red-600">{strategy.name}</span>
-                          <p className="text-xs text-gray-500 mt-1">{strategy.description}</p>
+                        <div className="mb-3">
+                          <span className="text-sm font-bold text-red-600">{scenario.name}</span>
+                          <p className="text-xs text-gray-500 mt-1">{scenario.description}</p>
                         </div>
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {strategy.yourFinishes.map((finish, i) => (
-                            <div key={i} className="inline-flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1 text-sm">
-                              <span>{finish.emoji}</span>
-                              <span className="font-medium">{finish.count}×</span>
-                              <span className="text-gray-600">{finish.position}</span>
-                              {finish.isSprint && <span className="text-xs text-purple-600">Sprint</span>}
+                        
+                        {/* Tabella comparativa */}
+                        <div className="grid md:grid-cols-2 gap-4 mt-3">
+                          {/* Tuoi risultati */}
+                          <div className="bg-green-50 rounded-lg p-3">
+                            <h4 className="font-bold text-green-800 mb-2 flex items-center gap-1">
+                              <Trophy className="w-4 h-4" />
+                              {yourDriver.driver_name}
+                            </h4>
+                            <div className="space-y-2">
+                              {scenario.yourFinishes.map((finish, i) => (
+                                <div key={i} className="flex justify-between items-center text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg">{finish.emoji}</span>
+                                    <span className="font-medium">{finish.position}</span>
+                                    {finish.isSprint && <span className="text-xs bg-purple-200 px-1 rounded">Sprint</span>}
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="font-mono text-gray-600">×{finish.count}</span>
+                                    <span className="font-bold text-green-700">
+                                      {finish.points * finish.count} pt
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                              <div className="border-t border-green-200 mt-2 pt-2">
+                                <div className="flex justify-between items-center font-bold">
+                                  <span>Punti attuali:</span>
+                                  <span>{yourDriver.points} pt</span>
+                                </div>
+                                <div className="flex justify-between items-center font-bold text-green-700">
+                                  <span>Totale finale:</span>
+                                  <span>{scenario.yourTotalPoints} pt</span>
+                                </div>
+                              </div>
                             </div>
-                          ))}
+                          </div>
+
+                          {/* Risultati rivale */}
+                          <div className="bg-red-50 rounded-lg p-3">
+                            <h4 className="font-bold text-red-800 mb-2 flex items-center gap-1">
+                              <AlertTriangle className="w-4 h-4" />
+                              {rival.driver_name}
+                            </h4>
+                            <div className="space-y-2">
+                              {scenario.rivalFinishes.map((finish, i) => (
+                                <div key={i} className="flex justify-between items-center text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg">{finish.emoji}</span>
+                                    <span className="font-medium">{finish.position}</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="font-mono text-gray-600">×{finish.count}</span>
+                                    <span className="font-bold text-red-700">
+                                      {finish.points * finish.count} pt
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                              <div className="border-t border-red-200 mt-2 pt-2">
+                                <div className="flex justify-between items-center font-bold">
+                                  <span>Punti attuali:</span>
+                                  <span>{rival.points} pt</span>
+                                </div>
+                                <div className="flex justify-between items-center font-bold text-red-700">
+                                  <span>Totale finale:</span>
+                                  <span>{scenario.rivalTotalPoints} pt</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="mt-3 pt-2 border-t border-gray-100">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">Punti totali:</span>
-                            <span className="font-bold text-green-600">{strategy.totalPoints} / {pointsNeeded} pt</span>
+
+                        {/* Risultato del confronto */}
+                        <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+                          <div className="flex justify-between items-center flex-wrap gap-2">
+                            <span className="text-sm text-gray-600">Differenza finale:</span>
+                            <span className={`font-bold text-lg ${scenario.finalGap > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {scenario.finalGap > 0 ? `+${scenario.finalGap}` : scenario.finalGap} pt
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${scenario.finalGap > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {scenario.finalGap > 0 ? `✅ ${yourDriver.driver_name} supera ${rival.driver_name}` : `❌ Non sufficiente`}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-xs text-gray-500 text-center">
+                            {scenario.finalGap > 0 
+                              ? `🏆 ${yourDriver.driver_name} vincerebbe il confronto diretto con ${scenario.finalGap} punti di vantaggio`
+                              : `⚠️ Serve una strategia più aggressiva`}
                           </div>
                         </div>
                       </motion.div>
@@ -531,28 +605,24 @@ function RivalDetailModal({
                   </div>
                 </div>
 
-                {/* Suggerimento */}
+                {/* Suggerimento finale */}
                 <div className="bg-yellow-50 rounded-xl p-4">
                   <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
                     <HelpCircle className="w-4 h-4 text-yellow-600" />
-                    Suggerimento
+                    Suggerimento Strategico
                   </h4>
                   <p className="text-sm text-gray-700">
                     {avgNeeded > 18 
-                      ? "🔥 Obiettivo molto difficile: servono prestazioni da campione del mondo!"
+                      ? "🔥 Obiettivo molto difficile: devi puntare a vittorie consecutive e sperare in passi falsi del rivale"
                       : avgNeeded > 12 
-                      ? "📈 Obiettivo impegnativo ma possibile con costanza ai vertici"
-                      : "✅ Obiettivo realistico: buone prestazioni regolari sono sufficienti"}
+                      ? "📈 Obiettivo impegnativo: la costanza ai vertici della classifica è fondamentale"
+                      : "✅ Obiettivo realistico: con buone prestazioni regolari puoi farcela"}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 Le Sprint Race sono un'ottima opportunità per recuperare punti preziosi (max 8 punti per vittoria)
                   </p>
                 </div>
               </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-gray-100 p-4 bg-gray-50">
-              <p className="text-xs text-gray-500 text-center">
-                💡 Basato su media di {avgNeeded.toFixed(2)} punti per gara su {totalRaces} gare totali
-              </p>
             </div>
           </motion.div>
         </motion.div>
@@ -572,7 +642,6 @@ function RivalCard({
   isMain?: boolean;
   onCardClick: () => void;
 }) {
-  // Determina il colore in base alla difficoltà
   const getDifficultyColor = () => {
     switch(rival.difficulty) {
       case "impossible": return "text-gray-500 bg-gray-100";
@@ -865,7 +934,7 @@ export default function ScenariosPage() {
           >
             <MagicNumberCard analysis={analysis} driverColor={TEAM_COLORS[selectedDriver.team] || "#ccc"} />
 
-            {/* Rivals section - ORDINATA DAL PIÙ DIFFICILE AL PIÙ FACILE */}
+            {/* Rivals section */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-gray-900 flex items-center gap-2">
@@ -991,29 +1060,18 @@ export default function ScenariosPage() {
               <div className="space-y-6 text-sm text-gray-600">
                 <div className="bg-blue-50 p-4 rounded-xl">
                   <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                    <Calculator className="w-4 h-4 text-red-500" />
-                    Calcolo preciso
+                    <GitCompare className="w-4 h-4 text-red-500" />
+                    Confronto Diretto
                   </h4>
                   <p>
-                    L'analisi si basa sulla <strong>media punti per gara</strong> necessaria per superare ogni rivale:
+                    Cliccando su un rivale, puoi vedere:
                   </p>
                   <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li><strong>Media &gt; 25</strong> → Impossibile</li>
-                    <li><strong>Media &gt; 18</strong> → Deve vincere quasi sempre</li>
-                    <li><strong>Media &gt; 15</strong> → Podio fisso</li>
-                    <li><strong>Media &gt; 12</strong> → Top 3 costante</li>
-                    <li><strong>Media &lt; 12</strong> → Possibile</li>
+                    <li>I risultati che DEVI ottenere tu</li>
+                    <li>I risultati che FARÀ il rivale (stima)</li>
+                    <li>Il confronto finale punto per punto</li>
+                    <li>Diverse strategie per superarlo</li>
                   </ul>
-                </div>
-                <div className="bg-purple-50 p-4 rounded-xl">
-                  <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                    <TrendingDown className="w-4 h-4 text-purple-600" />
-                    Ordine dei rivali
-                  </h4>
-                  <p>
-                    I rivali sono ordinati <strong>dal più difficile al più facile</strong> da superare,
-                    in base alla media punti per gara necessaria.
-                  </p>
                 </div>
               </div>
             </motion.div>
