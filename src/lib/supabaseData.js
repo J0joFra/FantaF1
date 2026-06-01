@@ -14,21 +14,16 @@ function currentYear() {
 // Known columns from error messages + original code:
 //   position_number, driver_id, points, wins, driver_name/first_name/last_name,
 //   constructor_name, abbreviation, fastest_laps, etc.
-export async function getDriverStandings(season = currentYear()) {
-  // Query standings + driver info + constructor info all at once
+export async function getDriverStandings() {
+  // Use the current_season view (no year filter needed) + enrich constructor name
   const [
     { data: standings, error: stErr },
-    { data: drivers,   error: drErr },
-    { data: constructors, error: coErr },
+    { data: constructors },
   ] = await Promise.all([
     supabase
-      .from('season_driver_standing')
+      .from('current_season_driver_standings')
       .select('*')
-      .eq('year', season)
       .order('position_number', { ascending: true }),
-    supabase
-      .from('driver')
-      .select('id, first_name, last_name, abbreviation'),
     supabase
       .from('constructor')
       .select('id, name'),
@@ -36,26 +31,18 @@ export async function getDriverStandings(season = currentYear()) {
 
   throwIfError(stErr, 'Driver standings');
 
-  const driverMap = {};
-  (drivers || []).forEach(d => { driverMap[d.id] = d; });
+  // Build constructor map for name enrichment
   const constructorMap = {};
   (constructors || []).forEach(c => { constructorMap[c.id] = c; });
 
-  return (standings || [])
-    .filter(s => s.position_number)
-    .map(s => {
-      const dr = driverMap[s.driver_id]      || {};
-      const co = constructorMap[s.constructor_id] || {};
-      return normalizeDriver({
-        ...s,
-        driver_name:      s.driver_name
-                          || (dr.first_name && dr.last_name
-                              ? `${dr.first_name} ${dr.last_name}`
-                              : ''),
-        abbreviation:     dr.abbreviation || s.abbreviation || '',
-        constructor_name: s.constructor_name || co.name || '',
-      });
+  return (standings || []).map(row => {
+    const co = constructorMap[row.constructor_id] || {};
+    return normalizeDriver({
+      ...row,
+      // Prefer view's constructor_name; fall back to joined constructor table
+      constructor_name: row.constructor_name || row.team_name || row.team || co.name || '',
     });
+  });
 }
 
 function normalizeDriver(row) {
