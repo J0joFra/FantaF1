@@ -106,6 +106,7 @@ function DriverRow({ driver, leader, index }) {
   const isLeader = index === 0;
   const color    = getTeamColor(driver.team);
   const gap      = leader.points - driver.points;
+  const barPct   = leader.points > 0 ? (driver.points / leader.points) * 100 : 0;
 
   return (
     <motion.div
@@ -131,9 +132,16 @@ function DriverRow({ driver, leader, index }) {
         <p className="font-heading font-black text-base leading-tight truncate">
           {driver.driver_name}
         </p>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-          <p className="text-xs text-muted-foreground font-body truncate">{driver.team}</p>
+        <p className="text-xs text-muted-foreground font-body truncate mt-0.5">{driver.team}</p>
+        {/* Points bar in team colour */}
+        <div className="relative h-1 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${barPct}%` }}
+            transition={{ duration: 0.7, delay: index * 0.04, ease: "easeOut" }}
+            className="absolute inset-y-0 left-0 rounded-full"
+            style={{ backgroundColor: color }}
+          />
         </div>
       </div>
 
