@@ -46,7 +46,7 @@ export async function getDriverStandings(season = currentYear()) {
         ...s,
         driver_name:      s.driver_name
                           || (dr.first_name && dr.last_name
-                              ? \`\${dr.first_name} \${dr.last_name}\`
+                              ? `${dr.first_name} ${dr.last_name}`
                               : ''),
         abbreviation:     dr.abbreviation || s.abbreviation || '',
         constructor_name: s.constructor_name || co.name || '',
