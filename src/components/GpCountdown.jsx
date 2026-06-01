@@ -1,69 +1,92 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-export default function GpCountdown({ targetDate }) {
-  // Wrap calculateTimeLeft in useCallback so it can safely be listed
-  // as a dependency — fixes the stale-closure bug where the timer kept
-  // reading the original targetDate even after a prop change.
-  const calculateTimeLeft = useCallback(() => {
+export default function GpCountdown({ targetDate, light = false, compact = false }) {
+  const calc = useCallback(() => {
     if (!targetDate) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
     const diff = new Date(targetDate).getTime() - Date.now();
     if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
     return {
-      days:    Math.floor(diff / (1000 * 60 * 60 * 24)),
-      hours:   Math.floor((diff / (1000 * 60 * 60)) % 24),
-      minutes: Math.floor((diff / (1000 * 60)) % 60),
+      days:    Math.floor(diff / 86400000),
+      hours:   Math.floor((diff / 3600000) % 24),
+      minutes: Math.floor((diff / 60000) % 60),
       seconds: Math.floor((diff / 1000) % 60),
     };
   }, [targetDate]);
 
-  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft);
-
+  const [t, setT] = useState(calc);
   useEffect(() => {
-    // Recalculate immediately when targetDate changes
-    setTimeLeft(calculateTimeLeft());
-    const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000);
-    return () => clearInterval(timer);
-  }, [calculateTimeLeft]);
+    setT(calc());
+    const id = setInterval(() => setT(calc()), 1000);
+    return () => clearInterval(id);
+  }, [calc]);
 
   const units = [
-    { label: 'GG',  value: timeLeft.days },
-    { label: 'ORE', value: timeLeft.hours },
-    { label: 'MIN', value: timeLeft.minutes },
-    { label: 'SEC', value: timeLeft.seconds },
+    { l: "GG",  v: t.days    },
+    { l: "ORE", v: t.hours   },
+    { l: "MIN", v: t.minutes },
+    { l: "SEC", v: t.seconds },
   ];
 
-  const isExpired = Object.values(timeLeft).every(v => v === 0);
+  // ── Compact mode: inline red numbers ──────────────────────────────────────
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1.5">
+        {units.map((u, i) => (
+          <div key={u.l} className="flex items-center gap-1.5">
+            <div className="text-center">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={u.v}
+                  initial={{ y: 3, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -3, opacity: 0 }}
+                  transition={{ duration: 0.1 }}
+                  className="font-heading font-black text-2xl leading-none tabular-nums text-primary block"
+                >
+                  {String(u.v).padStart(2, "0")}
+                </motion.span>
+              </AnimatePresence>
+              <span className="text-[9px] font-body text-muted-foreground uppercase tracking-widest mt-0.5 block">
+                {u.l}
+              </span>
+            </div>
+            {i < 3 && (
+              <span className="font-heading font-black text-lg text-primary/30 mb-3">:</span>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
 
+  // ── Full mode ─────────────────────────────────────────────────────────────
   return (
-    <div className="flex items-center justify-center gap-2">
-      {units.map((unit, i) => (
-        <div key={unit.label} className="flex items-center gap-2">
-          <div className="flex flex-col items-center min-w-[44px]">
+    <div className="flex items-end gap-2.5 mt-1">
+      {units.map((u, i) => (
+        <div key={u.l} className="flex items-end gap-2.5">
+          <div className="text-center">
             <AnimatePresence mode="wait">
               <motion.span
-                key={unit.value}
+                key={u.v}
                 initial={{ y: 4, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: -4, opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className={`text-2xl font-black tabular-nums leading-none ${
-                  isExpired ? 'text-zinc-700' : 'text-white'
-                }`}
+                transition={{ duration: 0.1 }}
+                className={`font-heading font-black text-2xl leading-none tabular-nums block
+                  ${light ? "text-foreground" : "text-white"}`}
               >
-                {String(unit.value).padStart(2, '0')}
+                {String(u.v).padStart(2, "0")}
               </motion.span>
             </AnimatePresence>
-            <span className="text-[8px] font-black text-zinc-600 tracking-[0.2em] mt-1 uppercase">
-              {unit.label}
+            <span className={`text-[9px] font-body uppercase tracking-[0.2em] mt-0.5 block
+              ${light ? "text-muted-foreground" : "text-white/40"}`}>
+              {u.l}
             </span>
           </div>
-          {i < units.length - 1 && (
-            <span className={`text-sm font-black mb-4 ${
-              isExpired ? 'text-zinc-800' : 'text-red-500/50'
-            }`}>
-              :
-            </span>
+          {i < 3 && (
+            <span className={`font-heading font-black text-lg mb-4
+              ${light ? "text-primary/30" : "text-white/20"}`}>:</span>
           )}
         </div>
       ))}
