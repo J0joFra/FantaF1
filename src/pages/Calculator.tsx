@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Calculator, Info, X, Share2, Bookmark, ChevronDown, ChevronUp,
   Trophy, AlertTriangle, Sparkles, Target, TrendingUp, Award, Eye, HelpCircle,
-  ChevronRight, Filter, Grid3x3, Maximize2, Minimize2
+  ChevronRight, Grid3x3, Zap, Clock, TrendingDown
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
@@ -123,13 +123,10 @@ function generateMosaic(
   let maxRacesNeeded = 0;
   let bestCombination: MosaicCell | null = null;
   
-  // Per ogni possibile posizione del pilota
   for (const yourPos of SCORING_POSITIONS) {
-    // Per ogni possibile posizione del rivale
     for (const rivalPos of SCORING_POSITIONS) {
       const gainPerRace = yourPos.points - rivalPos.points;
       
-      // Se il guadagno per gara è <= 0, non si può recuperare
       if (gainPerRace <= 0) {
         cells.push({
           yourPos: yourPos.position,
@@ -144,7 +141,6 @@ function generateMosaic(
         continue;
       }
       
-      // Calcola quante gare servono per recuperare il gap
       const racesNeeded = Math.ceil((startGap + 1) / gainPerRace);
       
       if (racesNeeded <= racesLeft) {
@@ -163,7 +159,6 @@ function generateMosaic(
         
         cells.push(cell);
         
-        // Trova la migliore combinazione (minor numero di gare)
         if (!bestCombination || racesNeeded < bestCombination.racesNeeded) {
           bestCombination = cell;
         }
@@ -240,13 +235,13 @@ function generateDetailedCombination(
 function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverColor: string }) {
   if (analysis.isAlreadyChampion) {
     return (
-      <div className="bg-gradient-to-br from-green-500 to-green-700 text-white rounded-2xl p-6 text-center">
+      <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 text-white rounded-2xl p-6 text-center shadow-lg">
         <div className="relative inline-block mb-3">
           <Sparkles className="w-16 h-16 text-yellow-300 animate-pulse" />
           <Trophy className="w-8 h-8 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-yellow-400" />
         </div>
         <h3 className="font-bold text-2xl mb-2">Campione del Mondo! 🏆</h3>
-        <p className="text-green-100 text-sm">
+        <p className="text-emerald-100 text-sm">
           {analysis.driver.driver_name} ha già vinto matematicamente il campionato.
         </p>
       </div>
@@ -255,7 +250,7 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
 
   if (analysis.isMathematicallyOut) {
     return (
-      <div className="bg-gradient-to-br from-gray-600 to-gray-800 text-white rounded-2xl p-6 text-center">
+      <div className="bg-gradient-to-br from-gray-700 to-gray-900 text-white rounded-2xl p-6 text-center shadow-lg">
         <AlertTriangle className="w-16 h-16 mx-auto mb-3 text-gray-400" />
         <h3 className="font-bold text-2xl mb-2">Matematicamente Fuori ❌</h3>
         <p className="text-gray-300 text-sm">
@@ -266,31 +261,38 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
   }
 
   return (
-    <div className="bg-gradient-to-br from-red-500 to-red-700 text-white rounded-2xl p-6 shadow-lg">
+    <div className="bg-gradient-to-br from-rose-600 to-rose-800 text-white rounded-2xl p-6 shadow-lg">
       <div className="text-center mb-4">
-        <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 mb-3">
+        <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 mb-3 backdrop-blur-sm">
           <Target className="w-4 h-4" />
-          <span className="text-xs font-medium">OBIETTIVO</span>
+          <span className="text-xs font-medium uppercase tracking-wider">Obiettivo</span>
         </div>
         <p className="text-7xl font-black mt-1">{analysis.magicNumber}</p>
-        <p className="text-red-100 text-sm mt-2">punti da conquistare</p>
+        <p className="text-rose-100 text-sm mt-2">punti da conquistare</p>
       </div>
 
       {analysis.mainRival && (
-        <div className="bg-white/10 rounded-xl p-3">
-          <p className="text-xs text-red-100 mb-2">🎯 RIVALE PRINCIPALE</p>
+        <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
+          <p className="text-xs text-rose-100 mb-2 flex items-center gap-1">
+            <Zap className="w-3 h-3" />
+            Rivale principale
+          </p>
           <div className="flex justify-between items-center">
             <span className="font-bold text-lg">{analysis.mainRival.driver.driver_name}</span>
-            <span className="text-sm font-mono">{analysis.mainRival.driver.points} pt</span>
+            <span className="text-sm font-mono bg-white/20 px-2 py-0.5 rounded">
+              {analysis.mainRival.driver.points} pt
+            </span>
           </div>
-          <p className="text-xs text-red-100 mt-1">dietro di {analysis.mainRival.currentGap} punti</p>
+          <p className="text-xs text-rose-100 mt-1">
+            Distacco: -{analysis.mainRival.currentGap} punti
+          </p>
         </div>
       )}
     </div>
   );
 }
 
-// 🔥 COMPONENTE MOSAICO INTERATTIVO
+// 🔥 COMPONENTE MOSAICO CON COLORI MIGLIORATI
 function MosaicDiagram({ 
   cells, 
   bestCombination,
@@ -308,167 +310,238 @@ function MosaicDiagram({
 }) {
   const [hoveredCell, setHoveredCell] = useState<MosaicCell | null>(null);
   
-  // Organizza le celle in matrice 10x10
   const matrix: (MosaicCell | null)[][] = Array(10).fill(null).map(() => Array(10).fill(null));
   
   cells.forEach(cell => {
     matrix[cell.yourPos - 1][cell.rivalPos - 1] = cell;
   });
   
-  const getCellColor = (cell: MosaicCell | null) => {
-    if (!cell) return "bg-gray-100";
-    if (!cell.isPossible) return "bg-red-200 hover:bg-red-300";
-    if (cell.racesNeeded <= 3) return "bg-green-500 hover:bg-green-600 text-white";
-    if (cell.racesNeeded <= 5) return "bg-green-400 hover:bg-green-500 text-white";
-    if (cell.racesNeeded <= 7) return "bg-yellow-400 hover:bg-yellow-500";
-    return "bg-orange-400 hover:bg-orange-500";
+  const getCellStyle = (cell: MosaicCell | null) => {
+    if (!cell) return "bg-gray-100 cursor-default";
+    if (!cell.isPossible) return "bg-gray-300 cursor-not-allowed opacity-50";
+    
+    // Gradiente basato sul numero di gare necessarie
+    const percent = (cell.racesNeeded / racesLeft) * 100;
+    if (percent <= 30) {
+      return "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-sm hover:shadow-md cursor-pointer";
+    }
+    if (percent <= 50) {
+      return "bg-gradient-to-br from-lime-500 to-lime-600 text-white shadow-sm hover:shadow-md cursor-pointer";
+    }
+    if (percent <= 70) {
+      return "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-sm hover:shadow-md cursor-pointer";
+    }
+    return "bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-sm hover:shadow-md cursor-pointer";
   };
   
-  const getCellTooltip = (cell: MosaicCell | null) => {
-    if (!cell) return "";
-    if (!cell.isPossible) return `❌ Impossibile recuperare (guadagno: ${cell.gain} pt/gara)`;
-    return `✅ Possibile in ${cell.racesNeeded} gare\n📈 Guadagno: ${cell.gain} pt/gara\n🎯 Sorpasso alla gara ${cell.overtakeRace}`;
-  };
-  
-  const isBest = (cell: MosaicCell | null) => {
-    return cell && bestCombination && 
-           cell.yourPos === bestCombination.yourPos && 
-           cell.rivalPos === bestCombination.rivalPos;
+  const getDifficultyBadge = (cell: MosaicCell | null) => {
+    if (!cell || !cell.isPossible) return null;
+    if (cell.racesNeeded <= 3) return { icon: "⚡", text: "Veloce", color: "bg-emerald-700" };
+    if (cell.racesNeeded <= 5) return { icon: "📈", text: "Medio", color: "bg-lime-700" };
+    if (cell.racesNeeded <= 7) return { icon: "⏱️", text: "Lento", color: "bg-amber-700" };
+    return { icon: "🐢", text: "Molto lento", color: "bg-orange-700" };
   };
   
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 overflow-x-auto">
-      <div className="flex items-center gap-2 mb-4">
-        <Grid3x3 className="w-5 h-5 text-red-500" />
-        <h3 className="font-bold text-gray-900">Diagramma a Mosaico</h3>
-        <span className="text-xs text-gray-400">Clicca su una cella per i dettagli</span>
-      </div>
-      
-      {/* Legenda */}
-      <div className="flex flex-wrap gap-3 mb-4 text-xs">
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 bg-green-500 rounded"></div>
-          <span>Facile (≤3 gare)</span>
+    <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-200">
+      {/* Header con statistiche */}
+      <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-2 rounded-xl shadow-md">
+            <Grid3x3 className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="font-black text-gray-900 text-lg">Mosaico Strategie</h3>
+            <p className="text-xs text-gray-500">Clicca su una cella per i dettagli</p>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 bg-green-400 rounded"></div>
-          <span>Medio (4-5 gare)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 bg-yellow-400 rounded"></div>
-          <span>Difficile (6-7 gare)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 bg-orange-400 rounded"></div>
-          <span>Molto difficile (≥8 gare)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 bg-red-200 rounded"></div>
-          <span>Impossibile</span>
+        <div className="text-right">
+          <div className="text-sm font-bold text-gray-900">{racesLeft} gare</div>
+          <div className="text-xs text-gray-500">rimanenti</div>
         </div>
       </div>
       
-      {/* Tabella Mosaico */}
-      <div className="inline-block min-w-full">
-        {/* Intestazione colonne (risultati rivale) */}
-        <div className="grid grid-cols-11 gap-1 mb-1">
-          <div className="text-center text-xs font-bold text-gray-500 p-2"></div>
-          {SCORING_POSITIONS.map(pos => (
-            <div key={`header-${pos.position}`} className="text-center">
-              <div className="text-lg">{pos.emoji}</div>
-              <div className="text-xs font-bold text-gray-600">{pos.label}</div>
+      {/* Legenda migliorata */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-5">
+        <div className="flex items-center gap-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200">
+          <div className="w-4 h-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded shadow-sm"></div>
+          <div className="text-xs">
+            <span className="font-bold text-emerald-700">Facile</span>
+            <span className="text-gray-500 ml-1">≤30% gare</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 p-2 bg-lime-50 rounded-lg border border-lime-200">
+          <div className="w-4 h-4 bg-gradient-to-br from-lime-500 to-lime-600 rounded shadow-sm"></div>
+          <div className="text-xs">
+            <span className="font-bold text-lime-700">Medio</span>
+            <span className="text-gray-500 ml-1">31-50% gare</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border border-amber-200">
+          <div className="w-4 h-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded shadow-sm"></div>
+          <div className="text-xs">
+            <span className="font-bold text-amber-700">Difficile</span>
+            <span className="text-gray-500 ml-1">51-70% gare</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg border border-orange-200">
+          <div className="w-4 h-4 bg-gradient-to-br from-orange-500 to-orange-600 rounded shadow-sm"></div>
+          <div className="text-xs">
+            <span className="font-bold text-orange-700">Molto difficile</span>
+            <span className="text-gray-500 ml-1">&gt;70% gare</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Tabella Mosaico - Scrollabile */}
+      <div className="overflow-x-auto">
+        <div className="min-w-[600px]">
+          {/* Intestazione colonne */}
+          <div className="grid grid-cols-11 gap-1.5 mb-1.5">
+            <div className="text-center text-xs font-bold text-gray-400 p-2">Pilota ↓ / Rivale →</div>
+            {SCORING_POSITIONS.map(pos => (
+              <div key={`header-${pos.position}`} className="text-center bg-gray-100 rounded-lg p-1.5">
+                <div className="text-base">{pos.emoji}</div>
+                <div className="text-[10px] font-bold text-gray-600">{pos.label}</div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Righe della matrice */}
+          {SCORING_POSITIONS.map(yourPos => (
+            <div key={`row-${yourPos.position}`} className="grid grid-cols-11 gap-1.5 mb-1.5">
+              {/* Intestazione riga */}
+              <div className="flex flex-col items-center justify-center bg-gray-100 rounded-lg p-1.5">
+                <div className="text-base">{yourPos.emoji}</div>
+                <div className="text-[10px] font-bold text-gray-600">{yourPos.label}</div>
+                <div className="text-[9px] text-gray-400">{yourPos.points} pt</div>
+              </div>
+              
+              {/* Celle */}
+              {SCORING_POSITIONS.map(rivalPos => {
+                const cell = matrix[yourPos.position - 1][rivalPos.position - 1];
+                const difficulty = getDifficultyBadge(cell);
+                const isBest = cell && bestCombination && 
+                               cell.yourPos === bestCombination.yourPos && 
+                               cell.rivalPos === bestCombination.rivalPos;
+                
+                return (
+                  <motion.button
+                    key={`cell-${yourPos.position}-${rivalPos.position}`}
+                    whileHover={{ scale: cell?.isPossible ? 1.02 : 1 }}
+                    whileTap={{ scale: cell?.isPossible ? 0.98 : 1 }}
+                    onClick={() => cell?.isPossible && onCellClick(cell.yourPos, cell.rivalPos)}
+                    onMouseEnter={() => setHoveredCell(cell)}
+                    onMouseLeave={() => setHoveredCell(null)}
+                    className={`
+                      relative rounded-lg p-2 text-center transition-all min-h-[70px]
+                      ${getCellStyle(cell)}
+                      ${isBest ? 'ring-2 ring-rose-500 ring-offset-2 shadow-lg' : ''}
+                    `}
+                    disabled={!cell?.isPossible}
+                  >
+                    {cell && cell.isPossible && (
+                      <div className="flex flex-col items-center gap-0.5">
+                        <div className="text-lg font-black">{cell.racesNeeded}</div>
+                        <div className="text-[10px] font-medium opacity-90">gare</div>
+                        <div className="text-[9px] opacity-75">+{cell.gain}/g</div>
+                        {difficulty && (
+                          <div className={`absolute -top-1 -right-1 ${difficulty.color} text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px]`}>
+                            {difficulty.icon}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {cell && !cell.isPossible && (
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <div className="text-lg opacity-50">❌</div>
+                        <div className="text-[9px] text-gray-500">+{cell.gain}/g</div>
+                      </div>
+                    )}
+                    {!cell && <div className="h-full w-full"></div>}
+                  </motion.button>
+                );
+              })}
             </div>
           ))}
         </div>
-        
-        {/* Righe della matrice */}
-        {SCORING_POSITIONS.map(yourPos => (
-          <div key={`row-${yourPos.position}`} className="grid grid-cols-11 gap-1 mb-1">
-            {/* Intestazione riga (risultati pilota) */}
-            <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-1">
-              <div className="text-lg">{yourPos.emoji}</div>
-              <div className="text-xs font-bold text-gray-600">{yourPos.label}</div>
-            </div>
-            
-            {/* Celle */}
-            {SCORING_POSITIONS.map(rivalPos => {
-              const cell = matrix[yourPos.position - 1][rivalPos.position - 1];
-              return (
-                <motion.button
-                  key={`cell-${yourPos.position}-${rivalPos.position}`}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => cell?.isPossible && onCellClick(cell.yourPos, cell.rivalPos)}
-                  onMouseEnter={() => setHoveredCell(cell)}
-                  onMouseLeave={() => setHoveredCell(null)}
-                  className={`
-                    relative rounded-lg p-2 text-center transition-all min-h-[60px]
-                    ${getCellColor(cell)}
-                    ${isBest(cell) ? 'ring-2 ring-red-500 ring-offset-2' : ''}
-                    ${cell?.isPossible ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}
-                  `}
-                  disabled={!cell?.isPossible}
-                >
-                  {cell && (
-                    <>
-                      <div className="text-sm font-bold">
-                        {cell.isPossible ? `✅ ${cell.racesNeeded}g` : '❌'}
-                      </div>
-                      <div className="text-xs">
-                        ±{Math.abs(cell.gain)} pt/g
-                      </div>
-                      {isBest(cell) && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                      )}
-                    </>
-                  )}
-                </motion.button>
-              );
-            })}
-          </div>
-        ))}
       </div>
       
-      {/* Tooltip hover */}
+      {/* Tooltip hover migliorato */}
       {hoveredCell && (
-        <div className="mt-4 p-3 bg-gray-100 rounded-lg text-sm">
-          <div className="font-bold mb-1">
-            {hoveredCell.isPossible ? '✅ Combinazione Possibile' : '❌ Combinazione Impossibile'}
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <span className="text-gray-500">Il tuo piazzamento:</span>
-              <span className="ml-2 font-bold">{hoveredCell.yourPos}° ({hoveredCell.yourPoints} pt)</span>
-            </div>
-            <div>
-              <span className="text-gray-500">Piazzamento rivale:</span>
-              <span className="ml-2 font-bold">{hoveredCell.rivalPos}° ({hoveredCell.rivalPoints} pt)</span>
-            </div>
-            <div>
-              <span className="text-gray-500">Guadagno a gara:</span>
-              <span className="ml-2 font-bold text-green-600">+{hoveredCell.gain} pt</span>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 shadow-md"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">
+                {SCORING_POSITIONS.find(p => p.position === hoveredCell.yourPos)?.emoji}
+              </div>
+              <div className="text-gray-400 text-sm">vs</div>
+              <div className="text-2xl">
+                {SCORING_POSITIONS.find(p => p.position === hoveredCell.rivalPos)?.emoji}
+              </div>
             </div>
             {hoveredCell.isPossible && (
-              <>
-                <div>
-                  <span className="text-gray-500">Gare necessarie:</span>
-                  <span className="ml-2 font-bold text-blue-600">{hoveredCell.racesNeeded}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-gray-500">Sorpasso alla gara:</span>
-                  <span className="ml-2 font-bold text-green-600">{hoveredCell.overtakeRace}</span>
-                </div>
-              </>
+              <div className={`px-2 py-0.5 rounded-full text-xs font-bold text-white ${
+                hoveredCell.racesNeeded <= 3 ? 'bg-emerald-600' :
+                hoveredCell.racesNeeded <= 5 ? 'bg-lime-600' :
+                hoveredCell.racesNeeded <= 7 ? 'bg-amber-600' : 'bg-orange-600'
+              }`}>
+                {hoveredCell.isPossible ? `✅ ${hoveredCell.racesNeeded} gare` : '❌ Impossibile'}
+              </div>
             )}
           </div>
-        </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="bg-white rounded-lg p-2">
+              <div className="text-gray-500 text-xs mb-1">Il tuo piazzamento</div>
+              <div className="font-bold text-gray-900">
+                {hoveredCell.yourPos}° posto ({hoveredCell.yourPoints} pt)
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-2">
+              <div className="text-gray-500 text-xs mb-1">Piazzamento rivale</div>
+              <div className="font-bold text-gray-900">
+                {hoveredCell.rivalPos}° posto ({hoveredCell.rivalPoints} pt)
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-2">
+              <div className="text-gray-500 text-xs mb-1">Guadagno a gara</div>
+              <div className="font-bold text-emerald-600">+{hoveredCell.gain} punti</div>
+            </div>
+            {hoveredCell.isPossible && (
+              <div className="bg-white rounded-lg p-2">
+                <div className="text-gray-500 text-xs mb-1">Sorpasso alla gara</div>
+                <div className="font-bold text-rose-600">#{hoveredCell.overtakeRace}</div>
+              </div>
+            )}
+          </div>
+        </motion.div>
       )}
       
       {/* Best combination highlight */}
       {bestCombination && (
-        <div className="mt-3 p-2 bg-green-50 rounded-lg text-xs text-center">
-          ⭐ Migliore combinazione: {bestCombination.yourPos}° vs {bestCombination.rivalPos}° → 
-          sorpasso in {bestCombination.racesNeeded} gare
+        <div className="mt-4 p-3 bg-gradient-to-r from-rose-50 to-orange-50 rounded-xl border border-rose-200">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-rose-600" />
+              <span className="text-sm font-semibold text-gray-700">Combinazione ottimale:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">
+                {SCORING_POSITIONS.find(p => p.position === bestCombination.yourPos)?.emoji}
+              </span>
+              <span className="text-gray-600">vs</span>
+              <span className="text-lg">
+                {SCORING_POSITIONS.find(p => p.position === bestCombination.rivalPos)?.emoji}
+              </span>
+              <span className="text-sm font-bold text-emerald-600">
+                → sorpasso in {bestCombination.racesNeeded} gare
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -507,7 +580,7 @@ function CellDetailModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={onClose}
         >
           <motion.div
@@ -518,18 +591,29 @@ function CellDetailModal({
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white">
+            <div className="bg-gradient-to-r from-rose-600 to-rose-700 p-6 text-white">
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-2xl font-bold mb-2">Dettaglio Combinazione</h2>
-                  <p className="text-red-100">
-                    {yourDriver.driver_name} <strong>{yourPosData.label}</strong> ({yourPosData.points} pt) vs 
-                    {rival.driver_name} <strong>{rivalPosData.label}</strong> ({rivalPosData.points} pt)
-                  </p>
+                  <div className="flex items-center gap-3 text-rose-100">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{yourPosData.emoji}</span>
+                      <span>
+                        <strong>{yourDriver.driver_name}</strong> {yourPosData.label} ({yourPosData.points} pt)
+                      </span>
+                    </div>
+                    <span>vs</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{rivalPosData.emoji}</span>
+                      <span>
+                        <strong>{rival.driver_name}</strong> {rivalPosData.label} ({rivalPosData.points} pt)
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30"
+                  className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -538,59 +622,78 @@ function CellDetailModal({
             
             {/* Content */}
             <div className="p-6">
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-green-50 rounded-xl p-3 text-center">
-                  <div className="text-2xl mb-1">{yourPosData.emoji}</div>
-                  <div className="font-bold text-green-800">{yourDriver.driver_name}</div>
-                  <div className="text-sm">{yourPosData.points} pt a gara</div>
+              {/* Statistiche */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                  <div className="text-xs text-gray-500">Guadagno a gara</div>
+                  <div className="text-xl font-bold text-emerald-600">+{gainPerRace} pt</div>
                 </div>
-                <div className="bg-red-50 rounded-xl p-3 text-center">
-                  <div className="text-2xl mb-1">{rivalPosData.emoji}</div>
-                  <div className="font-bold text-red-800">{rival.driver_name}</div>
-                  <div className="text-sm">{rivalPosData.points} pt a gara</div>
+                <div className="bg-blue-50 rounded-xl p-3 text-center">
+                  <div className="text-xs text-gray-500">Gare necessarie</div>
+                  <div className="text-xl font-bold text-blue-600">{racesNeeded}</div>
                 </div>
-              </div>
-              
-              <div className="bg-blue-50 rounded-xl p-4 mb-6">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Guadagno a gara:</span>
-                    <span className="ml-2 font-bold text-green-600">+{gainPerRace} pt</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Gare necessarie:</span>
-                    <span className="ml-2 font-bold">{racesNeeded}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Partenza:</span>
-                    <span className="ml-2">{yourDriver.points} - {rival.points}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Arrivo:</span>
-                    <span className="ml-2 font-bold">{details.finalYourPoints} - {details.finalRivalPoints}</span>
-                  </div>
+                <div className="bg-amber-50 rounded-xl p-3 text-center">
+                  <div className="text-xs text-gray-500">Partenza</div>
+                  <div className="text-sm font-bold">{yourDriver.points} - {rival.points}</div>
+                </div>
+                <div className="bg-rose-50 rounded-xl p-3 text-center">
+                  <div className="text-xs text-gray-500">Arrivo</div>
+                  <div className="text-sm font-bold">{details.finalYourPoints} - {details.finalRivalPoints}</div>
                 </div>
               </div>
               
-              <h4 className="font-bold mb-3">📊 Andamento gara per gara:</h4>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+              {/* Timeline gare */}
+              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-rose-500" />
+                Andamento gara per gara
+              </h4>
+              <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
                 {details.results.map(result => (
                   <div 
                     key={result.raceNumber}
-                    className={`p-3 rounded-lg ${result.isOvertake ? 'bg-green-100 border border-green-300' : 'bg-gray-50'}`}
+                    className={`p-3 rounded-xl transition-all ${
+                      result.isOvertake 
+                        ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 border border-emerald-300 shadow-sm' 
+                        : 'bg-gray-50 border border-gray-100'
+                    }`}
                   >
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold">Gara {result.raceNumber}</span>
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                          result.isOvertake ? 'bg-emerald-500 text-white' : 'bg-gray-300 text-gray-600'
+                        }`}>
+                          {result.raceNumber}
+                        </div>
+                        <span className="font-medium text-gray-700">Gara {result.raceNumber}</span>
+                      </div>
                       {result.isOvertake && (
-                        <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">SORPASSO!</span>
+                        <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500 text-white rounded-full text-xs font-bold">
+                          <Zap className="w-3 h-3" />
+                          SORPASSO!
+                        </div>
                       )}
                     </div>
-                    <div className="flex justify-between mt-1 text-sm">
-                      <span>{yourDriver.driver_name}: {result.yourTotal} pt</span>
-                      <span>{rival.driver_name}: {result.rivalTotal} pt</span>
-                      <span className={result.yourTotal > result.rivalTotal ? 'text-green-600 font-bold' : 'text-red-600'}>
-                        {result.yourTotal > result.rivalTotal ? '👍 Avanti' : '👎 Dietro'}
-                      </span>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">{yourDriver.driver_name}</span>
+                        <span className={`font-mono font-bold ${result.yourTotal > result.rivalTotal ? 'text-emerald-600' : 'text-gray-700'}`}>
+                          {result.yourTotal} pt
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">{rival.driver_name}</span>
+                        <span className={`font-mono font-bold ${result.rivalTotal > result.yourTotal ? 'text-rose-600' : 'text-gray-700'}`}>
+                          {result.rivalTotal} pt
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-500">Differenza:</span>
+                        <span className={`font-bold ${result.yourTotal - result.rivalTotal > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {result.yourTotal - result.rivalTotal > 0 ? '+' : ''}{result.yourTotal - result.rivalTotal} pt
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -617,27 +720,32 @@ function RivalCard({
     <div 
       onClick={onCardClick}
       className={`bg-white rounded-xl p-4 shadow-sm border cursor-pointer transition-all hover:shadow-md ${
-        isMain ? 'border-red-300 bg-red-50/30 hover:bg-red-50/50' : 'border-gray-100 hover:border-gray-300'
+        isMain ? 'border-rose-300 bg-rose-50/50 hover:bg-rose-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
       }`}
     >
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-bold text-gray-900">{rival.driver.driver_name}</p>
-            {isMain && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">Principale</span>}
+            {isMain && (
+              <span className="text-xs bg-gradient-to-r from-rose-500 to-rose-600 text-white px-2 py-0.5 rounded-full shadow-sm">
+                Principale
+              </span>
+            )}
           </div>
           <p className="text-xs text-gray-500">{rival.driver.team}</p>
         </div>
         <div className="text-right">
           <p className="text-lg font-bold text-gray-900">{rival.driver.points} pt</p>
-          <p className="text-xs text-gray-400">distanza: -{rival.currentGap} pt</p>
+          <p className="text-xs text-rose-600 font-medium">-{rival.currentGap} pt</p>
         </div>
       </div>
       
       <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
-        <div>
-          <p className="text-sm font-medium text-red-600">
-            Devi fare {rival.pointsNeeded} punti in più
+        <div className="flex items-center gap-1">
+          <Target className="w-3 h-3 text-rose-500" />
+          <p className="text-sm font-medium text-gray-700">
+            Servono <span className="text-rose-600 font-bold">{rival.pointsNeeded} pt</span> in più
           </p>
         </div>
         <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -762,38 +870,44 @@ export default function ScenariosPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Caricamento dati F1 2026...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Caricamento dati F1 2026...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-24">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-md mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Trophy className="w-7 h-7 text-red-500" />
-              <Sparkles className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />
+              <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-1.5 rounded-xl shadow-md">
+                <Trophy className="w-5 h-5 text-white" />
+              </div>
+              <Sparkles className="w-3 h-3 text-yellow-500 absolute -top-1 -right-1" />
             </div>
-            <h1 className="font-black text-xl text-gray-900">F1 2026</h1>
-            <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Mosaico Strategie</span>
+            <h1 className="font-black text-xl bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              F1 2026
+            </h1>
+            <span className="text-[10px] font-mono text-white bg-gradient-to-r from-rose-500 to-rose-600 px-2 py-0.5 rounded-full shadow-sm">
+              Mosaico
+            </span>
           </div>
           <button
             onClick={() => setShowInfo(true)}
-            className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
+            className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors shadow-sm"
           >
             <HelpCircle className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-5 py-5 space-y-5">
+      <div className="max-w-md mx-auto px-4 py-5 space-y-5">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4">
             <p className="text-red-600 text-sm">{error}</p>
@@ -807,14 +921,14 @@ export default function ScenariosPage() {
         )}
 
         {/* Driver selector */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
           <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
             Seleziona Pilota
           </label>
           <select
             value={selectedDriverId}
             onChange={(e) => setSelectedDriverId(e.target.value)}
-            className="w-full h-12 bg-gray-50 border-0 rounded-xl px-4 text-gray-900 font-medium outline-none focus:ring-2 focus:ring-red-500 cursor-pointer"
+            className="w-full h-12 bg-gray-50 border-0 rounded-xl px-4 text-gray-900 font-medium outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
           >
             {drivers.map(d => (
               <option key={d.id} value={d.id}>
@@ -823,14 +937,15 @@ export default function ScenariosPage() {
             ))}
           </select>
           {leader && (
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" />
               Leader: <span className="font-bold">{leader.driver_name}</span> ({leader.points} pt)
             </p>
           )}
         </div>
 
         {/* Races counter */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
           <div className="flex justify-between items-center">
             <div>
               <p className="text-sm font-bold text-gray-900">🏁 GP rimanenti</p>
@@ -839,14 +954,14 @@ export default function ScenariosPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setRacesLeft(Math.max(0, racesLeft - 1))}
-                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
               <span className="w-12 text-center font-mono font-bold text-2xl text-gray-900">{racesLeft}</span>
               <button
                 onClick={() => setRacesLeft(racesLeft + 1)}
-                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
               >
                 <ChevronUp className="w-4 h-4" />
               </button>
@@ -860,15 +975,15 @@ export default function ScenariosPage() {
             key={selectedDriverId}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
+            className="space-y-5"
           >
             <MagicNumberCard analysis={analysis} driverColor="red" />
 
             {/* Rivals section */}
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
+                  <TrendingUp className="w-4 h-4 text-rose-500" />
                   Piloti da superare
                 </h3>
                 <span className="text-xs text-gray-400">
@@ -878,8 +993,9 @@ export default function ScenariosPage() {
               <div className="space-y-2">
                 {analysis.allRivals.length === 0 ? (
                   <div className="text-center py-6">
-                    <Award className="w-12 h-12 text-green-500 mx-auto mb-2" />
-                    <p className="text-gray-600 font-medium">Sei in testa! 🎯</p>
+                    <Award className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
+                    <p className="text-gray-600 font-medium">Sei in testa alla classifica! 🎯</p>
+                    <p className="text-xs text-gray-400 mt-1">Nessun pilota davanti a te</p>
                   </div>
                 ) : (
                   analysis.allRivals
@@ -913,13 +1029,13 @@ export default function ScenariosPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={handleShare}
-                className="flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 rounded-xl font-medium text-gray-700"
+                className="flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors active:scale-95 shadow-sm"
               >
                 <Share2 className="w-4 h-4" /> Condividi
               </button>
               <button
                 onClick={handleSave}
-                className="flex items-center justify-center gap-2 py-3 bg-red-50 border border-red-200 rounded-xl font-medium text-red-600"
+                className="flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200 rounded-xl font-medium text-rose-600 hover:from-rose-100 hover:to-rose-200 transition-colors active:scale-95 shadow-sm"
               >
                 <Bookmark className="w-4 h-4" /> Salva
               </button>
@@ -927,15 +1043,18 @@ export default function ScenariosPage() {
 
             {/* Saved scenarios */}
             {savedScenarios.length > 0 && (
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
                   Ultime simulazioni
                 </p>
                 <div className="space-y-2">
                   {savedScenarios.map(s => (
-                    <div key={s.id} className="flex justify-between items-center text-sm">
-                      <span className="font-medium text-gray-900">{s.driverName}</span>
-                      <span className={`font-mono ${s.isChampion ? 'text-green-600' : s.isOut ? 'text-gray-400' : 'text-red-600'}`}>
+                    <div key={s.id} className="flex justify-between items-center text-sm py-2 border-b border-gray-50 last:border-0">
+                      <div>
+                        <span className="font-medium text-gray-900">{s.driverName}</span>
+                        <p className="text-xs text-gray-400">{s.driverTeam}</p>
+                      </div>
+                      <span className={`font-mono text-sm font-bold ${s.isChampion ? 'text-emerald-600' : s.isOut ? 'text-gray-400' : 'text-rose-600'}`}>
                         {s.isChampion ? "🏆 Campione" : s.isOut ? "❌ Fuori" : `+${s.magicNumber} pt`}
                       </span>
                     </div>
@@ -947,9 +1066,10 @@ export default function ScenariosPage() {
         )}
 
         {!selectedDriver && drivers.length > 0 && (
-          <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-            <Calculator className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">Seleziona un pilota</p>
+          <div className="text-center py-12 bg-white rounded-xl border border-gray-100 shadow-md">
+            <Calculator className="w-16 h-16 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium">Seleziona un pilota</p>
+            <p className="text-xs text-gray-400 mt-2">per iniziare l'analisi</p>
           </div>
         )}
       </div>
@@ -974,34 +1094,52 @@ export default function ScenariosPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 z-50 flex items-end justify-center"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end justify-center"
             onClick={() => setShowInfo(false)}
           >
             <motion.div
               initial={{ y: 100 }}
               animate={{ y: 0 }}
               exit={{ y: 100 }}
-              className="bg-white w-full max-w-md rounded-t-3xl p-6"
+              className="bg-white w-full max-w-md rounded-t-3xl p-6 shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-black text-lg">Diagramma a Mosaico</h3>
-                <button onClick={() => setShowInfo(false)} className="w-8 h-8 rounded-full bg-gray-100">
+                <h3 className="font-black text-xl bg-gradient-to-r from-rose-600 to-rose-700 bg-clip-text text-transparent">
+                  Diagramma a Mosaico
+                </h3>
+                <button onClick={() => setShowInfo(false)} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
                   <X className="w-4 h-4 mx-auto" />
                 </button>
               </div>
               <div className="space-y-4 text-sm text-gray-600">
                 <p>
-                  Il <strong>diagramma a mosaico</strong> mostra tutte le possibili combinazioni di piazzamenti:
+                  Il <strong className="text-rose-600">diagramma a mosaico</strong> mostra tutte le possibili combinazioni di piazzamenti:
                 </p>
-                <ul className="list-disc list-inside space-y-2">
-                  <li>🟢 <strong>Verde</strong>: Possibile in poche gare</li>
-                  <li>🟡 <strong>Giallo</strong>: Possibile in 6-7 gare</li>
-                  <li>🟠 <strong>Arancione</strong>: Possibile in 8+ gare</li>
-                  <li>🔴 <strong>Rosso</strong>: Impossibile</li>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2 p-2 bg-emerald-50 rounded-lg">
+                    <div className="w-4 h-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded shadow-sm"></div>
+                    <span><strong>Verde</strong> → Possibile in ≤30% delle gare</span>
+                  </li>
+                  <li className="flex items-center gap-2 p-2 bg-lime-50 rounded-lg">
+                    <div className="w-4 h-4 bg-gradient-to-br from-lime-500 to-lime-600 rounded shadow-sm"></div>
+                    <span><strong>Lime</strong> → Possibile in 31-50% delle gare</span>
+                  </li>
+                  <li className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg">
+                    <div className="w-4 h-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded shadow-sm"></div>
+                    <span><strong>Ambra</strong> → Possibile in 51-70% delle gare</span>
+                  </li>
+                  <li className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg">
+                    <div className="w-4 h-4 bg-gradient-to-br from-orange-500 to-orange-600 rounded shadow-sm"></div>
+                    <span><strong>Arancione</strong> → Possibile in &gt;70% delle gare</span>
+                  </li>
+                  <li className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
+                    <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                    <span><strong>Grigio</strong> → Impossibile</span>
+                  </li>
                 </ul>
-                <p className="text-xs text-gray-400 mt-2">
-                  Clicca su una cella verde/gialla/arancione per vedere il dettaglio gara per gara!
+                <p className="text-xs text-gray-400 pt-2 border-t border-gray-100">
+                  💡 Clicca su una cella colorata per vedere il dettaglio gara per gara!
                 </p>
               </div>
             </motion.div>
