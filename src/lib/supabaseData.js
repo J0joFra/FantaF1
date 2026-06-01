@@ -200,3 +200,43 @@ export async function getFerrariArchiveStats() {
   }
   return data?.[0] || null;
 }
+
+// ─── NEXT N RACES ─────────────────────────────────────────────────────────────
+export async function getUpcomingRaces(limit = 5, season = new Date().getFullYear()) {
+  const today = new Date().toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('race')
+    .select('id, round, date, sprint_race_date, official_name, grand_prix_id')
+    .eq('year', season)
+    .gte('date', today)
+    .order('round', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.error('Upcoming races:', error.message);
+    return [];
+  }
+
+  // Enrich with grand_prix names if available
+  const gpIds = (data || []).map(r => r.grand_prix_id).filter(Boolean);
+  let gpMap = {};
+  if (gpIds.length) {
+    const { data: gps } = await supabase
+      .from('grand_prix')
+      .select('id, name, country_id')
+      .in('id', gpIds);
+    (gps || []).forEach(g => { gpMap[g.id] = g; });
+  }
+
+  return (data || []).map(r => {
+    const gp = gpMap[r.grand_prix_id] || {};
+    return {
+      id:          r.id,
+      round:       r.round,
+      name:        gp.name || r.official_name || '',
+      date:        r.date,
+      has_sprint:  !!(r.sprint_race_date),
+      country_id:  gp.country_id || null,
+    };
+  });
+}
