@@ -123,7 +123,7 @@ function calculateChampionshipAnalysis(
     });
 
   // Filtra rivali che sono già stati battuti matematicamente
-  const activeRivals = rivalsAnalysis.filter(r => r.driver.points > selectedDriver.points);
+  const activeRivals = rivalsAnalysis.filter(r => r.pointsNeeded > 0 && !r.isMathematicallyEliminated);
   
   // Il rivale più pericoloso è quello che richiede più punti
   const mainRival = activeRivals.length > 0
@@ -338,7 +338,7 @@ export default function ScenariosPage() {
         const processedDrivers: Driver[] = (driversData || []).map((row: any, idx: number) => ({
           id: row.driver_id ?? String(idx),
           position: row.position_number ?? idx + 1,
-          driver_name: row.full_name ?? (row.driver_first_name ? `${row.driver_first_name} ${row.driver_last_name ?? ""}`.trim() : (row.driver_last_name ?? (row.driver_id ?? `Driver ${idx + 1}`))),
+          driver_name: row.full_name ?? `${row.driver_first_name || ""} ${row.driver_last_name || ""}`.trim() || `Driver ${idx + 1}`,
           driver_code: row.driver_code || (row.driver_id?.toUpperCase().slice(0, 3) ?? "N/A"),
           team: row.constructor_name ?? row.team_name ?? "Unknown",
           points: Number(row.points ?? 0),
