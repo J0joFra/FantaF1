@@ -341,11 +341,23 @@ function MosaicDiagram({
         </div>
       </div>
 
-      {/* Spiegazione + scala colori */}
-      <div className="mb-3">
-        <p className="text-[11px] text-gray-600 mb-2 text-center">
-          Il numero indica <strong className="text-gray-900">quante gare</strong> servono per superare il rivale
+      {/* Come si legge */}
+      <div className="mb-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+        <p className="text-[11px] text-gray-700 leading-snug">
+          Ogni casella = un <strong>"e se ogni gara finisse così?"</strong>.
+          Scegli la posizione di <strong className="text-rose-600">{yourDriver.driver_name}</strong> (riga) e
+          quella di <strong className="text-rose-600">{rival.driver_name}</strong> (colonna):
+          il numero dentro è <strong className="text-gray-900">quante gare</strong> servono per il sorpasso.
         </p>
+        <p className="text-[11px] text-gray-500 leading-snug mt-2 pt-2 border-t border-gray-200">
+          📌 <strong>Esempio:</strong> {yourDriver.driver_name} sempre 1° (riga&nbsp;1),
+          {" "}{rival.driver_name} sempre 4° (colonna&nbsp;4)
+          → guadagna punti ogni gara finché lo sorpassa. Numero più basso = più facile.
+        </p>
+      </div>
+
+      {/* Scala colori */}
+      <div className="mb-3">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-emerald-600 shrink-0">Facile</span>
           <div
@@ -355,20 +367,22 @@ function MosaicDiagram({
           <span className="text-[10px] font-bold text-orange-600 shrink-0">Difficile</span>
         </div>
         <p className="text-[10px] text-gray-400 mt-1.5 text-center">
-          Caselle <span className="text-gray-300 font-bold">grigie</span> = non è possibile recuperare
+          Caselle <span className="text-gray-300 font-bold">grigie</span> = non recuperi (pari o peggio del rivale)
         </p>
       </div>
 
-      {/* Etichette assi */}
-      <div className="flex items-center justify-center gap-4 mb-2 text-[11px] font-semibold text-gray-500">
-        <span className="flex items-center gap-1"><span className="text-rose-500">↓</span> La tua posizione</span>
-        <span className="flex items-center gap-1"><span className="text-rose-500">→</span> Il rivale</span>
+      {/* Etichetta asse colonne (rivale) */}
+      <div className="flex items-center justify-center gap-1 mb-1 text-[11px] font-bold text-gray-600">
+        <span className="text-rose-500">→</span> Posizione di {rival.driver_name}
       </div>
 
       {/* Matrice mosaico - adatta alla larghezza dello schermo */}
       <div className="grid grid-cols-[1.4rem_repeat(10,minmax(0,1fr))] gap-[3px]">
-        {/* angolo vuoto + intestazione colonne (rivale) */}
-        <div />
+        {/* angolo: legenda assi (codici piloti) */}
+        <div className="flex flex-col items-center justify-center text-[7px] font-bold leading-none text-gray-400">
+          <span>{yourDriver.driver_code}↓</span>
+          <span>{rival.driver_code}→</span>
+        </div>
         {SCORING_POSITIONS.map(pos => (
           <div
             key={`col-${pos.position}`}
@@ -423,9 +437,9 @@ function MosaicDiagram({
             <span className="text-xs font-bold text-gray-700">Strategia più veloce</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <span className="font-bold text-gray-900">Tu {bestCombination.yourPos}°</span>
+            <span className="font-bold text-gray-900">{yourDriver.driver_code} {bestCombination.yourPos}°</span>
             <span className="text-gray-400">vs</span>
-            <span className="font-bold text-gray-900">Rivale {bestCombination.rivalPos}°</span>
+            <span className="font-bold text-gray-900">{rival.driver_code} {bestCombination.rivalPos}°</span>
             <span className="ml-auto text-emerald-600 font-bold whitespace-nowrap">
               {bestCombination.racesNeeded} {bestCombination.racesNeeded === 1 ? "gara" : "gare"}
             </span>
@@ -655,6 +669,7 @@ export default function ScenariosPage() {
   const [savedScenarios, setSavedScenarios] = useState<any[]>([]);
   const [selectedRival, setSelectedRival] = useState<Driver | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ yourPos: number; rivalPos: number } | null>(null);
+  const [rivalsOpen, setRivalsOpen] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -867,39 +882,85 @@ export default function ScenariosPage() {
           >
             <MagicNumberCard analysis={analysis} driverColor="red" />
 
-            {/* Rivals section */}
-            <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-rose-500" />
-                  Piloti da superare
-                </h3>
-                <span className="text-xs text-gray-400">
-                  {analysis.allRivals.filter(r => !r.isMathematicallyEliminated).length} da battere
-                </span>
-              </div>
-              <div className="space-y-2">
-                {analysis.allRivals.length === 0 ? (
-                  <div className="text-center py-6">
-                    <Award className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                    <p className="text-gray-600 font-medium">Sei in testa alla classifica! 🎯</p>
-                    <p className="text-xs text-gray-400 mt-1">Nessun pilota davanti a te</p>
+            {/* Rivals section (semi-aperta: mostra il rivale più distante, gli altri a tendina) */}
+            {(() => {
+              const activeRivals = analysis.allRivals.filter(r => !r.isMathematicallyEliminated);
+              const farthestRival = activeRivals[0] ?? null;
+              const otherRivals = activeRivals.slice(1);
+
+              return (
+                <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+                  <div className="flex items-center justify-between p-4 pb-3">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-rose-500" />
+                      Piloti da superare
+                    </h3>
+                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                      {activeRivals.length} da battere
+                    </span>
                   </div>
-                ) : (
-                  analysis.allRivals
-                    .filter(r => !r.isMathematicallyEliminated)
-                    .map(rival => (
-                      <RivalCard
-                        key={rival.driver.id}
-                        rival={rival}
-                        driverName={selectedDriver.driver_name}
-                        isMain={analysis.mainRival?.driver.id === rival.driver.id}
-                        onCardClick={() => setSelectedRival(rival.driver)}
-                      />
-                    ))
-                )}
-              </div>
-            </div>
+
+                  <div className="px-4 pb-4 space-y-2">
+                    {activeRivals.length === 0 ? (
+                      <div className="text-center py-6">
+                        <Award className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
+                        <p className="text-gray-600 font-medium">Sei in testa alla classifica! 🎯</p>
+                        <p className="text-xs text-gray-400 mt-1">Nessun pilota davanti a te</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Rivale più distante: sempre visibile */}
+                        {farthestRival && (
+                          <RivalCard
+                            key={farthestRival.driver.id}
+                            rival={farthestRival}
+                            driverName={selectedDriver.driver_name}
+                            isMain={analysis.mainRival?.driver.id === farthestRival.driver.id}
+                            onCardClick={() => setSelectedRival(farthestRival.driver)}
+                          />
+                        )}
+
+                        {/* Gli altri rivali: a tendina */}
+                        <AnimatePresence initial={false}>
+                          {rivalsOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.25 }}
+                              className="overflow-hidden space-y-2"
+                            >
+                              {otherRivals.map(rival => (
+                                <RivalCard
+                                  key={rival.driver.id}
+                                  rival={rival}
+                                  driverName={selectedDriver.driver_name}
+                                  isMain={analysis.mainRival?.driver.id === rival.driver.id}
+                                  onCardClick={() => setSelectedRival(rival.driver)}
+                                />
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        {/* Toggle per gli altri rivali */}
+                        {otherRivals.length > 0 && (
+                          <button
+                            onClick={() => setRivalsOpen(o => !o)}
+                            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors active:scale-[0.98]"
+                          >
+                            {rivalsOpen ? "Mostra meno" : `Vedi altri ${otherRivals.length} piloti`}
+                            <ChevronDown
+                              className={`w-4 h-4 transition-transform ${rivalsOpen ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Mosaic Diagram */}
             {selectedRival && mosaicData && (
@@ -1004,6 +1065,25 @@ export default function ScenariosPage() {
                 <p>
                   Il <strong className="text-rose-600">diagramma a mosaico</strong> mostra tutte le possibili combinazioni di piazzamenti:
                 </p>
+
+                {/* Come leggerlo */}
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-2">
+                  <p className="font-bold text-gray-800">Come si legge</p>
+                  <p className="text-xs leading-snug">
+                    <span className="inline-block w-5 font-bold text-rose-600">↓</span>
+                    Le <strong>righe</strong> sono la posizione di arrivo del <strong>pilota selezionato</strong> (1°–10°).
+                  </p>
+                  <p className="text-xs leading-snug">
+                    <span className="inline-block w-5 font-bold text-rose-600">→</span>
+                    Le <strong>colonne</strong> sono la posizione del <strong>rivale</strong> (1°–10°).
+                  </p>
+                  <p className="text-xs leading-snug">
+                    <span className="inline-block w-5">🔢</span>
+                    Il numero nella casella = <strong>quante gare</strong> servono, se ogni gara
+                    finisse così, perché il pilota selezionato lo sorpassi. Più basso = più facile.
+                  </p>
+                </div>
+
                 <ul className="space-y-2">
                   <li className="flex items-center gap-2 p-2 bg-emerald-50 rounded-lg">
                     <div className="w-4 h-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded shadow-sm"></div>
