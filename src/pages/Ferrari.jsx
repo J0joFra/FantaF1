@@ -3,11 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield, Trophy, TrendingUp, Loader2, Users, Flag, Crown,
-  Target, Timer, Star, ShieldAlert, Zap, Medal, Sparkles,
+  Target, Timer, Star, ShieldAlert, Zap, Medal,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
+import PageHeader from "@/components/PageHeader";
+import InfoTip from "@/components/InfoTip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   getConstructorStandings, getConstructorSeasonStats,
@@ -46,7 +48,7 @@ function FlagImg({ iso, className = "w-5 h-3.5" }) {
 }
 
 // ── head-to-head stat row ─────────────────────────────────────────────────────
-function StatRow({ icon: Icon, label, val1, val2, color1, color2, lowerBetter = false }) {
+function StatRow({ icon: Icon, label, val1, val2, color1, color2, lowerBetter = false, tip }) {
   const winner = cmp(val1, val2, lowerBetter);
   const raw1 = typeof val1 === "number" ? val1 : 0;
   const raw2 = typeof val2 === "number" ? val2 : 0;
@@ -60,6 +62,7 @@ function StatRow({ icon: Icon, label, val1, val2, color1, color2, lowerBetter = 
       <div className="flex items-center justify-center gap-1.5 mb-2">
         {Icon && <Icon className="w-3 h-3 text-gray-400" />}
         <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest">{label}</p>
+        {tip && <InfoTip>{tip}</InfoTip>}
       </div>
       <div className="flex items-center gap-3">
         <span className="font-heading font-black text-base w-14 text-right tabular-nums"
@@ -161,13 +164,13 @@ export default function Ferrari() {
   }, [selected, leader, teams, config]);
 
   const seasonRows = [
-    { icon: Zap,         label: "Punti",          get: (t, s) => t.points },
-    { icon: Trophy,      label: "Vittorie",       get: (t, s) => s.wins ?? 0 },
-    { icon: Medal,       label: "Podi",           get: (t, s) => s.podiums ?? 0 },
-    { icon: Target,      label: "Pole position",  get: (t, s) => s.poles ?? 0 },
-    { icon: Timer,       label: "Giri veloci",    get: (t, s) => s.fastest_laps ?? 0 },
-    { icon: Star,        label: "Arrivi a punti", get: (t, s) => s.points_finishes ?? 0 },
-    { icon: ShieldAlert, label: "Ritiri (DNF)",   get: (t, s) => s.dnf ?? 0, lowerBetter: true },
+    { icon: Zap,         label: "Punti",          get: (t) => t.points },
+    { icon: Trophy,      label: "Vittorie",       get: (t, s) => s.wins ?? 0, tip: "Gare vinte dalla scuderia (somma delle vittorie dei due piloti)." },
+    { icon: Medal,       label: "Podi",           get: (t, s) => s.podiums ?? 0, tip: "Arrivi nei primi 3 dei piloti del team." },
+    { icon: Target,      label: "Pole position",  get: (t, s) => s.poles ?? 0, tip: "Partenze dalla 1ª posizione conquistate in qualifica." },
+    { icon: Timer,       label: "Giri veloci",    get: (t, s) => s.fastest_laps ?? 0, tip: "Giri più veloci segnati in gara." },
+    { icon: Star,        label: "Arrivi a punti", get: (t, s) => s.points_finishes ?? 0, tip: "Piazzamenti nei primi 10 (zona punti)." },
+    { icon: ShieldAlert, label: "Ritiri (DNF)",   get: (t, s) => s.dnf ?? 0, lowerBetter: true, tip: "DNF = Did Not Finish: gare non concluse dai piloti del team." },
   ];
   const careerRows = [
     { icon: Crown,  label: "Titoli costruttori",   get: (t) => t.career?.titles ?? 0 },
@@ -192,18 +195,7 @@ export default function Ferrari() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
-      {/* ── HEADER (sticky) ── */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-3 flex items-center gap-2">
-          <div className="relative shrink-0">
-            <div className="p-1.5 rounded-xl shadow-md" style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}>
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <Sparkles className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />
-          </div>
-          <h1 className="font-heading font-black text-xl uppercase tracking-wide">Scuderie</h1>
-        </div>
-      </div>
+      <PageHeader icon={Shield} title="Scuderie" color={color} />
 
       <div className="px-4 py-5 space-y-4">
         {/* ── TEAM SELECTOR ── */}
@@ -286,6 +278,7 @@ export default function Ferrari() {
             <div className="flex items-center gap-2 mb-3">
               <Trophy className="w-4 h-4" style={{ color }} />
               <h3 className="font-heading font-black text-sm uppercase tracking-wide">Titolo costruttori</h3>
+              <InfoTip>Punti che servono alla scuderia per essere sicura di vincere (o quanto manca al leader). Calcolo sul massimo ottenibile per weekend: 43 in gara (1°+2°) + 15 nella sprint.</InfoTip>
               <span className="ml-auto text-[11px] font-body text-muted-foreground">{titleRace.racesLeft} GP rimasti</span>
             </div>
 

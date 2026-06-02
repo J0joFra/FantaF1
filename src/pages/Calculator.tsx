@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
+import { getDriverStandings, getDriverSeasonStats } from "../lib/supabaseData";
+import PageHeader from "@/components/PageHeader";
 
 // ─── Costanti F1 2026 ──────────────────────────────────────────────────────
 const MAX_RACE_PTS = 25;
@@ -677,13 +679,11 @@ export default function ScenariosPage() {
       setError(null);
       
       try {
-        const { data: driversData, error: driversError } = await supabase
-          .from("current_season_driver_standings")
-          .select("*")
-          .order("position_number", { ascending: true });
-        
-        if (driversError) throw driversError;
-        
+        const [standings, seasonStats] = await Promise.all([
+          getDriverStandings(),
+          getDriverSeasonStats(),
+        ]);
+
         const today = new Date().toISOString().slice(0, 10);
         const { data: calendarData, error: calendarError } = await supabase
           .from("race_calendar_with_results")
@@ -691,17 +691,17 @@ export default function ScenariosPage() {
           .or("has_results.is.null,has_results.eq.false")
           .gte("date", today)
           .order("date", { ascending: true });
-        
+
         if (calendarError) throw calendarError;
-        
-        const processedDrivers: Driver[] = (driversData || []).map((row: any, idx: number) => ({
-          id: row.driver_id ?? String(idx),
-          position: row.position_number ?? idx + 1,
-          driver_name: row.full_name ?? (`${row.driver_first_name || ""} ${row.driver_last_name || ""}`.trim() || `Driver ${idx + 1}`),
-          driver_code: row.driver_code ?? (row.driver_id?.toUpperCase().slice(0, 3) ?? "N/A"),
-          team: row.constructor_name ?? row.team_name ?? "Unknown",
-          points: Number(row.points ?? 0),
-          victories: Number(row.wins ?? row.victories ?? 0),
+
+        const processedDrivers: Driver[] = (standings || []).map((d: any, idx: number) => ({
+          id: d.id ?? String(idx),
+          position: d.position ?? idx + 1,
+          driver_name: d.driver_name ?? `Driver ${idx + 1}`,
+          driver_code: d.driver_code || (d.id?.toUpperCase().slice(0, 3) ?? "N/A"),
+          team: d.team || "—",
+          points: Number(d.points ?? 0),
+          victories: Number((seasonStats as any)[d.id]?.wins ?? 0),
         }));
         
         setDrivers(processedDrivers);
@@ -784,31 +784,18 @@ export default function ScenariosPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-24">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-md mx-auto px-5 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-1.5 rounded-xl shadow-md">
-                <Trophy className="w-5 h-5 text-white" />
-              </div>
-              <Sparkles className="w-3 h-3 text-yellow-500 absolute -top-1 -right-1" />
-            </div>
-            <h1 className="font-black text-xl bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-              F1 2026
-            </h1>
-            <span className="text-[10px] font-mono text-white bg-gradient-to-r from-rose-500 to-rose-600 px-2 py-0.5 rounded-full shadow-sm">
-              Mosaico
-            </span>
-          </div>
+      <PageHeader
+        icon={Grid3x3}
+        title="Scenari"
+        right={
           <button
             onClick={() => setShowInfo(true)}
-            className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors shadow-sm"
+            className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors border border-gray-200"
           >
-            <HelpCircle className="w-5 h-5" />
+            <HelpCircle className="w-4 h-4" />
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="max-w-md mx-auto px-4 py-5 space-y-5">
         {error && (

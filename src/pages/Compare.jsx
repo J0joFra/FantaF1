@@ -8,8 +8,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, Loader2, ArrowLeftRight, Shuffle, Share2, Crown,
   Trophy, Medal, Target, Timer, Star, Award, TrendingUp, Gauge,
-  ShieldAlert, Zap, Flag, GitCompare, Sparkles,
+  ShieldAlert, Zap, Flag, GitCompare,
 } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
+import InfoTip from "@/components/InfoTip";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function ageFrom(dob) {
@@ -48,7 +50,7 @@ function FlagImg({ iso, className = "w-5 h-3.5" }) {
 }
 
 // ── stat comparison row ─────────────────────────────────────────────────────────
-function StatRow({ icon: Icon, label, val1, val2, color1, color2, lowerBetter = false }) {
+function StatRow({ icon: Icon, label, val1, val2, color1, color2, lowerBetter = false, tip }) {
   const winner = cmp(val1, val2, lowerBetter);
 
   const raw1 = typeof val1 === "number" ? val1 : 0;
@@ -63,6 +65,7 @@ function StatRow({ icon: Icon, label, val1, val2, color1, color2, lowerBetter = 
       <div className="flex items-center justify-center gap-1.5 mb-2">
         {Icon && <Icon className="w-3 h-3 text-gray-400" />}
         <p className="font-body text-[10px] text-muted-foreground text-center uppercase tracking-widest">{label}</p>
+        {tip && <InfoTip>{tip}</InfoTip>}
       </div>
       <div className="flex items-center gap-3">
         <span className="font-heading font-black text-base w-12 text-right tabular-nums"
@@ -168,15 +171,15 @@ export default function Compare() {
   const seasonRows = [
     { icon: Zap,         label: "Punti",                get: (d) => d.points },
     { icon: Trophy,      label: "Vittorie",             get: (_, s) => s.wins ?? 0 },
-    { icon: Medal,       label: "Podi",                 get: (_, s) => s.podiums ?? 0 },
-    { icon: Target,      label: "Pole position",        get: (_, s) => s.poles ?? 0 },
-    { icon: Timer,       label: "Giri veloci",          get: (_, s) => s.fastest_laps ?? 0 },
-    { icon: Star,        label: "Arrivi a punti",       get: (_, s) => s.points_finishes ?? 0 },
-    { icon: Award,       label: "Driver of the Day",    get: (_, s) => s.dotd ?? 0 },
-    { icon: TrendingUp,  label: "Posizioni guadagnate", get: (_, s) => s.positions_gained ?? 0 },
-    { icon: Crown,       label: "Miglior arrivo",       get: (_, s) => s.best_finish, lowerBetter: true },
-    { icon: Gauge,       label: "Arrivo medio",         get: (_, s) => s.avg_finish, lowerBetter: true },
-    { icon: ShieldAlert, label: "Ritiri (DNF)",         get: (_, s) => s.dnf ?? 0, lowerBetter: true },
+    { icon: Medal,       label: "Podi",                 get: (_, s) => s.podiums ?? 0, tip: "Arrivi nei primi 3 (1°, 2° o 3°)." },
+    { icon: Target,      label: "Pole position",        get: (_, s) => s.poles ?? 0, tip: "Volte in cui ha segnato il giro più veloce in qualifica, partendo 1°." },
+    { icon: Timer,       label: "Giri veloci",          get: (_, s) => s.fastest_laps ?? 0, tip: "Giro più veloce in gara." },
+    { icon: Star,        label: "Arrivi a punti",       get: (_, s) => s.points_finishes ?? 0, tip: "Gare concluse nei primi 10 (zona punti)." },
+    { icon: Award,       label: "Driver of the Day",    get: (_, s) => s.dotd ?? 0, tip: "Premio \"pilota del giorno\" votato dai tifosi a fine gara." },
+    { icon: TrendingUp,  label: "Posizioni guadagnate", get: (_, s) => s.positions_gained ?? 0, tip: "Posizioni recuperate dalla griglia di partenza al traguardo, sommate nella stagione." },
+    { icon: Crown,       label: "Miglior arrivo",       get: (_, s) => s.best_finish, lowerBetter: true, tip: "Miglior piazzamento ottenuto in gara (1 = vittoria)." },
+    { icon: Gauge,       label: "Arrivo medio",         get: (_, s) => s.avg_finish, lowerBetter: true, tip: "Posizione media al traguardo: più bassa è meglio." },
+    { icon: ShieldAlert, label: "Ritiri (DNF)",         get: (_, s) => s.dnf ?? 0, lowerBetter: true, tip: "DNF = Did Not Finish: gare non concluse (ritiri)." },
   ];
 
   const careerRows = [
@@ -229,32 +232,20 @@ export default function Compare() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
-      {/* ── HEADER (sticky, translucent) ── */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="relative shrink-0">
-              <div className="bg-gradient-to-br from-primary to-red-700 p-1.5 rounded-xl shadow-md">
-                <GitCompare className="w-5 h-5 text-white" />
-              </div>
-              <Sparkles className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />
-            </div>
-            <h1 className="font-heading font-black text-xl uppercase tracking-wide truncate">Confronta</h1>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={shuffle} title="Pescaggio casuale"
+      <PageHeader icon={GitCompare} title="Confronta" right={
+        <>
+          <button onClick={shuffle} title="Pescaggio casuale"
+            className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-muted-foreground border border-gray-200 active:scale-95 transition-transform">
+            <Shuffle className="w-4 h-4" />
+          </button>
+          {d1 && d2 && (
+            <button onClick={share} title="Condividi"
               className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-muted-foreground border border-gray-200 active:scale-95 transition-transform">
-              <Shuffle className="w-4 h-4" />
+              <Share2 className="w-4 h-4" />
             </button>
-            {d1 && d2 && (
-              <button onClick={share} title="Condividi"
-                className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-muted-foreground border border-gray-200 active:scale-95 transition-transform">
-                <Share2 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+          )}
+        </>
+      } />
 
       <div className="px-4 py-5 space-y-4">
         {/* ── SELECTORS + swap ── */}
@@ -321,7 +312,7 @@ export default function Compare() {
                 transition={{ duration: 0.2 }}
                 className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
                 {rows.map(r => (
-                  <StatRow key={r.label} icon={r.icon} label={r.label}
+                  <StatRow key={r.label} icon={r.icon} label={r.label} tip={r.tip}
                     val1={r.get(d1, s1)} val2={r.get(d2, s2)}
                     color1={c1} color2={c2} lowerBetter={r.lowerBetter} />
                 ))}
