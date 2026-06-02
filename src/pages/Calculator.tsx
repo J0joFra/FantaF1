@@ -262,21 +262,17 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
   }
 
   return (
-    <div className="bg-gradient-to-br from-rose-600 to-rose-800 text-white rounded-2xl p-6 shadow-lg">
-      <div className="text-center mb-4">
-        <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 mb-3 backdrop-blur-sm">
-          <Target className="w-4 h-4" />
-          <span className="text-xs font-medium uppercase tracking-wider">Obiettivo</span>
-        </div>
-        <p className="text-7xl font-black mt-1">{analysis.magicNumber}</p>
-        <p className="text-rose-100 text-sm mt-2">punti da conquistare</p>
+    <div className="bg-gradient-to-br from-rose-600 to-rose-800 text-white rounded-2xl p-5 shadow-lg">
+      <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 mb-3 backdrop-blur-sm">
+        <Target className="w-4 h-4" />
+        <span className="text-xs font-medium uppercase tracking-wider">Obiettivo</span>
       </div>
 
       {analysis.mainRival && (
         <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
           <p className="text-xs text-rose-100 mb-2 flex items-center gap-1">
             <Zap className="w-3 h-3" />
-            Rivale principale
+            Rivale principale da battere
           </p>
           <div className="flex justify-between items-center">
             <span className="font-bold text-lg">{analysis.mainRival.driver.driver_name}</span>
@@ -901,14 +897,21 @@ export default function ScenariosPage() {
 
               return (
                 <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-                  <div className="flex items-center justify-between p-4 pb-3">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-rose-500" />
-                      Piloti da superare
-                    </h3>
-                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                      {activeRivals.length} da battere
-                    </span>
+                  <div className="p-4 pb-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-rose-500" />
+                        Piloti da superare
+                      </h3>
+                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {activeRivals.length} da battere
+                      </span>
+                    </div>
+                    {activeRivals.length > 0 && (
+                      <p className="text-xs text-rose-600 font-medium mt-1.5">
+                        👆 Tocca un pilota per vedere il mosaico delle strategie
+                      </p>
+                    )}
                   </div>
 
                   <div className="px-4 pb-4 space-y-2">
@@ -974,6 +977,17 @@ export default function ScenariosPage() {
             })()}
 
             {/* Mosaic Diagram */}
+            {/* Prompt: nessun rivale selezionato ma ce ne sono da battere */}
+            {!selectedRival && analysis.allRivals.some(r => !r.isMathematicallyEliminated) && (
+              <div className="bg-white rounded-2xl p-6 shadow-md border border-dashed border-rose-200 text-center">
+                <Grid3x3 className="w-10 h-10 text-rose-300 mx-auto mb-2" />
+                <p className="font-bold text-gray-700">Scegli un pilota da superare</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Tocca uno dei piloti qui sopra per vedere il <strong>mosaico delle strategie</strong>
+                </p>
+              </div>
+            )}
+
             {selectedRival && mosaicData && (
               <MosaicDiagram
                 cells={mosaicData.cells}
