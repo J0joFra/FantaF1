@@ -15,32 +15,60 @@ function currentYear() {
 //   position_number, driver_id, points, wins, driver_name/first_name/last_name,
 //   constructor_name, abbreviation, fastest_laps, etc.
 export async function getDriverStandings() {
-  // Use the current_season view (no year filter needed) + enrich constructor name
-  const [
-    { data: standings, error: stErr },
-    { data: constructors },
-  ] = await Promise.all([
-    supabase
-      .from('current_season_driver_standings')
-      .select('*')
-      .order('position_number', { ascending: true }),
-    supabase
-      .from('constructor')
-      .select('id, name'),
-  ]);
+  // The current_season_driver_standings view has NO team/constructor column,
+  // so we enrich it: driver_id -> constructor (via season_entrant_driver) -> name,
+  // plus the official 3-letter code from the driver table.
+  const { data: standings, error: stErr } = await supabase
+    .from('current_season_driver_standings')
+    .select('*')
+    .order('position_number', { ascending: true });
 
   throwIfError(stErr, 'Driver standings');
 
-  // Build constructor map for name enrichment
+  const year = standings?.[0]?.year ?? currentYear();
+
+  const [
+    { data: entrants },
+    { data: constructors },
+    { data: driversMeta },
+  ] = await Promise.all([
+    supabase
+      .from('season_entrant_driver')
+      .select('driver_id, constructor_id, test_driver, rounds')
+      .eq('year', year),
+    supabase
+      .from('constructor')
+      .select('id, name'),
+    supabase
+      .from('driver')
+      .select('id, abbreviation, permanent_number'),
+  ]);
+
+  // constructor id -> name
   const constructorMap = {};
-  (constructors || []).forEach(c => { constructorMap[c.id] = c; });
+  (constructors || []).forEach(c => { constructorMap[c.id] = c.name; });
+
+  // driver id -> team name (prefer the actual race seat over test-driver entries)
+  const driverTeamMap = {};
+  (entrants || []).forEach(e => {
+    const name = constructorMap[e.constructor_id];
+    if (!name) return;
+    if (!(e.driver_id in driverTeamMap) || !e.test_driver) {
+      driverTeamMap[e.driver_id] = name;
+    }
+  });
+
+  // driver id -> metadata (abbreviation / number)
+  const driverMetaMap = {};
+  (driversMeta || []).forEach(d => { driverMetaMap[d.id] = d; });
 
   return (standings || []).map(row => {
-    const co = constructorMap[row.constructor_id] || {};
+    const meta = driverMetaMap[row.driver_id] || {};
     return normalizeDriver({
       ...row,
-      // Prefer view's constructor_name; fall back to joined constructor table
-      constructor_name: row.constructor_name || row.team_name || row.team || co.name || '',
+      constructor_name: driverTeamMap[row.driver_id] || row.constructor_name || '',
+      abbreviation: meta.abbreviation || row.abbreviation || '',
+      permanent_number: meta.permanent_number ?? row.permanent_number ?? null,
     });
   });
 }
