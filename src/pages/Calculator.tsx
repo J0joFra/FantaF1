@@ -14,6 +14,9 @@ import PageHeader from "@/components/PageHeader";
 const MAX_RACE_PTS = 25;
 const MAX_SPRINT_PTS = 8;
 const RACE_POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+// Punti sprint: top 8
+const SPRINT_POINTS = [8, 7, 6, 5, 4, 3, 2, 1];
+const sprintPtsForPos = (pos: number) => (pos >= 1 && pos <= 8 ? SPRINT_POINTS[pos - 1] : 0);
 const POSITION_LABELS = ["1°", "2°", "3°", "4°", "5°", "6°", "7°", "8°", "9°", "10°"];
 const POSITION_EMOJI = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
 
@@ -21,7 +24,8 @@ const SCORING_POSITIONS = RACE_POINTS.map((pts, idx) => ({
   position: idx + 1,
   label: POSITION_LABELS[idx],
   emoji: POSITION_EMOJI[idx],
-  points: pts
+  points: pts,
+  sprintPoints: sprintPtsForPos(idx + 1)
 }));
 
 interface Driver {
@@ -110,11 +114,12 @@ function calculateChampionshipAnalysis(
   };
 }
 
-// 🔥 GENERA IL MOSAICO DELLE COMBINAZIONI
+// 🔥 GENERA IL MOSAICO DELLE COMBINAZIONI (gara + sprint)
 function generateMosaic(
   yourDriver: Driver,
   rival: Driver,
-  racesLeft: number
+  racesLeft: number,
+  sprintsLeft: number
 ): {
   cells: MosaicCell[];
   maxRacesNeeded: number;
@@ -122,108 +127,102 @@ function generateMosaic(
 } {
   const cells: MosaicCell[] = [];
   const startGap = rival.points - yourDriver.points;
+  const target = startGap + 1;
+  const sprints = Math.min(Math.max(0, sprintsLeft), racesLeft);
   let maxRacesNeeded = 0;
   let bestCombination: MosaicCell | null = null;
-  
+
   for (const yourPos of SCORING_POSITIONS) {
     for (const rivalPos of SCORING_POSITIONS) {
-      const gainPerRace = yourPos.points - rivalPos.points;
-      
-      if (gainPerRace <= 0) {
-        cells.push({
-          yourPos: yourPos.position,
-          rivalPos: rivalPos.position,
-          yourPoints: yourPos.points,
-          rivalPoints: rivalPos.points,
-          gain: gainPerRace,
-          isPossible: false,
-          racesNeeded: 0,
-          overtakeRace: null
-        });
-        continue;
+      const raceGain = yourPos.points - rivalPos.points;
+      const sprintGain = yourPos.sprintPoints - rivalPos.sprintPoints;
+
+      // Simula weekend per weekend: i prossimi `sprints` weekend includono anche la sprint.
+      let cumulative = 0;
+      let racesNeeded = 0;
+      let reached = false;
+      for (let i = 1; i <= racesLeft; i++) {
+        cumulative += raceGain + (i <= sprints ? sprintGain : 0);
+        if (cumulative >= target) { racesNeeded = i; reached = true; break; }
       }
-      
-      const racesNeeded = Math.ceil((startGap + 1) / gainPerRace);
-      
-      if (racesNeeded <= racesLeft) {
+
+      const cell: MosaicCell = {
+        yourPos: yourPos.position,
+        rivalPos: rivalPos.position,
+        yourPoints: yourPos.points,
+        rivalPoints: rivalPos.points,
+        gain: raceGain,
+        isPossible: reached,
+        racesNeeded: reached ? racesNeeded : 0,
+        overtakeRace: reached ? racesNeeded : null
+      };
+      cells.push(cell);
+
+      if (reached) {
         maxRacesNeeded = Math.max(maxRacesNeeded, racesNeeded);
-        
-        const cell: MosaicCell = {
-          yourPos: yourPos.position,
-          rivalPos: rivalPos.position,
-          yourPoints: yourPos.points,
-          rivalPoints: rivalPos.points,
-          gain: gainPerRace,
-          isPossible: true,
-          racesNeeded: racesNeeded,
-          overtakeRace: racesNeeded
-        };
-        
-        cells.push(cell);
-        
         if (!bestCombination || racesNeeded < bestCombination.racesNeeded) {
           bestCombination = cell;
         }
-      } else {
-        cells.push({
-          yourPos: yourPos.position,
-          rivalPos: rivalPos.position,
-          yourPoints: yourPos.points,
-          rivalPoints: rivalPos.points,
-          gain: gainPerRace,
-          isPossible: false,
-          racesNeeded: racesNeeded,
-          overtakeRace: null
-        });
       }
     }
   }
-  
+
   return { cells, maxRacesNeeded, bestCombination };
 }
 
-// 🔥 GENERA DETTAGLIO PER UNA CELLA SPECIFICA
+// 🔥 GENERA DETTAGLIO PER UNA CELLA SPECIFICA (gara + sprint)
 function generateDetailedCombination(
   yourDriver: Driver,
   rival: Driver,
   yourPos: number,
   rivalPos: number,
-  racesLeft: number
+  racesLeft: number,
+  sprintsLeft: number
 ): {
-  results: { raceNumber: number; yourTotal: number; rivalTotal: number; isOvertake: boolean }[];
+  results: { raceNumber: number; yourTotal: number; rivalTotal: number; isOvertake: boolean; isSprint: boolean }[];
   overtakeAtRace: number;
   finalYourPoints: number;
   finalRivalPoints: number;
 } {
-  const startYourPoints = yourDriver.points;
-  const startRivalPoints = rival.points;
-  const yourPointsPerRace = SCORING_POSITIONS.find(p => p.position === yourPos)!.points;
-  const rivalPointsPerRace = SCORING_POSITIONS.find(p => p.position === rivalPos)!.points;
-  const gainPerRace = yourPointsPerRace - rivalPointsPerRace;
-  const racesNeeded = Math.ceil((rival.points - yourDriver.points + 1) / gainPerRace);
-  
+  const yp = SCORING_POSITIONS.find(p => p.position === yourPos)!;
+  const rp = SCORING_POSITIONS.find(p => p.position === rivalPos)!;
+  const raceGain = yp.points - rp.points;
+  const sprintGain = yp.sprintPoints - rp.sprintPoints;
+  const target = rival.points - yourDriver.points + 1;
+  const sprints = Math.min(Math.max(0, sprintsLeft), racesLeft);
+
+  // Quante gare servono (simulazione weekend per weekend, sprint nei primi weekend)
+  let cumulative = 0;
+  let racesNeeded = racesLeft;
+  for (let i = 1; i <= racesLeft; i++) {
+    cumulative += raceGain + (i <= sprints ? sprintGain : 0);
+    if (cumulative >= target) { racesNeeded = i; break; }
+  }
+
   const results = [];
-  let currentYour = startYourPoints;
-  let currentRival = startRivalPoints;
+  let currentYour = yourDriver.points;
+  let currentRival = rival.points;
   let overtakeAtRace = -1;
-  
+
   for (let i = 1; i <= Math.min(racesNeeded, racesLeft); i++) {
-    currentYour += yourPointsPerRace;
-    currentRival += rivalPointsPerRace;
+    const isSprint = i <= sprints;
+    currentYour += yp.points + (isSprint ? yp.sprintPoints : 0);
+    currentRival += rp.points + (isSprint ? rp.sprintPoints : 0);
     const isOvertake = overtakeAtRace === -1 && currentYour > currentRival;
-    
+
     if (isOvertake) {
       overtakeAtRace = i;
     }
-    
+
     results.push({
       raceNumber: i,
       yourTotal: currentYour,
       rivalTotal: currentRival,
-      isOvertake
+      isOvertake,
+      isSprint
     });
   }
-  
+
   return {
     results,
     overtakeAtRace,
@@ -296,18 +295,20 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
 
 // 🔥 COMPONENTE MOSAICO CON COLORI MIGLIORATI
 function MosaicDiagram({ 
-  cells, 
+  cells,
   bestCombination,
   yourDriver,
   rival,
   racesLeft,
-  onCellClick 
-}: { 
+  sprintsLeft,
+  onCellClick
+}: {
   cells: MosaicCell[];
   bestCombination: MosaicCell | null;
   yourDriver: Driver;
   rival: Driver;
   racesLeft: number;
+  sprintsLeft: number;
   onCellClick: (yourPos: number, rivalPos: number) => void;
 }) {
   const matrix: (MosaicCell | null)[][] = Array(10).fill(null).map(() => Array(10).fill(null));
@@ -356,6 +357,11 @@ function MosaicDiagram({
           {" "}{rival.driver_name} sempre 4° (colonna&nbsp;4)
           → guadagna punti ogni gara finché lo sorpassa. Numero più basso = più facile.
         </p>
+        {sprintsLeft > 0 && (
+          <p className="text-[11px] text-amber-700 leading-snug mt-2 pt-2 border-t border-gray-200">
+            🏁 Il calcolo include anche i <strong>{sprintsLeft} weekend con sprint</strong> rimasti (punti extra).
+          </p>
+        )}
       </div>
 
       {/* Scala colori */}
@@ -460,7 +466,8 @@ function CellDetailModal({
   rival,
   yourPos,
   rivalPos,
-  racesLeft
+  racesLeft,
+  sprintsLeft
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -469,13 +476,15 @@ function CellDetailModal({
   yourPos: number;
   rivalPos: number;
   racesLeft: number;
+  sprintsLeft: number;
 }) {
   const yourPosData = SCORING_POSITIONS.find(p => p.position === yourPos)!;
   const rivalPosData = SCORING_POSITIONS.find(p => p.position === rivalPos)!;
   const gainPerRace = yourPosData.points - rivalPosData.points;
-  const racesNeeded = Math.ceil((rival.points - yourDriver.points + 1) / gainPerRace);
-  
-  const details = generateDetailedCombination(yourDriver, rival, yourPos, rivalPos, racesLeft);
+  const sprintGain = yourPosData.sprintPoints - rivalPosData.sprintPoints;
+
+  const details = generateDetailedCombination(yourDriver, rival, yourPos, rivalPos, racesLeft, sprintsLeft);
+  const racesNeeded = details.overtakeAtRace > 0 ? details.overtakeAtRace : null;
   
   return (
     <AnimatePresence>
@@ -530,11 +539,14 @@ function CellDetailModal({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div className="bg-emerald-50 rounded-xl p-3 text-center">
                   <div className="text-xs text-gray-500">Guadagno a gara</div>
-                  <div className="text-xl font-bold text-emerald-600">+{gainPerRace} pt</div>
+                  <div className="text-xl font-bold text-emerald-600">{gainPerRace >= 0 ? "+" : ""}{gainPerRace} pt</div>
+                  {sprintsLeft > 0 && (
+                    <div className="text-[10px] text-gray-400 mt-0.5">{sprintGain >= 0 ? "+" : ""}{sprintGain} pt nella sprint</div>
+                  )}
                 </div>
                 <div className="bg-blue-50 rounded-xl p-3 text-center">
                   <div className="text-xs text-gray-500">Gare necessarie</div>
-                  <div className="text-xl font-bold text-blue-600">{racesNeeded}</div>
+                  <div className="text-xl font-bold text-blue-600">{racesNeeded ?? "—"}</div>
                 </div>
                 <div className="bg-amber-50 rounded-xl p-3 text-center">
                   <div className="text-xs text-gray-500">Partenza</div>
@@ -568,7 +580,12 @@ function CellDetailModal({
                         }`}>
                           {result.raceNumber}
                         </div>
-                        <span className="font-medium text-gray-700">Gara {result.raceNumber}</span>
+                        <span className="font-medium text-gray-700">GP {result.raceNumber}</span>
+                        {result.isSprint && (
+                          <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                            +Sprint
+                          </span>
+                        )}
                       </div>
                       {result.isOvertake && (
                         <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500 text-white rounded-full text-xs font-bold">
@@ -684,12 +701,12 @@ export default function ScenariosPage() {
           getDriverSeasonStats(),
         ]);
 
-        const today = new Date().toISOString().slice(0, 10);
+        // Gare mancanti dall'intero calendario: tutte le gare della stagione senza risultati
+        // (indipendente dalla data odierna). La stagione = l'anno con gare ancora da disputare.
         const { data: calendarData, error: calendarError } = await supabase
           .from("race_calendar_with_results")
-          .select("*")
+          .select("year, date, sprint_race_date, has_results")
           .or("has_results.is.null,has_results.eq.false")
-          .gte("date", today)
           .order("date", { ascending: true });
 
         if (calendarError) throw calendarError;
@@ -703,12 +720,14 @@ export default function ScenariosPage() {
           points: Number(d.points ?? 0),
           victories: Number((seasonStats as any)[d.id]?.wins ?? 0),
         }));
-        
+
         setDrivers(processedDrivers);
-        
-        const sprintWeekends = (calendarData || []).filter((r: any) => r.sprint_race_date != null).length;
-        setRacesLeft(calendarData?.length ?? 0);
-        setSprintsLeft(sprintWeekends);
+
+        const incomplete = calendarData || [];
+        const season = incomplete.reduce((max: number, r: any) => Math.max(max, r.year ?? 0), 0);
+        const seasonRemaining = incomplete.filter((r: any) => (r.year ?? 0) === season);
+        setRacesLeft(seasonRemaining.length);
+        setSprintsLeft(seasonRemaining.filter((r: any) => r.sprint_race_date != null).length);
         
         if (processedDrivers.length > 0) {
           setSelectedDriverId(processedDrivers[0].id);
@@ -729,13 +748,13 @@ export default function ScenariosPage() {
   
   const analysis = useMemo(() => {
     if (!selectedDriver || racesLeft === 0 || drivers.length === 0) return null;
-    return calculateChampionshipAnalysis(selectedDriver, drivers, racesLeft, sprintsLeft);
+    return calculateChampionshipAnalysis(selectedDriver, drivers, racesLeft, Math.min(sprintsLeft, racesLeft));
   }, [selectedDriver, drivers, racesLeft, sprintsLeft]);
 
   const mosaicData = useMemo(() => {
     if (!selectedDriver || !selectedRival || racesLeft === 0) return null;
-    return generateMosaic(selectedDriver, selectedRival, racesLeft);
-  }, [selectedDriver, selectedRival, racesLeft]);
+    return generateMosaic(selectedDriver, selectedRival, racesLeft, Math.min(sprintsLeft, racesLeft));
+  }, [selectedDriver, selectedRival, racesLeft, sprintsLeft]);
 
   const maxPossiblePoints = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
   const leader = drivers.length > 0 ? drivers.reduce((a, b) => a.points > b.points ? a : b) : null;
@@ -839,7 +858,12 @@ export default function ScenariosPage() {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-sm font-bold text-gray-900">🏁 GP rimanenti</p>
-              <p className="text-xs text-gray-500">Gare da disputare</p>
+              <p className="text-xs text-gray-500">
+                Fino a fine campionato
+                {sprintsLeft > 0 && (
+                  <> · <span className="text-amber-600 font-semibold">{Math.min(sprintsLeft, racesLeft)} con sprint</span></>
+                )}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -957,6 +981,7 @@ export default function ScenariosPage() {
                 yourDriver={selectedDriver}
                 rival={selectedRival}
                 racesLeft={racesLeft}
+                sprintsLeft={Math.min(sprintsLeft, racesLeft)}
                 onCellClick={(yourPos, rivalPos) => setSelectedCell({ yourPos, rivalPos })}
               />
             )}
@@ -1020,6 +1045,7 @@ export default function ScenariosPage() {
           yourPos={selectedCell.yourPos}
           rivalPos={selectedCell.rivalPos}
           racesLeft={racesLeft}
+          sprintsLeft={Math.min(sprintsLeft, racesLeft)}
         />
       )}
 
