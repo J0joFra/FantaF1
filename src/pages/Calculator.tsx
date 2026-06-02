@@ -9,6 +9,7 @@ import {
 import { supabase } from "../lib/supabase";
 import { getDriverStandings, getDriverSeasonStats } from "../lib/supabaseData";
 import PageHeader from "@/components/PageHeader";
+import { useI18n } from "@/lib/i18n";
 
 // ─── Costanti F1 2026 ──────────────────────────────────────────────────────
 const MAX_RACE_PTS = 25;
@@ -234,6 +235,7 @@ function generateDetailedCombination(
 // ─── UI COMPONENTS ─────────────────────────────────────────────────────────
 
 function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverColor: string }) {
+  const { t } = useI18n();
   if (analysis.isAlreadyChampion) {
     return (
       <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 text-white rounded-2xl p-6 text-center shadow-lg">
@@ -241,7 +243,7 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
           <Sparkles className="w-16 h-16 text-yellow-300 animate-pulse" />
           <Trophy className="w-8 h-8 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-yellow-400" />
         </div>
-        <h3 className="font-bold text-2xl mb-2">Campione del Mondo! 🏆</h3>
+        <h3 className="font-bold text-2xl mb-2">{t("sc_champion")}</h3>
         <p className="text-emerald-100 text-sm">
           {analysis.driver.driver_name} ha già vinto matematicamente il campionato.
         </p>
@@ -253,7 +255,7 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
     return (
       <div className="bg-gradient-to-br from-gray-700 to-gray-900 text-white rounded-2xl p-6 text-center shadow-lg">
         <AlertTriangle className="w-16 h-16 mx-auto mb-3 text-gray-400" />
-        <h3 className="font-bold text-2xl mb-2">Matematicamente Fuori ❌</h3>
+        <h3 className="font-bold text-2xl mb-2">{t("sc_out")}</h3>
         <p className="text-gray-300 text-sm">
           {analysis.driver.driver_name} non può più vincere il campionato.
         </p>
@@ -265,14 +267,14 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
     <div className="bg-gradient-to-br from-rose-600 to-rose-800 text-white rounded-2xl p-5 shadow-lg">
       <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 mb-3 backdrop-blur-sm">
         <Target className="w-4 h-4" />
-        <span className="text-xs font-medium uppercase tracking-wider">Obiettivo</span>
+        <span className="text-xs font-medium uppercase tracking-wider">{t("sc_objective")}</span>
       </div>
 
       {analysis.mainRival && (
         <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
           <p className="text-xs text-rose-100 mb-2 flex items-center gap-1">
             <Zap className="w-3 h-3" />
-            Rivale principale da battere
+            {t("sc_mainRival")}
           </p>
           <div className="flex justify-between items-center">
             <span className="font-bold text-lg">{analysis.mainRival.driver.driver_name}</span>
@@ -281,7 +283,7 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
             </span>
           </div>
           <p className="text-xs text-rose-100 mt-1">
-            Distacco: -{analysis.mainRival.currentGap} punti
+            {t("sc_gap")}: -{analysis.mainRival.currentGap} {t("pts")}
           </p>
         </div>
       )}
@@ -307,8 +309,9 @@ function MosaicDiagram({
   sprintsLeft: number;
   onCellClick: (yourPos: number, rivalPos: number) => void;
 }) {
+  const { t } = useI18n();
   const matrix: (MosaicCell | null)[][] = Array(10).fill(null).map(() => Array(10).fill(null));
-  
+
   cells.forEach(cell => {
     matrix[cell.yourPos - 1][cell.rivalPos - 1] = cell;
   });
@@ -331,7 +334,7 @@ function MosaicDiagram({
           <Grid3x3 className="w-4 h-4 text-white" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-black text-gray-900 text-base leading-tight">Mosaico Strategie</h3>
+          <h3 className="font-black text-gray-900 text-base leading-tight">{t("sc_mosaic")}</h3>
           <p className="text-[11px] text-gray-500 leading-tight">Tocca una cella per i dettagli</p>
         </div>
         <div className="text-right shrink-0">
@@ -674,6 +677,7 @@ function RivalCard({
 // ─── MAIN PAGE ──────────────────────────────────────────────────────────────
 
 export default function ScenariosPage() {
+  const { t } = useI18n();
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>("");
   const [racesLeft, setRacesLeft] = useState(0);
@@ -801,7 +805,7 @@ export default function ScenariosPage() {
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-24">
       <PageHeader
         icon={Grid3x3}
-        title="Scenari"
+        title={t("nav_scenarios")}
         right={
           <button
             onClick={() => setShowInfo(true)}
@@ -828,7 +832,7 @@ export default function ScenariosPage() {
         {/* Driver selector */}
         <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
           <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-            Seleziona Pilota
+            {t("sc_selectDriver")}
           </label>
           <select
             value={selectedDriverId}
@@ -853,11 +857,11 @@ export default function ScenariosPage() {
         <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-sm font-bold text-gray-900">🏁 GP rimanenti</p>
+              <p className="text-sm font-bold text-gray-900">🏁 {t("sc_gpRemaining")}</p>
               <p className="text-xs text-gray-500">
-                Fino a fine campionato
+                {t("sc_untilEnd")}
                 {sprintsLeft > 0 && (
-                  <> · <span className="text-amber-600 font-semibold">{Math.min(sprintsLeft, racesLeft)} con sprint</span></>
+                  <> · <span className="text-amber-600 font-semibold">{Math.min(sprintsLeft, racesLeft)} {t("sc_withSprint")}</span></>
                 )}
               </p>
             </div>
@@ -901,15 +905,15 @@ export default function ScenariosPage() {
                     <div className="flex items-center justify-between">
                       <h3 className="font-bold text-gray-900 flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-rose-500" />
-                        Piloti da superare
+                        {t("sc_driversToBeat")}
                       </h3>
                       <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                        {activeRivals.length} da battere
+                        {activeRivals.length} {t("sc_toBeat")}
                       </span>
                     </div>
                     {activeRivals.length > 0 && (
                       <p className="text-xs text-rose-600 font-medium mt-1.5">
-                        👆 Tocca un pilota per vedere il mosaico delle strategie
+                        {t("sc_tapDriver")}
                       </p>
                     )}
                   </div>
@@ -981,10 +985,8 @@ export default function ScenariosPage() {
             {!selectedRival && analysis.allRivals.some(r => !r.isMathematicallyEliminated) && (
               <div className="bg-white rounded-2xl p-6 shadow-md border border-dashed border-rose-200 text-center">
                 <Grid3x3 className="w-10 h-10 text-rose-300 mx-auto mb-2" />
-                <p className="font-bold text-gray-700">Scegli un pilota da superare</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Tocca uno dei piloti qui sopra per vedere il <strong>mosaico delle strategie</strong>
-                </p>
+                <p className="font-bold text-gray-700">{t("sc_chooseDriver")}</p>
+                <p className="text-xs text-gray-400 mt-1">{t("sc_chooseHint")}</p>
               </div>
             )}
 
@@ -1006,13 +1008,13 @@ export default function ScenariosPage() {
                 onClick={handleShare}
                 className="flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors active:scale-95 shadow-sm"
               >
-                <Share2 className="w-4 h-4" /> Condividi
+                <Share2 className="w-4 h-4" /> {t("share")}
               </button>
               <button
                 onClick={handleSave}
                 className="flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200 rounded-xl font-medium text-rose-600 hover:from-rose-100 hover:to-rose-200 transition-colors active:scale-95 shadow-sm"
               >
-                <Bookmark className="w-4 h-4" /> Salva
+                <Bookmark className="w-4 h-4" /> {t("save")}
               </button>
             </div>
 

@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import InfoTip from "@/components/InfoTip";
+import { useI18n } from "@/lib/i18n";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -159,6 +160,7 @@ function DriverRow({ driver, leader, index }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Home() {
+  const { t } = useI18n();
   const [showAllDrivers, setShowAllDrivers] = useState(false);
 
   const { data: drivers = [], isLoading: ld, error: err } = useQuery({
@@ -174,7 +176,7 @@ export default function Home() {
   if (ld || lc) return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-gradient-to-b from-gray-100 to-gray-200">
       <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      <p className="text-sm text-muted-foreground font-body">Caricamento...</p>
+      <p className="text-sm text-muted-foreground font-body">{t("loading")}</p>
     </div>
   );
 
@@ -237,7 +239,7 @@ export default function Home() {
         {/* ── INTRO + PROSSIMA GARA ── */}
         <div className="app-card p-4">
           <p className="text-xs text-muted-foreground font-body leading-snug mb-3">
-            Calcola i punti necessari per vincere il Campionato del Mondo di F1
+            {t("home_tagline")}
           </p>
           {config?.next_race_name && (
             <div className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
@@ -255,7 +257,7 @@ export default function Home() {
         <div className="app-card overflow-hidden">
           <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100">
             <h2 className="font-heading font-black text-base uppercase tracking-wide">
-              Classifica Piloti
+              {t("home_standings")}
             </h2>
             <span className="text-xs text-muted-foreground font-body">
               {config?.races_completed ?? 0}/{config?.total_races ?? 0} GP
@@ -275,8 +277,8 @@ export default function Home() {
                          text-xs font-body font-semibold text-primary hover:bg-gray-50 transition-colors"
             >
               {showAllDrivers
-                ? <><ChevronUp className="w-3.5 h-3.5" /> Mostra meno</>
-                : <><ChevronDown className="w-3.5 h-3.5" /> Vedi tutti ({drivers.length})</>}
+                ? <><ChevronUp className="w-3.5 h-3.5" /> {t("showLess")}</>
+                : <><ChevronDown className="w-3.5 h-3.5" /> {t("showAll")} ({drivers.length})</>}
             </button>
           )}
         </div>
@@ -286,21 +288,21 @@ export default function Home() {
           <div className="app-card px-4 py-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-heading font-black text-base uppercase tracking-wide">
-                Scenario Attuale
+                {t("home_scenario")}
               </h2>
               <Link to="/calculator"
                 className="flex items-center gap-1 border border-primary/30 rounded-full
                            px-3 py-1 text-xs text-primary font-body font-semibold">
-                ✏ Modifica
+                ✏ {t("home_edit")}
               </Link>
             </div>
             <div className="grid grid-cols-3 gap-3 text-center">
               {[
-                { v: (config.total_races||0) - (config.races_completed||0), l: "GARE\nRIMANENTI" },
-                { v: maxAvailable,                                           l: "PUNTI MAX\nDISPONIBILI" },
+                { v: (config.total_races||0) - (config.races_completed||0), l: t("home_racesRemaining") },
+                { v: maxAvailable,                                           l: t("home_maxAvailable") },
                 { v: config.next_race_has_sprint
                     ? MAX_POINTS_RACE + MAX_POINTS_SPRINT
-                    : MAX_POINTS_RACE,                                       l: "MAX\nPROSSIMO GP" },
+                    : MAX_POINTS_RACE,                                       l: t("home_maxNext") },
               ].map(({ v, l }) => (
                 <div key={l}>
                   <p className="font-heading font-black text-3xl leading-none">{v}</p>
@@ -318,8 +320,8 @@ export default function Home() {
             {/* Header */}
             <h2 className="font-heading font-black text-xs uppercase tracking-widest
                            text-white/50 mb-3 flex items-center gap-1.5">
-              Punti necessari per vincere
-              <InfoTip>Quanti punti deve ancora conquistare il leader per essere sicuro del titolo, considerando il massimo che può fare l'inseguitore nelle gare rimaste.</InfoTip>
+              {t("home_needed")}
+              <InfoTip>{t("home_neededHint")}</InfoTip>
             </h2>
 
             {/* Two-column layout: left = text, right = gauge */}
@@ -331,7 +333,7 @@ export default function Home() {
                   <span className="font-heading font-black text-white">
                     {leader.driver_name}
                   </span>
-                  {" "}può vincere il campionato con
+                  {" "}{t("home_canWin")}
                 </p>
                 <div className="flex items-baseline gap-1 mt-3">
                   <span className="font-heading font-black leading-none text-primary"
@@ -372,7 +374,7 @@ export default function Home() {
           <div className="app-card overflow-hidden">
             <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100">
               <h2 className="font-heading font-black text-base uppercase tracking-wide">
-                Prossimi GP
+                {t("home_nextGps")}
               </h2>
               <span className="text-xs text-muted-foreground font-body">
                 {config?.races_completed ?? 0}/{config?.total_races ?? 0}

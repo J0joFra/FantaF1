@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import PageHeader from "@/components/PageHeader";
 import InfoTip from "@/components/InfoTip";
+import { useI18n } from "@/lib/i18n";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   getConstructorStandings, getConstructorSeasonStats,
@@ -93,6 +94,7 @@ const tooltipStyle = {
 
 // ── main ───────────────────────────────────────────────────────────────────────
 export default function Ferrari() {
+  const { t: tr } = useI18n();
   const [selectedId, setSelectedId] = useState(null);
   const [compareId, setCompareId] = useState(null);
   const [mode, setMode] = useState("season");
@@ -164,21 +166,21 @@ export default function Ferrari() {
   }, [selected, leader, teams, config]);
 
   const seasonRows = [
-    { icon: Zap,         label: "Punti",          get: (t) => t.points },
-    { icon: Trophy,      label: "Vittorie",       get: (t, s) => s.wins ?? 0, tip: "Gare vinte dalla scuderia (somma delle vittorie dei due piloti)." },
-    { icon: Medal,       label: "Podi",           get: (t, s) => s.podiums ?? 0, tip: "Arrivi nei primi 3 dei piloti del team." },
-    { icon: Target,      label: "Pole position",  get: (t, s) => s.poles ?? 0, tip: "Partenze dalla 1ª posizione conquistate in qualifica." },
-    { icon: Timer,       label: "Giri veloci",    get: (t, s) => s.fastest_laps ?? 0, tip: "Giri più veloci segnati in gara." },
-    { icon: Star,        label: "Arrivi a punti", get: (t, s) => s.points_finishes ?? 0, tip: "Piazzamenti nei primi 10 (zona punti)." },
-    { icon: ShieldAlert, label: "Ritiri (DNF)",   get: (t, s) => s.dnf ?? 0, lowerBetter: true, tip: "DNF = Did Not Finish: gare non concluse dai piloti del team." },
+    { icon: Zap,         label: tr("st_points"),         get: (t) => t.points },
+    { icon: Trophy,      label: tr("st_wins"),           get: (t, s) => s.wins ?? 0, tip: "Gare vinte dalla scuderia (somma delle vittorie dei due piloti)." },
+    { icon: Medal,       label: tr("st_podiums"),        get: (t, s) => s.podiums ?? 0, tip: "Arrivi nei primi 3 dei piloti del team." },
+    { icon: Target,      label: tr("st_poles"),          get: (t, s) => s.poles ?? 0, tip: "Partenze dalla 1ª posizione conquistate in qualifica." },
+    { icon: Timer,       label: tr("st_fastestLaps"),    get: (t, s) => s.fastest_laps ?? 0, tip: "Giri più veloci segnati in gara." },
+    { icon: Star,        label: tr("st_pointsFinishes"), get: (t, s) => s.points_finishes ?? 0, tip: "Piazzamenti nei primi 10 (zona punti)." },
+    { icon: ShieldAlert, label: tr("st_dnf"),            get: (t, s) => s.dnf ?? 0, lowerBetter: true, tip: "DNF = Did Not Finish: gare non concluse dai piloti del team." },
   ];
   const careerRows = [
-    { icon: Crown,  label: "Titoli costruttori",   get: (t) => t.career?.titles ?? 0 },
-    { icon: Trophy, label: "Vittorie",             get: (t) => t.career?.wins ?? 0 },
-    { icon: Medal,  label: "Podi",                 get: (t) => t.career?.podiums ?? 0 },
-    { icon: Target, label: "Pole position",        get: (t) => t.career?.poles ?? 0 },
-    { icon: Zap,    label: "Punti totali",         get: (t) => t.career?.points ?? 0 },
-    { icon: Flag,   label: "GP disputati",         get: (t) => t.career?.entries ?? 0 },
+    { icon: Crown,  label: tr("st_constructorTitles"), get: (t) => t.career?.titles ?? 0 },
+    { icon: Trophy, label: tr("st_wins"),              get: (t) => t.career?.wins ?? 0 },
+    { icon: Medal,  label: tr("st_podiums"),           get: (t) => t.career?.podiums ?? 0 },
+    { icon: Target, label: tr("st_poles"),             get: (t) => t.career?.poles ?? 0 },
+    { icon: Zap,    label: tr("st_totalPoints"),       get: (t) => t.career?.points ?? 0 },
+    { icon: Flag,   label: tr("st_gpEntered"),         get: (t) => t.career?.entries ?? 0 },
   ];
   const rows = mode === "season" ? seasonRows : careerRows;
 
@@ -195,16 +197,16 @@ export default function Ferrari() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
-      <PageHeader icon={Shield} title="Scuderie" color={color} />
+      <PageHeader icon={Shield} title={tr("nav_teams")} color={color} />
 
       <div className="px-4 py-5 space-y-4">
         {/* ── TEAM SELECTOR ── */}
         <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: color }} />
-          <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Scuderia</p>
+          <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mb-2">{tr("tm_team")}</p>
           <Select value={selectedId || ""} onValueChange={setSelectedId}>
             <SelectTrigger className="w-full text-sm font-heading font-black h-10 px-3 border-gray-200 rounded-xl">
-              <SelectValue placeholder="Seleziona scuderia…" />
+              <SelectValue placeholder={tr("tm_team")} />
             </SelectTrigger>
             <SelectContent>
               {teams.map(t => (
@@ -277,9 +279,9 @@ export default function Ferrari() {
           <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
             <div className="flex items-center gap-2 mb-3">
               <Trophy className="w-4 h-4" style={{ color }} />
-              <h3 className="font-heading font-black text-sm uppercase tracking-wide">Titolo costruttori</h3>
+              <h3 className="font-heading font-black text-sm uppercase tracking-wide">{tr("tm_title")}</h3>
               <InfoTip>Punti che servono alla scuderia per essere sicura di vincere (o quanto manca al leader). Calcolo sul massimo ottenibile per weekend: 43 in gara (1°+2°) + 15 nella sprint.</InfoTip>
-              <span className="ml-auto text-[11px] font-body text-muted-foreground">{titleRace.racesLeft} GP rimasti</span>
+              <span className="ml-auto text-[11px] font-body text-muted-foreground">{titleRace.racesLeft} {tr("tm_gpLeft")}</span>
             </div>
 
             {titleRace.isLeader ? (
@@ -297,11 +299,11 @@ export default function Ferrari() {
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="bg-gray-50 rounded-xl py-3">
                   <p className="font-heading font-black text-3xl" style={{ color }}>−{titleRace.gap}</p>
-                  <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mt-1">dal leader</p>
+                  <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mt-1">{tr("tm_fromLeader")}</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl py-3">
                   <p className="font-heading font-black text-3xl text-gray-800">{titleRace.maxAvail}</p>
-                  <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mt-1">punti in palio</p>
+                  <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mt-1">{tr("tm_pointsAtStake")}</p>
                 </div>
               </div>
             )}
@@ -312,7 +314,7 @@ export default function Ferrari() {
         <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="w-4 h-4 text-gray-500" />
-            <h3 className="font-heading font-black text-sm uppercase tracking-wide">Classifica costruttori</h3>
+            <h3 className="font-heading font-black text-sm uppercase tracking-wide">{tr("tm_standings")}</h3>
           </div>
           <div className="space-y-1">
             {teams.map(t => {
@@ -344,7 +346,7 @@ export default function Ferrari() {
         <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
           <div className="flex items-center gap-2 mb-3">
             <Users className="w-4 h-4 text-gray-500" />
-            <h3 className="font-heading font-black text-sm uppercase tracking-wide">Confronto scuderie</h3>
+            <h3 className="font-heading font-black text-sm uppercase tracking-wide">{tr("tm_compare")}</h3>
           </div>
 
           {/* opponent selector */}
@@ -355,7 +357,7 @@ export default function Ferrari() {
             <span className="text-gray-400 font-heading text-xs">VS</span>
             <Select value={compareId || ""} onValueChange={setCompareId}>
               <SelectTrigger className="flex-1 text-xs font-heading font-bold h-8 px-2.5 border-gray-200 rounded-lg">
-                <SelectValue placeholder="Scegli avversario…" />
+                <SelectValue placeholder={tr("tm_chooseOpponent")} />
               </SelectTrigger>
               <SelectContent>
                 {teams.filter(t => t.id !== selectedId).map(t => (
@@ -374,7 +376,7 @@ export default function Ferrari() {
             <>
               {/* toggle */}
               <div className="grid grid-cols-2 gap-1 bg-gray-200/70 p-1 rounded-xl mb-3">
-                {[{ k: "season", label: "Stagione" }, { k: "career", label: "Carriera" }].map(m => (
+                {[{ k: "season", label: tr("season") }, { k: "career", label: tr("career") }].map(m => (
                   <button key={m.k} onClick={() => setMode(m.k)}
                     className={`py-1.5 rounded-lg font-heading font-bold text-xs uppercase tracking-wide transition-all
                       ${mode === m.k ? "bg-white shadow-sm text-primary" : "text-gray-500"}`}>
@@ -401,7 +403,7 @@ export default function Ferrari() {
         <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
           <div className="flex items-center gap-2 mb-3">
             <Crown className="w-4 h-4" style={{ color }} />
-            <h3 className="font-heading font-black text-sm uppercase tracking-wide">Albo & storia</h3>
+            <h3 className="font-heading font-black text-sm uppercase tracking-wide">{tr("tm_history")}</h3>
           </div>
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
