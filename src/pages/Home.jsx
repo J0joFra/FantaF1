@@ -13,7 +13,7 @@ import {
 } from "@/lib/f1Utils";
 import { raceFlagUrl, gpIso, flagUrl } from "@/lib/flagUtils";
 import GpCountdown from "@/components/GpCountdown";
-import { Loader2, AlertCircle, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { Loader2, AlertCircle, ChevronDown, ChevronUp, Info, Trophy, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -134,13 +134,13 @@ function DriverRow({ driver, leader, index }) {
         </p>
         <p className="text-xs text-muted-foreground font-body truncate mt-0.5">{driver.team}</p>
         {/* Points bar in team colour */}
-        <div className="relative h-1 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
+        <div className="relative h-1.5 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${barPct}%` }}
             transition={{ duration: 0.7, delay: index * 0.04, ease: "easeOut" }}
             className="absolute inset-y-0 left-0 rounded-full"
-            style={{ backgroundColor: color }}
+            style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}66` }}
           />
         </div>
       </div>
@@ -170,14 +170,14 @@ export default function Home() {
   });
 
   if (ld || lc) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-gradient-to-b from-gray-100 to-gray-200">
       <Loader2 className="w-8 h-8 animate-spin text-primary" />
       <p className="text-sm text-muted-foreground font-body">Caricamento...</p>
     </div>
   );
 
   if (err) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-3 px-6 text-center">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-3 px-6 text-center bg-gradient-to-b from-gray-100 to-gray-200">
       <AlertCircle className="w-10 h-10 text-destructive" />
       <p className="font-heading font-black text-xl uppercase">Errore connessione</p>
       <p className="text-sm text-muted-foreground font-body">{err.message}</p>
@@ -204,52 +204,56 @@ export default function Home() {
       : [];
 
   return (
-    <div className="space-y-0 pb-4">
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
 
-      {/* ── HERO ── */}
-      <div className="relative bg-white px-5 pt-12 pb-5">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
-
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <div className="font-heading font-black leading-none">
-              <span className="text-3xl text-primary">F1</span>
-              <span className="text-3xl text-foreground"> CHAMP</span>
+      {/* ── HEADER (sticky, translucent — stile Scenari) ── */}
+      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+        <div className="px-4 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="relative shrink-0">
+              <div className="bg-gradient-to-br from-primary to-red-700 p-1.5 rounded-xl shadow-md">
+                <Trophy className="w-5 h-5 text-white" />
+              </div>
+              <Sparkles className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />
             </div>
-            <div className="font-heading font-black text-3xl text-foreground leading-none">POINTS</div>
-            <p className="text-[11px] text-muted-foreground font-body mt-1.5 leading-snug max-w-[180px]">
-              Calcola i punti necessari per vincere il Campionato del Mondo di F1
-            </p>
+            <div className="font-heading font-black text-lg leading-none truncate">
+              <span className="text-primary">F1</span> CHAMP <span className="text-primary">POINTS</span>
+            </div>
           </div>
-          <div className="flex flex-col items-end gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 bg-gray-100 rounded-full px-3 py-1.5 border border-gray-200">
-              <span className="text-sm">🗓</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 bg-gray-100 rounded-full px-2.5 py-1 border border-gray-200">
+              <span className="text-xs">🗓</span>
               <span className="font-heading font-bold text-sm">
                 {config?.season ?? new Date().getFullYear()}
               </span>
             </div>
             <Link to="/calculator"
               className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center
-                         text-muted-foreground border border-gray-200">
+                         text-muted-foreground border border-gray-200 shrink-0">
               <Info className="w-4 h-4" />
             </Link>
           </div>
         </div>
-
-        {/* Next race: flag image + red countdown */}
-        {config?.next_race_name && (
-          <div className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-            <FlagImg iso={nextRaceIso} size="h80"
-              className="h-9 w-auto object-cover rounded-md shrink-0" style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.12)" }} />
-            <GpCountdown targetDate={config.next_race_date} compact />
-            {config.next_race_has_sprint && (
-              <span className="tag bg-amber-100 text-amber-700 shrink-0 ml-auto">Sprint</span>
-            )}
-          </div>
-        )}
       </div>
 
-      <div className="px-4 space-y-4 pt-4">
+      <div className="px-4 py-5 space-y-4">
+
+        {/* ── INTRO + PROSSIMA GARA ── */}
+        <div className="app-card p-4">
+          <p className="text-xs text-muted-foreground font-body leading-snug mb-3">
+            Calcola i punti necessari per vincere il Campionato del Mondo di F1
+          </p>
+          {config?.next_race_name && (
+            <div className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+              <FlagImg iso={nextRaceIso} size="h80"
+                className="h-9 w-auto object-cover rounded-md shrink-0" />
+              <GpCountdown targetDate={config.next_race_date} compact />
+              {config.next_race_has_sprint && (
+                <span className="tag bg-amber-100 text-amber-700 shrink-0 ml-auto">Sprint</span>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* ── CLASSIFICA PILOTI ── */}
         <div className="app-card overflow-hidden">
