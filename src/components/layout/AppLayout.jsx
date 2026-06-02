@@ -5,7 +5,7 @@ const tabs = [
   { path: "/",           label: "Panoramica", icon: BarChart2  },
   { path: "/calculator", label: "Scenari",    icon: Calculator },
   { path: "/compare",    label: "Confronta",  icon: GitCompare },
-  { path: "/ferrari",    label: "Ferrari",    icon: Shield     },
+  { path: "/ferrari",    label: "Scuderie",   icon: Shield     },
 ];
 
 export default function AppLayout() {

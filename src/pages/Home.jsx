@@ -13,9 +13,11 @@ import {
 } from "@/lib/f1Utils";
 import { raceFlagUrl, gpIso, flagUrl } from "@/lib/flagUtils";
 import GpCountdown from "@/components/GpCountdown";
-import { Loader2, AlertCircle, ChevronDown, ChevronUp, Info, Trophy, Sparkles } from "lucide-react";
+import { Loader2, AlertCircle, ChevronDown, ChevronUp, Info, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
+import PageHeader from "@/components/PageHeader";
+import InfoTip from "@/components/InfoTip";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -206,21 +208,15 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
 
-      {/* ── HEADER (sticky, translucent — stile Scenari) ── */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="relative shrink-0">
-              <div className="bg-gradient-to-br from-primary to-red-700 p-1.5 rounded-xl shadow-md">
-                <Trophy className="w-5 h-5 text-white" />
-              </div>
-              <Sparkles className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />
-            </div>
-            <div className="font-heading font-black text-lg leading-none truncate">
-              <span className="text-primary">F1</span> CHAMP <span className="text-primary">POINTS</span>
-            </div>
+      <PageHeader
+        icon={Trophy}
+        title={
+          <div className="font-heading font-black text-lg leading-none truncate">
+            <span className="text-primary">F1</span> CHAMP <span className="text-primary">POINTS</span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+        }
+        right={
+          <>
             <div className="flex items-center gap-1.5 bg-gray-100 rounded-full px-2.5 py-1 border border-gray-200">
               <span className="text-xs">🗓</span>
               <span className="font-heading font-bold text-sm">
@@ -232,9 +228,9 @@ export default function Home() {
                          text-muted-foreground border border-gray-200 shrink-0">
               <Info className="w-4 h-4" />
             </Link>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="px-4 py-5 space-y-4">
 
@@ -321,8 +317,9 @@ export default function Home() {
           <div className="dark-card px-5 pt-4 pb-5">
             {/* Header */}
             <h2 className="font-heading font-black text-xs uppercase tracking-widest
-                           text-white/50 mb-3">
+                           text-white/50 mb-3 flex items-center gap-1.5">
               Punti necessari per vincere
+              <InfoTip>Quanti punti deve ancora conquistare il leader per essere sicuro del titolo, considerando il massimo che può fare l'inseguitore nelle gare rimaste.</InfoTip>
             </h2>
 
             {/* Two-column layout: left = text, right = gauge */}
