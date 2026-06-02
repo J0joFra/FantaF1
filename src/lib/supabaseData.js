@@ -31,6 +31,7 @@ export async function getDriverStandings() {
     { data: entrants },
     { data: constructors },
     { data: driversMeta },
+    { data: countries },
   ] = await Promise.all([
     supabase
       .from('season_entrant_driver')
@@ -41,12 +42,19 @@ export async function getDriverStandings() {
       .select('id, name'),
     supabase
       .from('driver')
-      .select('id, abbreviation, permanent_number'),
+      .select('id, abbreviation, permanent_number, date_of_birth, place_of_birth, nationality_country_id, total_race_wins, total_podiums, total_pole_positions, total_fastest_laps, total_championship_wins, total_points, total_race_starts, best_race_result'),
+    supabase
+      .from('country')
+      .select('id, alpha2_code, name'),
   ]);
 
   // constructor id -> name
   const constructorMap = {};
   (constructors || []).forEach(c => { constructorMap[c.id] = c.name; });
+
+  // country id -> { iso, name }
+  const countryMap = {};
+  (countries || []).forEach(c => { countryMap[c.id] = { iso: c.alpha2_code, name: c.name }; });
 
   // driver id -> team name (prefer the actual race seat over test-driver entries)
   const driverTeamMap = {};
@@ -58,19 +66,94 @@ export async function getDriverStandings() {
     }
   });
 
-  // driver id -> metadata (abbreviation / number)
+  // driver id -> metadata (abbreviation / number / career)
   const driverMetaMap = {};
   (driversMeta || []).forEach(d => { driverMetaMap[d.id] = d; });
 
   return (standings || []).map(row => {
-    const meta = driverMetaMap[row.driver_id] || {};
-    return normalizeDriver({
+    const meta    = driverMetaMap[row.driver_id] || {};
+    const country = countryMap[meta.nationality_country_id] || {};
+    const base = normalizeDriver({
       ...row,
       constructor_name: driverTeamMap[row.driver_id] || row.constructor_name || '',
       abbreviation: meta.abbreviation || row.abbreviation || '',
       permanent_number: meta.permanent_number ?? row.permanent_number ?? null,
     });
+    return {
+      ...base,
+      permanent_number: meta.permanent_number ?? null,
+      date_of_birth:    meta.date_of_birth ?? null,
+      place_of_birth:   meta.place_of_birth ?? null,
+      nationality:      country.name || null,
+      nationality_iso:  country.iso || null,
+      career: {
+        titles:       meta.total_championship_wins ?? 0,
+        wins:         meta.total_race_wins ?? 0,
+        podiums:      meta.total_podiums ?? 0,
+        poles:        meta.total_pole_positions ?? 0,
+        fastest_laps: meta.total_fastest_laps ?? 0,
+        points:       meta.total_points ?? 0,
+        starts:       meta.total_race_starts ?? 0,
+        best_finish:  meta.best_race_result ?? null,
+      },
+    };
   });
+}
+
+// ─── DRIVER SEASON STATS (per-race aggregation) ──────────────────────────────
+// Aggregates the current season's race_data into per-driver stats keyed by driver_id.
+export async function getDriverSeasonStats(season = currentYear()) {
+  const { data: races, error: rErr } = await supabase
+    .from('race')
+    .select('id')
+    .eq('year', season);
+
+  if (rErr) throw new Error(`Season stats (races): ${rErr.message}`);
+  const ids = (races || []).map(r => r.id);
+  if (!ids.length) return {};
+
+  const { data: rows, error: dErr } = await supabase
+    .from('race_data')
+    .select('type, position_number, driver_id, race_reason_retired, race_positions_gained')
+    .in('race_id', ids)
+    .in('type', ['RACE_RESULT', 'QUALIFYING_RESULT', 'FASTEST_LAP', 'SPRINT_RACE_RESULT', 'DRIVER_OF_THE_DAY_RESULT']);
+
+  if (dErr) throw new Error(`Season stats (data): ${dErr.message}`);
+
+  const stats = {};
+  const get = (id) => (stats[id] ||= {
+    wins: 0, podiums: 0, points_finishes: 0, dnf: 0, poles: 0,
+    fastest_laps: 0, dotd: 0, sprint_wins: 0, positions_gained: 0,
+    best_finish: null, avg_finish: null, races: 0, _sum: 0, _fin: 0,
+  });
+
+  (rows || []).forEach(r => {
+    const s = get(r.driver_id);
+    const p = r.position_number;
+    switch (r.type) {
+      case 'RACE_RESULT':
+        s.races++;
+        if (p === 1) s.wins++;
+        if (p && p <= 3) s.podiums++;
+        if (p && p <= 10) s.points_finishes++;
+        if (r.race_reason_retired) s.dnf++;
+        if (p) { s._fin++; s._sum += p; if (s.best_finish === null || p < s.best_finish) s.best_finish = p; }
+        if (r.race_positions_gained) s.positions_gained += r.race_positions_gained;
+        break;
+      case 'QUALIFYING_RESULT': if (p === 1) s.poles++; break;
+      case 'FASTEST_LAP':       if (p === 1) s.fastest_laps++; break;
+      case 'SPRINT_RACE_RESULT':if (p === 1) s.sprint_wins++; break;
+      case 'DRIVER_OF_THE_DAY_RESULT': if (p === 1) s.dotd++; break;
+      default: break;
+    }
+  });
+
+  Object.values(stats).forEach(s => {
+    s.avg_finish = s._fin ? Math.round((s._sum / s._fin) * 10) / 10 : null;
+    delete s._sum; delete s._fin;
+  });
+
+  return stats;
 }
 
 function normalizeDriver(row) {
