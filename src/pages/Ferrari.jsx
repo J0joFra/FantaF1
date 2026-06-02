@@ -1,220 +1,460 @@
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Trophy, TrendingUp, Loader2, Users, Flag } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Shield, Trophy, TrendingUp, Loader2, Users, Flag, Crown,
+  Target, Timer, Star, ShieldAlert, Zap, Medal, Sparkles,
+} from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  BarChart, Bar, CartesianGrid,
 } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  getFerrariSeasonSummary, getFerrariArchiveStats,
-  getFerrariDriverStats, getConstructorStandings, getDriverStandings,
+  getConstructorStandings, getConstructorSeasonStats,
+  getConstructorPointsByYear, getDriverStandings, getSeasonConfig,
 } from "@/lib/supabaseData";
+import { getTeamColor } from "@/lib/f1Utils";
+import { flagUrl } from "@/lib/flagUtils";
 
-const RED = "#E8002D";
+// Constructor max points per weekend (two cars): race 25+18, sprint 8+7
+const MAX_C_RACE = 43;
+const MAX_C_SPRINT = 15;
 
-function StatBox({ label, value }) {
+// ── helpers ─────────────────────────────────────────────────────────────────
+const fmtNum = (v) =>
+  v === null || v === undefined ? "–"
+  : typeof v === "number" ? v.toLocaleString("it-IT") : v;
+
+function cmp(v1, v2, lower) {
+  const a = v1 ?? null, b = v2 ?? null;
+  if (a === null && b === null) return 0;
+  if (a === null) return 2;
+  if (b === null) return 1;
+  if (a === b) return 0;
+  if (lower) return a < b ? 1 : 2;
+  return a > b ? 1 : 2;
+}
+
+function FlagImg({ iso, className = "w-5 h-3.5" }) {
+  if (!iso) return null;
   return (
-    <div className="bg-card rounded-xl p-3 text-center">
-      <span className="font-heading font-black text-2xl block leading-none">{value}</span>
-      <p className="font-heading text-[10px] text-muted-foreground/70 uppercase tracking-widest mt-1">
-        {label}
-      </p>
+    <img src={flagUrl(iso, "h20")} alt={iso}
+      className={`${className} object-cover rounded-[2px] shrink-0`}
+      style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.12)" }}
+      onError={e => { e.target.style.display = "none"; }} />
+  );
+}
+
+// ── head-to-head stat row ─────────────────────────────────────────────────────
+function StatRow({ icon: Icon, label, val1, val2, color1, color2, lowerBetter = false }) {
+  const winner = cmp(val1, val2, lowerBetter);
+  const raw1 = typeof val1 === "number" ? val1 : 0;
+  const raw2 = typeof val2 === "number" ? val2 : 0;
+  let g1, g2;
+  if (lowerBetter) { const m = Math.max(raw1, raw2); g1 = m - raw1; g2 = m - raw2; }
+  else { g1 = Math.max(raw1, 0); g2 = Math.max(raw2, 0); }
+  const gmax = Math.max(g1, g2, 1);
+
+  return (
+    <div className="py-2.5 border-b border-gray-100 last:border-0">
+      <div className="flex items-center justify-center gap-1.5 mb-2">
+        {Icon && <Icon className="w-3 h-3 text-gray-400" />}
+        <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest">{label}</p>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="font-heading font-black text-base w-14 text-right tabular-nums"
+              style={{ color: winner === 1 ? color1 : "#d1d5db" }}>{fmtNum(val1)}</span>
+        <div className="flex-1 flex gap-1 h-2">
+          <div className="flex-1 flex justify-end">
+            <motion.div initial={{ width: 0 }} animate={{ width: `${(g1 / gmax) * 100}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="h-full rounded-l-full" style={{ backgroundColor: color1, opacity: winner === 2 ? 0.4 : 1 }} />
+          </div>
+          <div className="flex-1">
+            <motion.div initial={{ width: 0 }} animate={{ width: `${(g2 / gmax) * 100}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="h-full rounded-r-full" style={{ backgroundColor: color2, opacity: winner === 1 ? 0.4 : 1 }} />
+          </div>
+        </div>
+        <span className="font-heading font-black text-base w-14 tabular-nums"
+              style={{ color: winner === 2 ? color2 : "#d1d5db" }}>{fmtNum(val2)}</span>
+      </div>
     </div>
   );
 }
 
 const tooltipStyle = {
-  background: "white",
-  border: "1px solid hsl(20 8% 15%)",
-  borderRadius: "10px",
-  fontSize: "12px",
-  fontFamily: "'JetBrains Mono', monospace",
+  background: "white", border: "1px solid #e5e7eb",
+  borderRadius: "10px", fontSize: "12px", fontFamily: "'JetBrains Mono', monospace",
 };
 
+// ── main ───────────────────────────────────────────────────────────────────────
 export default function Ferrari() {
-  const { data: ferrariSeasons = [], isLoading } = useQuery({
-    queryKey: ["ferrariSeasons"], queryFn: getFerrariSeasonSummary, staleTime: 30 * 60 * 1000,
-  });
-  const { data: archiveStats } = useQuery({
-    queryKey: ["ferrariArchiveStats"], queryFn: getFerrariArchiveStats, staleTime: 60 * 60 * 1000,
-  });
-  const { data: topDrivers = [] } = useQuery({
-    queryKey: ["ferrariDriverStats"], queryFn: getFerrariDriverStats, staleTime: 60 * 60 * 1000,
-  });
-  const { data: teams   = [] } = useQuery({
+  const [selectedId, setSelectedId] = useState(null);
+  const [compareId, setCompareId] = useState(null);
+  const [mode, setMode] = useState("season");
+
+  const { data: teams = [], isLoading } = useQuery({
     queryKey: ["constructorStandings"], queryFn: getConstructorStandings, staleTime: 5 * 60 * 1000,
+  });
+  const { data: cstats = {} } = useQuery({
+    queryKey: ["constructorSeasonStats"], queryFn: () => getConstructorSeasonStats(), staleTime: 5 * 60 * 1000,
   });
   const { data: drivers = [] } = useQuery({
     queryKey: ["driverStandings"], queryFn: getDriverStandings, staleTime: 5 * 60 * 1000,
   });
+  const { data: config } = useQuery({
+    queryKey: ["seasonConfig"], queryFn: getSeasonConfig, staleTime: 10 * 60 * 1000,
+  });
 
-  if (isLoading) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Loader2 className="w-6 h-6 animate-spin" style={{ color: RED }} />
+  // default to Ferrari once data loads
+  useEffect(() => {
+    if (!selectedId && teams.length) {
+      const ferrari = teams.find(t => /ferrari/i.test(t.team_name));
+      setSelectedId((ferrari || teams[0]).id);
+    }
+  }, [teams, selectedId]);
+
+  const selected = teams.find(t => t.id === selectedId);
+  const leader   = teams[0];
+  const compare  = teams.find(t => t.id === compareId);
+
+  // default compare opponent = leader (or P2 if leader is selected)
+  useEffect(() => {
+    if (selected && !compareId && teams.length > 1) {
+      const opp = selected.id === leader?.id ? teams[1] : leader;
+      setCompareId(opp?.id ?? null);
+    }
+  }, [selected, compareId, teams, leader]);
+
+  const color   = selected ? getTeamColor(selected.team_name) : "#888";
+  const cColor  = compare ? getTeamColor(compare.team_name) : "#bbb";
+  const sStats  = cstats[selectedId] || {};
+  const oStats  = cstats[compareId] || {};
+  const lineup  = selected ? drivers.filter(d => d.team && d.team.toLowerCase() === selected.team_name.toLowerCase()) : [];
+
+  const { data: history = [] } = useQuery({
+    queryKey: ["constructorPointsByYear", selectedId],
+    queryFn: () => getConstructorPointsByYear(selectedId),
+    enabled: !!selectedId, staleTime: 30 * 60 * 1000,
+  });
+
+  // ── constructors' title race ──
+  const titleRace = useMemo(() => {
+    if (!selected || !leader || !config) return null;
+    const racesLeft   = Math.max(0, (config.total_races   || 0) - (config.races_completed   || 0));
+    const sprintsLeft = Math.max(0, (config.total_sprints || 0) - (config.sprints_completed || 0));
+    const maxAvail    = racesLeft * MAX_C_RACE + sprintsLeft * MAX_C_SPRINT;
+
+    if (selected.id === leader.id) {
+      let needed = 0;
+      teams.slice(1).forEach(r => { needed = Math.max(needed, (r.points + maxAvail) - selected.points + 1); });
+      return { isLeader: true, racesLeft, maxAvail, alreadyChampion: needed <= 0, magic: Math.max(0, needed) };
+    }
+    const teamMax = selected.points + maxAvail;
+    return {
+      isLeader: false, racesLeft, maxAvail,
+      out: teamMax < leader.points,
+      gap: leader.points - selected.points,
+      toCatch: leader.points - selected.points + 1,
+    };
+  }, [selected, leader, teams, config]);
+
+  const seasonRows = [
+    { icon: Zap,         label: "Punti",          get: (t, s) => t.points },
+    { icon: Trophy,      label: "Vittorie",       get: (t, s) => s.wins ?? 0 },
+    { icon: Medal,       label: "Podi",           get: (t, s) => s.podiums ?? 0 },
+    { icon: Target,      label: "Pole position",  get: (t, s) => s.poles ?? 0 },
+    { icon: Timer,       label: "Giri veloci",    get: (t, s) => s.fastest_laps ?? 0 },
+    { icon: Star,        label: "Arrivi a punti", get: (t, s) => s.points_finishes ?? 0 },
+    { icon: ShieldAlert, label: "Ritiri (DNF)",   get: (t, s) => s.dnf ?? 0, lowerBetter: true },
+  ];
+  const careerRows = [
+    { icon: Crown,  label: "Titoli costruttori",   get: (t) => t.career?.titles ?? 0 },
+    { icon: Trophy, label: "Vittorie",             get: (t) => t.career?.wins ?? 0 },
+    { icon: Medal,  label: "Podi",                 get: (t) => t.career?.podiums ?? 0 },
+    { icon: Target, label: "Pole position",        get: (t) => t.career?.poles ?? 0 },
+    { icon: Zap,    label: "Punti totali",         get: (t) => t.career?.points ?? 0 },
+    { icon: Flag,   label: "GP disputati",         get: (t) => t.career?.entries ?? 0 },
+  ];
+  const rows = mode === "season" ? seasonRows : careerRows;
+
+  const chartData = useMemo(
+    () => history.slice(-20).map(h => ({ year: String(h.year), punti: h.points })),
+    [history]
+  );
+
+  if (isLoading || !selected) return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
+      <Loader2 className="w-6 h-6 animate-spin text-primary" />
     </div>
   );
 
-  const ferrariTeam    = teams.find(t   => t.team_name?.toLowerCase().includes("ferrari"));
-  const ferrariDrivers = drivers.filter(d => d.team?.toLowerCase().includes("ferrari"));
-  const chartData      = [...ferrariSeasons].sort((a, b) => a.season - b.season).map(s => ({
-    year: String(s.season), punti: s.points, vittorie: s.wins || 0,
-  }));
-
   return (
-    <div className="space-y-4 px-4 pt-14 pb-4 relative">
-      <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
-      <div className="flex items-center gap-2 pt-1">
-        <div className="w-6 h-6 rounded flex items-center justify-center"
-             style={{ backgroundColor: RED }}>
-          <Trophy className="w-3.5 h-3.5 text-white" />
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
+      {/* ── HEADER (sticky) ── */}
+      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+        <div className="px-4 py-3 flex items-center gap-2">
+          <div className="relative shrink-0">
+            <div className="p-1.5 rounded-xl shadow-md" style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}>
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+            <Sparkles className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />
+          </div>
+          <h1 className="font-heading font-black text-xl uppercase tracking-wide">Scuderie</h1>
         </div>
-        <h1 className="font-heading font-black text-2xl uppercase tracking-wide">Ferrari</h1>
       </div>
 
-      {/* Current season card */}
-      {ferrariTeam && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl overflow-hidden border"
-          style={{ borderColor: `${RED}40` }}>
-          <div className="px-4 py-3 flex items-center justify-between"
-               style={{ background: `linear-gradient(90deg, ${RED}20, transparent)` }}>
-            <h2 className="font-heading font-black text-lg uppercase">
-              Stagione {new Date().getFullYear()}
-            </h2>
-            <span className="font-heading font-black text-2xl" style={{ color: RED }}>
-              P{ferrariTeam.position}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-px bg-border/40 mx-4 mb-4 rounded-xl overflow-hidden">
-            {[
-              { v: ferrariTeam.points,        l: "PTS"      },
-              { v: ferrariTeam.wins    || 0,  l: "VITTORIE" },
-              { v: ferrariTeam.podiums || 0,  l: "PODI"     },
-            ].map(({ v, l }) => (
-              <div key={l} className="bg-background/80 py-3 text-center">
-                <span className="font-heading font-black text-2xl">{v}</span>
-                <p className="font-heading text-[10px] text-muted-foreground tracking-widest mt-0.5">{l}</p>
-              </div>
-            ))}
-          </div>
-
-          {ferrariDrivers.map(d => (
-            <div key={d.id}
-              className="mx-4 mb-3 flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5">
-              <div>
-                <p className="font-heading font-bold text-sm">{d.driver_name}</p>
-                <p className="font-mono text-[10px] text-muted-foreground">P{d.position} mondiale</p>
-              </div>
-              <div className="text-right">
-                <p className="font-mono font-bold text-sm">{d.points} pts</p>
-                <p className="font-mono text-[10px] text-muted-foreground">
-                  {d.wins||0}V · {d.podiums||0}P · {d.poles||0}PP
-                </p>
-              </div>
-            </div>
-          ))}
-        </motion.div>
-      )}
-
-      {/* Archive stats */}
-      {archiveStats && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          className="app-card p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Flag className="w-4 h-4 text-primary" />
-            <h2 className="font-heading font-black text-lg uppercase tracking-wide">Storia</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <StatBox label="Titoli costruttori" value={archiveStats.constructors_titles ?? "–"} />
-            <StatBox label="Titoli piloti"       value={archiveStats.drivers_titles       ?? "–"} />
-            <StatBox label="Vittorie totali"     value={archiveStats.total_wins           ?? "–"} />
-            <StatBox label="Stagioni in F1"      value={archiveStats.seasons              ?? "–"} />
-          </div>
-        </motion.div>
-      )}
-
-      {/* Points trend chart */}
-      {chartData.length > 1 && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="app-card p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <h2 className="font-heading font-black text-lg uppercase tracking-wide">Punti per stagione</h2>
-          </div>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor={RED} stopOpacity={0.35} />
-                    <stop offset="95%" stopColor={RED} stopOpacity={0}    />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 14% 94%)" />
-                <XAxis dataKey="year" tick={{ fontSize: 10, fill: "hsl(20 8% 40%)" }} />
-                <YAxis tick={{ fontSize: 10, fill: "hsl(20 8% 40%)" }} width={30} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Area type="monotone" dataKey="punti" stroke={RED}
-                      fill="url(#fg)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Wins bar chart */}
-      {chartData.length > 1 && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-          className="app-card p-4">
-          <h2 className="font-heading font-black text-lg uppercase tracking-wide mb-4">Vittorie per stagione</h2>
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 14% 94%)" />
-                <XAxis dataKey="year" tick={{ fontSize: 10, fill: "hsl(20 8% 40%)" }} />
-                <YAxis tick={{ fontSize: 10, fill: "hsl(20 8% 40%)" }} allowDecimals={false} width={20} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="vittorie" fill={RED} radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Top Ferrari drivers */}
-      {topDrivers.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="app-card p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Users className="w-4 h-4 text-primary" />
-            <h2 className="font-heading font-black text-lg uppercase tracking-wide">Piloti storici</h2>
-          </div>
-          <div className="space-y-1.5">
-            {topDrivers.slice(0, 10).map((d, i) => (
-              <div key={i}
-                className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs text-muted-foreground/50 w-4">{i + 1}</span>
-                  <span className="font-heading font-bold text-sm">
-                    {d.driver_name || `${d.first_name||""} ${d.last_name||""}`.trim()}
+      <div className="px-4 py-5 space-y-4">
+        {/* ── TEAM SELECTOR ── */}
+        <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100 relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: color }} />
+          <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Scuderia</p>
+          <Select value={selectedId || ""} onValueChange={setSelectedId}>
+            <SelectTrigger className="w-full text-sm font-heading font-black h-10 px-3 border-gray-200 rounded-xl">
+              <SelectValue placeholder="Seleziona scuderia…" />
+            </SelectTrigger>
+            <SelectContent>
+              {teams.map(t => (
+                <SelectItem key={t.id} value={t.id}>
+                  <span className="flex items-center gap-2 font-heading text-sm">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getTeamColor(t.team_name) }} />
+                    {t.team_name}
                   </span>
-                </div>
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="text-muted-foreground">{d.wins ?? 0} vitt.</span>
-                  <span className="font-mono font-bold">{d.points ?? 0} pts</span>
-                </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* ── HERO ── */}
+        <motion.div key={selectedId} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl overflow-hidden text-white shadow-md"
+          style={{ background: `linear-gradient(160deg, ${color}, ${color}cc 55%, ${color}99)` }}>
+          <div className="px-4 pt-4 pb-3 flex items-start justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <FlagImg iso={selected.nationality_iso} />
+                <span className="font-body text-[11px] text-white/80 uppercase tracking-widest">
+                  Stagione {config?.season ?? new Date().getFullYear()}
+                </span>
+              </div>
+              <h2 className="font-heading font-black text-3xl leading-none truncate">{selected.team_name}</h2>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-heading font-black text-4xl leading-none">P{selected.position}</div>
+              {selected.championship_won && <Crown className="w-5 h-5 text-yellow-300 inline mt-1" />}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-px bg-white/15 mx-4 mb-3 rounded-xl overflow-hidden">
+            {[
+              { v: selected.points,      l: "PUNTI" },
+              { v: sStats.wins ?? 0,     l: "VITT." },
+              { v: sStats.podiums ?? 0,  l: "PODI" },
+              { v: sStats.poles ?? 0,    l: "POLE" },
+            ].map(({ v, l }) => (
+              <div key={l} className="py-2.5 text-center" style={{ background: `${color}` }}>
+                <span className="font-heading font-black text-xl">{v}</span>
+                <p className="font-heading text-[9px] text-white/75 tracking-widest mt-0.5">{l}</p>
               </div>
             ))}
           </div>
-        </motion.div>
-      )}
 
-      {!ferrariTeam && !isLoading && (
-        <div className="text-center py-12 text-muted-foreground font-heading text-sm uppercase tracking-wide">
-          Nessun dato Ferrari disponibile
+          {/* drivers lineup */}
+          {lineup.length > 0 && (
+            <div className="px-4 pb-4 space-y-2">
+              {lineup.map(d => (
+                <div key={d.id} className="flex items-center justify-between bg-black/15 rounded-xl px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-heading font-black text-xs bg-white/20 rounded px-1.5 py-0.5">{d.driver_code}</span>
+                    <span className="font-heading font-bold text-sm truncate">{d.driver_name}</span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="font-heading font-black text-sm">{d.points}</span>
+                    <span className="font-body text-[10px] text-white/70 ml-1">P{d.position}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+
+        {/* ── TITLE RACE (constructors' championship calc) ── */}
+        {titleRace && (
+          <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
+            <div className="flex items-center gap-2 mb-3">
+              <Trophy className="w-4 h-4" style={{ color }} />
+              <h3 className="font-heading font-black text-sm uppercase tracking-wide">Titolo costruttori</h3>
+              <span className="ml-auto text-[11px] font-body text-muted-foreground">{titleRace.racesLeft} GP rimasti</span>
+            </div>
+
+            {titleRace.isLeader ? (
+              titleRace.alreadyChampion ? (
+                <p className="font-heading font-bold text-emerald-600 text-center py-2">🏆 Campione matematico!</p>
+              ) : (
+                <div className="text-center">
+                  <p className="font-heading font-black text-5xl leading-none" style={{ color }}>{titleRace.magic}</p>
+                  <p className="font-body text-xs text-muted-foreground mt-1">punti per blindare il titolo (in testa)</p>
+                </div>
+              )
+            ) : titleRace.out ? (
+              <p className="font-heading font-bold text-gray-500 text-center py-2">❌ Fuori dalla lotta per il titolo</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 text-center">
+                <div className="bg-gray-50 rounded-xl py-3">
+                  <p className="font-heading font-black text-3xl" style={{ color }}>−{titleRace.gap}</p>
+                  <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mt-1">dal leader</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl py-3">
+                  <p className="font-heading font-black text-3xl text-gray-800">{titleRace.maxAvail}</p>
+                  <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mt-1">punti in palio</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CONSTRUCTOR STANDINGS (tap to switch) ── */}
+        <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-4 h-4 text-gray-500" />
+            <h3 className="font-heading font-black text-sm uppercase tracking-wide">Classifica costruttori</h3>
+          </div>
+          <div className="space-y-1">
+            {teams.map(t => {
+              const tc = getTeamColor(t.team_name);
+              const pct = leader.points > 0 ? (t.points / leader.points) * 100 : 0;
+              const active = t.id === selectedId;
+              return (
+                <button key={t.id} onClick={() => setSelectedId(t.id)}
+                  className={`w-full flex items-center gap-3 py-2 px-2 rounded-xl transition-colors ${active ? "bg-gray-50" : "hover:bg-gray-50"}`}>
+                  <span className="font-heading font-black text-sm w-5 text-center"
+                        style={{ color: active ? tc : "#9ca3af" }}>{t.position}</span>
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="flex items-center justify-between">
+                      <span className={`font-heading font-bold text-sm truncate ${active ? "" : "text-gray-700"}`}>{t.team_name}</span>
+                      <span className="font-heading font-black text-sm tabular-nums">{t.points}</span>
+                    </div>
+                    <div className="relative h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
+                      <div className="absolute inset-y-0 left-0 rounded-full"
+                           style={{ width: `${pct}%`, backgroundColor: tc, boxShadow: `0 0 6px ${tc}66` }} />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      )}
+
+        {/* ── HEAD-TO-HEAD COMPARE ── */}
+        <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
+          <div className="flex items-center gap-2 mb-3">
+            <Users className="w-4 h-4 text-gray-500" />
+            <h3 className="font-heading font-black text-sm uppercase tracking-wide">Confronto scuderie</h3>
+          </div>
+
+          {/* opponent selector */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="font-heading font-black text-sm px-2 py-1 rounded-lg text-white shrink-0" style={{ backgroundColor: color }}>
+              {selected.team_name}
+            </span>
+            <span className="text-gray-400 font-heading text-xs">VS</span>
+            <Select value={compareId || ""} onValueChange={setCompareId}>
+              <SelectTrigger className="flex-1 text-xs font-heading font-bold h-8 px-2.5 border-gray-200 rounded-lg">
+                <SelectValue placeholder="Scegli avversario…" />
+              </SelectTrigger>
+              <SelectContent>
+                {teams.filter(t => t.id !== selectedId).map(t => (
+                  <SelectItem key={t.id} value={t.id}>
+                    <span className="flex items-center gap-2 font-heading text-sm">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: getTeamColor(t.team_name) }} />
+                      {t.team_name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {compare && (
+            <>
+              {/* toggle */}
+              <div className="grid grid-cols-2 gap-1 bg-gray-200/70 p-1 rounded-xl mb-3">
+                {[{ k: "season", label: "Stagione" }, { k: "career", label: "Carriera" }].map(m => (
+                  <button key={m.k} onClick={() => setMode(m.k)}
+                    className={`py-1.5 rounded-lg font-heading font-bold text-xs uppercase tracking-wide transition-all
+                      ${mode === m.k ? "bg-white shadow-sm text-primary" : "text-gray-500"}`}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <AnimatePresence mode="wait">
+                <motion.div key={mode + compareId}
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.2 }}>
+                  {rows.map(r => (
+                    <StatRow key={r.label} icon={r.icon} label={r.label}
+                      val1={r.get(selected, sStats)} val2={r.get(compare, oStats)}
+                      color1={color} color2={cColor} lowerBetter={r.lowerBetter} />
+                  ))}
+                </motion.div>
+              </AnimatePresence>
+            </>
+          )}
+        </div>
+
+        {/* ── HISTORY (career + chart) ── */}
+        <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
+          <div className="flex items-center gap-2 mb-3">
+            <Crown className="w-4 h-4" style={{ color }} />
+            <h3 className="font-heading font-black text-sm uppercase tracking-wide">Albo & storia</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[
+              { v: selected.career?.titles ?? 0, l: "TITOLI" },
+              { v: selected.career?.wins ?? 0, l: "VITTORIE" },
+              { v: selected.career?.podiums ?? 0, l: "PODI" },
+              { v: selected.career?.poles ?? 0, l: "POLE" },
+              { v: fmtNum(selected.career?.points ?? 0), l: "PUNTI" },
+              { v: selected.career?.entries ?? 0, l: "GP" },
+            ].map(({ v, l }) => (
+              <div key={l} className="bg-gray-50 rounded-xl p-2.5 text-center">
+                <span className="font-heading font-black text-xl block leading-none">{v}</span>
+                <p className="font-heading text-[9px] text-muted-foreground uppercase tracking-widest mt-1">{l}</p>
+              </div>
+            ))}
+          </div>
+
+          {chartData.length > 1 ? (
+            <>
+              <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mb-2">
+                Punti per stagione (ultime {chartData.length})
+              </p>
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={color} stopOpacity={0.35} />
+                        <stop offset="95%" stopColor={color} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="year" tick={{ fontSize: 9, fill: "#9ca3af" }} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontSize: 9, fill: "#9ca3af" }} width={28} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Area type="monotone" dataKey="punti" stroke={color} fill="url(#cg)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </>
+          ) : (
+            <p className="text-center text-xs text-muted-foreground font-body py-3">
+              Storico punti non disponibile per questa scuderia.
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
