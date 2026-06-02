@@ -47,6 +47,33 @@
 
     --radius: 1.25rem;
   }
+
+  /* ─── DARK THEME — ribalta i token ─────────────────────────────────────── */
+  .dark {
+    --background:           222 30% 8%;
+    --foreground:           0 0% 96%;
+
+    --card:                 222 24% 13%;
+    --card-foreground:      0 0% 96%;
+
+    --popover:              222 24% 13%;
+    --popover-foreground:   0 0% 96%;
+
+    --secondary:            222 18% 20%;
+    --secondary-foreground: 0 0% 90%;
+
+    --muted:                222 18% 20%;
+    --muted-foreground:     220 12% 65%;
+
+    --accent:               3 90% 48%;
+    --accent-foreground:    0 0% 100%;
+
+    --border:               222 16% 22%;
+    --input:                222 16% 22%;
+
+    --dark-card:            222 22% 15%;
+    --dark-card-fg:         0 0% 98%;
+  }
 }
 
 @layer base {
@@ -69,9 +96,9 @@
   .font-heading { font-family: var(--font-heading); }
   .font-mono    { font-family: var(--font-mono); }
 
-  /* App card — white with soft shadow */
+  /* App card — follows the card token (white in light, dark surface in dark) */
   .app-card {
-    @apply bg-white rounded-2xl;
+    @apply bg-card rounded-2xl;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
   }
 
@@ -109,3 +136,53 @@
     @apply absolute left-0 top-0 bottom-0 w-1 rounded-full bg-primary;
   }
 }
+
+/* ─── DARK MODE — remap dei colori "literal" usati nelle pagine ──────────────── */
+/* Regole non-layered: hanno priorità sulle utility Tailwind senza !important.   */
+
+/* superfici */
+.dark .bg-white        { background-color: hsl(222 24% 13%); }
+.dark .bg-white\/80    { background-color: hsl(222 30% 9% / 0.85); }
+.dark .bg-gray-50      { background-color: hsl(222 24% 15%); }
+.dark .bg-gray-100     { background-color: hsl(222 20% 18%); }
+.dark .bg-gray-200,
+.dark .bg-gray-200\/70 { background-color: hsl(222 18% 22%); }
+
+/* tinte chiare (card statistiche / modali) */
+.dark .bg-emerald-50 { background-color: hsl(160 35% 13%); }
+.dark .bg-lime-50    { background-color: hsl(90 30% 13%); }
+.dark .bg-blue-50    { background-color: hsl(215 40% 15%); }
+.dark .bg-amber-50   { background-color: hsl(40 40% 14%); }
+.dark .bg-rose-50    { background-color: hsl(345 35% 15%); }
+.dark .bg-red-50     { background-color: hsl(0 40% 15%); }
+
+/* testo */
+.dark .text-gray-900 { color: hsl(0 0% 95%); }
+.dark .text-gray-800 { color: hsl(0 0% 90%); }
+.dark .text-gray-700 { color: hsl(220 13% 82%); }
+.dark .text-gray-600 { color: hsl(220 12% 72%); }
+.dark .text-gray-500 { color: hsl(220 10% 62%); }
+.dark .text-gray-400 { color: hsl(220 10% 52%); }
+.dark .text-gray-300 { color: hsl(220 12% 40%); }
+.dark .text-gray-200 { color: hsl(220 12% 36%); }
+
+/* bordi */
+.dark .border-gray-100 { border-color: hsl(222 16% 20%); }
+.dark .border-gray-200 { border-color: hsl(222 16% 24%); }
+
+/* hover su superfici chiare */
+.dark .hover\:bg-gray-50:hover  { background-color: hsl(222 24% 18%); }
+.dark .hover\:bg-gray-200:hover { background-color: hsl(222 18% 25%); }
+
+/* gradiente di sfondo pagina */
+.dark .from-gray-100 {
+  --tw-gradient-from: hsl(222 30% 8%) var(--tw-gradient-from-position);
+  --tw-gradient-to: hsl(222 30% 8% / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.dark .to-gray-200 {
+  --tw-gradient-to: hsl(222 28% 11%) var(--tw-gradient-to-position);
+}
+
+/* card morbida: ombra visibile su fondo scuro */
+.dark .app-card { box-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 6px 18px rgba(0,0,0,0.45); }
