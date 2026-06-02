@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calculator, Info, X, Share2, Bookmark, ChevronDown, ChevronUp,
@@ -308,241 +308,129 @@ function MosaicDiagram({
   racesLeft: number;
   onCellClick: (yourPos: number, rivalPos: number) => void;
 }) {
-  const [hoveredCell, setHoveredCell] = useState<MosaicCell | null>(null);
-  
   const matrix: (MosaicCell | null)[][] = Array(10).fill(null).map(() => Array(10).fill(null));
   
   cells.forEach(cell => {
     matrix[cell.yourPos - 1][cell.rivalPos - 1] = cell;
   });
   
+  // Colore piatto in base alla difficoltà (% delle gare necessarie)
   const getCellStyle = (cell: MosaicCell | null) => {
-    if (!cell) return "bg-gray-100 cursor-default";
-    if (!cell.isPossible) return "bg-gray-300 cursor-not-allowed opacity-50";
-    
-    // Gradiente basato sul numero di gare necessarie
+    if (!cell || !cell.isPossible) return "bg-gray-100 text-gray-300";
     const percent = (cell.racesNeeded / racesLeft) * 100;
-    if (percent <= 30) {
-      return "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-sm hover:shadow-md cursor-pointer";
-    }
-    if (percent <= 50) {
-      return "bg-gradient-to-br from-lime-500 to-lime-600 text-white shadow-sm hover:shadow-md cursor-pointer";
-    }
-    if (percent <= 70) {
-      return "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-sm hover:shadow-md cursor-pointer";
-    }
-    return "bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-sm hover:shadow-md cursor-pointer";
+    if (percent <= 30) return "bg-emerald-500 text-white";
+    if (percent <= 50) return "bg-lime-500 text-white";
+    if (percent <= 70) return "bg-amber-500 text-white";
+    return "bg-orange-500 text-white";
   };
-  
-  const getDifficultyBadge = (cell: MosaicCell | null) => {
-    if (!cell || !cell.isPossible) return null;
-    if (cell.racesNeeded <= 3) return { icon: "⚡", text: "Veloce", color: "bg-emerald-700" };
-    if (cell.racesNeeded <= 5) return { icon: "📈", text: "Medio", color: "bg-lime-700" };
-    if (cell.racesNeeded <= 7) return { icon: "⏱️", text: "Lento", color: "bg-amber-700" };
-    return { icon: "🐢", text: "Molto lento", color: "bg-orange-700" };
-  };
-  
+
   return (
-    <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-200">
-      {/* Header con statistiche */}
-      <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-2 rounded-xl shadow-md">
-            <Grid3x3 className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="font-black text-gray-900 text-lg">Mosaico Strategie</h3>
-            <p className="text-xs text-gray-500">Clicca su una cella per i dettagli</p>
-          </div>
+    <div className="bg-white rounded-2xl p-3 shadow-lg border border-gray-200 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-2 rounded-xl shadow-md shrink-0">
+          <Grid3x3 className="w-4 h-4 text-white" />
         </div>
-        <div className="text-right">
-          <div className="text-sm font-bold text-gray-900">{racesLeft} gare</div>
-          <div className="text-xs text-gray-500">rimanenti</div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-black text-gray-900 text-base leading-tight">Mosaico Strategie</h3>
+          <p className="text-[11px] text-gray-500 leading-tight">Tocca una cella per i dettagli</p>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="text-sm font-bold text-gray-900">{racesLeft}</div>
+          <div className="text-[10px] text-gray-500 -mt-0.5">gare</div>
         </div>
       </div>
-      
-      {/* Legenda migliorata */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-5">
-        <div className="flex items-center gap-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200">
-          <div className="w-4 h-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded shadow-sm"></div>
-          <div className="text-xs">
-            <span className="font-bold text-emerald-700">Facile</span>
-            <span className="text-gray-500 ml-1">≤30% gare</span>
-          </div>
+
+      {/* Spiegazione + scala colori */}
+      <div className="mb-3">
+        <p className="text-[11px] text-gray-600 mb-2 text-center">
+          Il numero indica <strong className="text-gray-900">quante gare</strong> servono per superare il rivale
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold text-emerald-600 shrink-0">Facile</span>
+          <div
+            className="h-2 flex-1 rounded-full"
+            style={{ background: "linear-gradient(to right, #10b981, #84cc16, #f59e0b, #f97316)" }}
+          />
+          <span className="text-[10px] font-bold text-orange-600 shrink-0">Difficile</span>
         </div>
-        <div className="flex items-center gap-2 p-2 bg-lime-50 rounded-lg border border-lime-200">
-          <div className="w-4 h-4 bg-gradient-to-br from-lime-500 to-lime-600 rounded shadow-sm"></div>
-          <div className="text-xs">
-            <span className="font-bold text-lime-700">Medio</span>
-            <span className="text-gray-500 ml-1">31-50% gare</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border border-amber-200">
-          <div className="w-4 h-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded shadow-sm"></div>
-          <div className="text-xs">
-            <span className="font-bold text-amber-700">Difficile</span>
-            <span className="text-gray-500 ml-1">51-70% gare</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg border border-orange-200">
-          <div className="w-4 h-4 bg-gradient-to-br from-orange-500 to-orange-600 rounded shadow-sm"></div>
-          <div className="text-xs">
-            <span className="font-bold text-orange-700">Molto difficile</span>
-            <span className="text-gray-500 ml-1">&gt;70% gare</span>
-          </div>
-        </div>
+        <p className="text-[10px] text-gray-400 mt-1.5 text-center">
+          Caselle <span className="text-gray-300 font-bold">grigie</span> = non è possibile recuperare
+        </p>
       </div>
-      
-      {/* Tabella Mosaico - Scrollabile */}
-      <div className="overflow-x-auto">
-        <div className="min-w-[600px]">
-          {/* Intestazione colonne */}
-          <div className="grid grid-cols-11 gap-1.5 mb-1.5">
-            <div className="text-center text-xs font-bold text-gray-400 p-2">Pilota ↓ / Rivale →</div>
-            {SCORING_POSITIONS.map(pos => (
-              <div key={`header-${pos.position}`} className="text-center bg-gray-100 rounded-lg p-1.5">
-                <div className="text-base">{pos.emoji}</div>
-                <div className="text-[10px] font-bold text-gray-600">{pos.label}</div>
-              </div>
-            ))}
-          </div>
-          
-          {/* Righe della matrice */}
-          {SCORING_POSITIONS.map(yourPos => (
-            <div key={`row-${yourPos.position}`} className="grid grid-cols-11 gap-1.5 mb-1.5">
-              {/* Intestazione riga */}
-              <div className="flex flex-col items-center justify-center bg-gray-100 rounded-lg p-1.5">
-                <div className="text-base">{yourPos.emoji}</div>
-                <div className="text-[10px] font-bold text-gray-600">{yourPos.label}</div>
-                <div className="text-[9px] text-gray-400">{yourPos.points} pt</div>
-              </div>
-              
-              {/* Celle */}
-              {SCORING_POSITIONS.map(rivalPos => {
-                const cell = matrix[yourPos.position - 1][rivalPos.position - 1];
-                const difficulty = getDifficultyBadge(cell);
-                const isBest = cell && bestCombination && 
-                               cell.yourPos === bestCombination.yourPos && 
-                               cell.rivalPos === bestCombination.rivalPos;
-                
-                return (
-                  <motion.button
-                    key={`cell-${yourPos.position}-${rivalPos.position}`}
-                    whileHover={{ scale: cell?.isPossible ? 1.02 : 1 }}
-                    whileTap={{ scale: cell?.isPossible ? 0.98 : 1 }}
-                    onClick={() => cell?.isPossible && onCellClick(cell.yourPos, cell.rivalPos)}
-                    onMouseEnter={() => setHoveredCell(cell)}
-                    onMouseLeave={() => setHoveredCell(null)}
-                    className={`
-                      relative rounded-lg p-2 text-center transition-all min-h-[70px]
-                      ${getCellStyle(cell)}
-                      ${isBest ? 'ring-2 ring-rose-500 ring-offset-2 shadow-lg' : ''}
-                    `}
-                    disabled={!cell?.isPossible}
-                  >
-                    {cell && cell.isPossible && (
-                      <div className="flex flex-col items-center gap-0.5">
-                        <div className="text-lg font-black">{cell.racesNeeded}</div>
-                        <div className="text-[10px] font-medium opacity-90">gare</div>
-                        <div className="text-[9px] opacity-75">+{cell.gain}/g</div>
-                        {difficulty && (
-                          <div className={`absolute -top-1 -right-1 ${difficulty.color} text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px]`}>
-                            {difficulty.icon}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {cell && !cell.isPossible && (
-                      <div className="flex flex-col items-center justify-center h-full">
-                        <div className="text-lg opacity-50">❌</div>
-                        <div className="text-[9px] text-gray-500">+{cell.gain}/g</div>
-                      </div>
-                    )}
-                    {!cell && <div className="h-full w-full"></div>}
-                  </motion.button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+
+      {/* Etichette assi */}
+      <div className="flex items-center justify-center gap-4 mb-2 text-[11px] font-semibold text-gray-500">
+        <span className="flex items-center gap-1"><span className="text-rose-500">↓</span> La tua posizione</span>
+        <span className="flex items-center gap-1"><span className="text-rose-500">→</span> Il rivale</span>
       </div>
-      
-      {/* Tooltip hover migliorato */}
-      {hoveredCell && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 shadow-md"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">
-                {SCORING_POSITIONS.find(p => p.position === hoveredCell.yourPos)?.emoji}
-              </div>
-              <div className="text-gray-400 text-sm">vs</div>
-              <div className="text-2xl">
-                {SCORING_POSITIONS.find(p => p.position === hoveredCell.rivalPos)?.emoji}
-              </div>
-            </div>
-            {hoveredCell.isPossible && (
-              <div className={`px-2 py-0.5 rounded-full text-xs font-bold text-white ${
-                hoveredCell.racesNeeded <= 3 ? 'bg-emerald-600' :
-                hoveredCell.racesNeeded <= 5 ? 'bg-lime-600' :
-                hoveredCell.racesNeeded <= 7 ? 'bg-amber-600' : 'bg-orange-600'
-              }`}>
-                {hoveredCell.isPossible ? `✅ ${hoveredCell.racesNeeded} gare` : '❌ Impossibile'}
-              </div>
-            )}
+
+      {/* Matrice mosaico - adatta alla larghezza dello schermo */}
+      <div className="grid grid-cols-[1.4rem_repeat(10,minmax(0,1fr))] gap-[3px]">
+        {/* angolo vuoto + intestazione colonne (rivale) */}
+        <div />
+        {SCORING_POSITIONS.map(pos => (
+          <div
+            key={`col-${pos.position}`}
+            className="flex items-center justify-center aspect-square rounded bg-gray-100 text-[9px] font-bold text-gray-500"
+          >
+            {pos.position}
           </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="bg-white rounded-lg p-2">
-              <div className="text-gray-500 text-xs mb-1">Il tuo piazzamento</div>
-              <div className="font-bold text-gray-900">
-                {hoveredCell.yourPos}° posto ({hoveredCell.yourPoints} pt)
-              </div>
+        ))}
+
+        {/* righe della matrice */}
+        {SCORING_POSITIONS.map(yourPos => (
+          <Fragment key={`row-${yourPos.position}`}>
+            {/* intestazione riga (tu) */}
+            <div className="flex items-center justify-center aspect-square rounded bg-gray-100 text-[9px] font-bold text-gray-500">
+              {yourPos.position}
             </div>
-            <div className="bg-white rounded-lg p-2">
-              <div className="text-gray-500 text-xs mb-1">Piazzamento rivale</div>
-              <div className="font-bold text-gray-900">
-                {hoveredCell.rivalPos}° posto ({hoveredCell.rivalPoints} pt)
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-2">
-              <div className="text-gray-500 text-xs mb-1">Guadagno a gara</div>
-              <div className="font-bold text-emerald-600">+{hoveredCell.gain} punti</div>
-            </div>
-            {hoveredCell.isPossible && (
-              <div className="bg-white rounded-lg p-2">
-                <div className="text-gray-500 text-xs mb-1">Sorpasso alla gara</div>
-                <div className="font-bold text-rose-600">#{hoveredCell.overtakeRace}</div>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      )}
-      
-      {/* Best combination highlight */}
+            {SCORING_POSITIONS.map(rivalPos => {
+              const cell = matrix[yourPos.position - 1][rivalPos.position - 1];
+              const isBest = cell && bestCombination &&
+                cell.yourPos === bestCombination.yourPos &&
+                cell.rivalPos === bestCombination.rivalPos;
+
+              return (
+                <motion.button
+                  key={`cell-${yourPos.position}-${rivalPos.position}`}
+                  whileTap={{ scale: cell?.isPossible ? 0.9 : 1 }}
+                  onClick={() => cell?.isPossible && onCellClick(cell.yourPos, cell.rivalPos)}
+                  disabled={!cell?.isPossible}
+                  className={`
+                    relative flex items-center justify-center aspect-square rounded
+                    text-[11px] font-black leading-none transition-colors
+                    ${getCellStyle(cell)}
+                    ${isBest ? "ring-2 ring-rose-500 ring-offset-1 z-10" : ""}
+                  `}
+                >
+                  {cell?.isPossible ? cell.racesNeeded : ""}
+                </motion.button>
+              );
+            })}
+          </Fragment>
+        ))}
+      </div>
+
+      {/* Combinazione ottimale (tappabile) */}
       {bestCombination && (
-        <div className="mt-4 p-3 bg-gradient-to-r from-rose-50 to-orange-50 rounded-xl border border-rose-200">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-rose-600" />
-              <span className="text-sm font-semibold text-gray-700">Combinazione ottimale:</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">
-                {SCORING_POSITIONS.find(p => p.position === bestCombination.yourPos)?.emoji}
-              </span>
-              <span className="text-gray-600">vs</span>
-              <span className="text-lg">
-                {SCORING_POSITIONS.find(p => p.position === bestCombination.rivalPos)?.emoji}
-              </span>
-              <span className="text-sm font-bold text-emerald-600">
-                → sorpasso in {bestCombination.racesNeeded} gare
-              </span>
-            </div>
+        <button
+          onClick={() => onCellClick(bestCombination.yourPos, bestCombination.rivalPos)}
+          className="mt-3 w-full text-left p-3 bg-gradient-to-r from-rose-50 to-orange-50 rounded-xl border border-rose-200 active:scale-[0.98] transition-transform"
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            <Trophy className="w-4 h-4 text-rose-600 shrink-0" />
+            <span className="text-xs font-bold text-gray-700">Strategia più veloce</span>
           </div>
-        </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-bold text-gray-900">Tu {bestCombination.yourPos}°</span>
+            <span className="text-gray-400">vs</span>
+            <span className="font-bold text-gray-900">Rivale {bestCombination.rivalPos}°</span>
+            <span className="ml-auto text-emerald-600 font-bold whitespace-nowrap">
+              {bestCombination.racesNeeded} {bestCombination.racesNeeded === 1 ? "gara" : "gare"}
+            </span>
+          </div>
+        </button>
       )}
     </div>
   );
