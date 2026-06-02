@@ -174,27 +174,102 @@ function normalizeDriver(row) {
 }
 
 // ─── CONSTRUCTOR STANDINGS ───────────────────────────────────────────────────
-// View: current_season_constructor_standings (7 cols)
+// View: current_season_constructor_standings — enriched with career stats + flag.
 export async function getConstructorStandings() {
-  const { data, error } = await supabase
+  const { data: standings, error } = await supabase
     .from('current_season_constructor_standings')
     .select('*')
     .order('position_number', { ascending: true });
 
   throwIfError(error, 'Constructor standings');
-  return (data || []).map(normalizeConstructor);
+
+  const [{ data: cons }, { data: countries }] = await Promise.all([
+    supabase
+      .from('constructor')
+      .select('id, name, country_id, total_championship_wins, total_race_wins, total_podiums, total_pole_positions, total_points, total_race_entries, best_championship_position'),
+    supabase
+      .from('country')
+      .select('id, alpha2_code'),
+  ]);
+
+  const conMap = {}; (cons || []).forEach(c => { conMap[c.id] = c; });
+  const isoMap = {}; (countries || []).forEach(c => { isoMap[c.id] = c.alpha2_code; });
+
+  // Dedupe by constructor_id (the view can contain duplicate rows) — keep highest points.
+  const byId = {};
+  (standings || []).forEach(row => {
+    const id = row.constructor_id;
+    if (!byId[id] || (row.points ?? 0) > (byId[id].points ?? 0)) byId[id] = row;
+  });
+
+  return Object.values(byId)
+    .map(row => {
+      const meta = conMap[row.constructor_id] || {};
+      return {
+        id:               String(row.constructor_id ?? ''),
+        team_name:        row.constructor_name || meta.name || '',
+        team_color:       null,
+        points:           row.points ?? 0,
+        championship_won: row.championship_won ?? false,
+        nationality_iso:  isoMap[meta.country_id] || null,
+        // back-compat fields (current-season wins/podiums live in getConstructorSeasonStats)
+        wins: 0, podiums: 0,
+        career: {
+          titles:            meta.total_championship_wins ?? 0,
+          wins:              meta.total_race_wins ?? 0,
+          podiums:           meta.total_podiums ?? 0,
+          poles:             meta.total_pole_positions ?? 0,
+          points:            meta.total_points ?? 0,
+          entries:           meta.total_race_entries ?? 0,
+          best_championship: meta.best_championship_position ?? null,
+        },
+      };
+    })
+    .sort((a, b) => b.points - a.points)
+    .map((t, i) => ({ ...t, position: i + 1 }));
 }
 
-function normalizeConstructor(row) {
-  return {
-    id:         String(row.constructor_id ?? row.id ?? ''),
-    team_name:  row.constructor_name || row.name || '',
-    team_color: row.color            || null,
-    points:     row.points           ?? 0,
-    position:   row.position_number  ?? row.position ?? 0,
-    wins:       row.wins             ?? 0,
-    podiums:    row.podiums          ?? 0,
-  };
+// ─── CONSTRUCTOR SEASON STATS (per-race aggregation) ─────────────────────────
+export async function getConstructorSeasonStats(season = currentYear()) {
+  const { data: races, error: rErr } = await supabase
+    .from('race').select('id').eq('year', season);
+  if (rErr) throw new Error(`Constructor stats (races): ${rErr.message}`);
+  const ids = (races || []).map(r => r.id);
+  if (!ids.length) return {};
+
+  const { data: rows, error: dErr } = await supabase
+    .from('race_data')
+    .select('type, position_number, constructor_id, race_reason_retired')
+    .in('race_id', ids)
+    .in('type', ['RACE_RESULT', 'QUALIFYING_RESULT', 'FASTEST_LAP']);
+  if (dErr) throw new Error(`Constructor stats (data): ${dErr.message}`);
+
+  const stats = {};
+  const get = (id) => (stats[id] ||= { wins: 0, podiums: 0, poles: 0, fastest_laps: 0, dnf: 0, points_finishes: 0 });
+  (rows || []).forEach(r => {
+    const s = get(r.constructor_id);
+    const p = r.position_number;
+    if (r.type === 'RACE_RESULT') {
+      if (p === 1) s.wins++;
+      if (p && p <= 3) s.podiums++;
+      if (p && p <= 10) s.points_finishes++;
+      if (r.race_reason_retired) s.dnf++;
+    } else if (r.type === 'QUALIFYING_RESULT' && p === 1) s.poles++;
+    else if (r.type === 'FASTEST_LAP' && p === 1) s.fastest_laps++;
+  });
+  return stats;
+}
+
+// ─── CONSTRUCTOR POINTS BY YEAR (history, any team) ──────────────────────────
+export async function getConstructorPointsByYear(constructorId) {
+  if (!constructorId) return [];
+  const { data, error } = await supabase
+    .from('season_constructor_standing')
+    .select('year, position_number, points')
+    .eq('constructor_id', constructorId)
+    .order('year', { ascending: true });
+  if (error) { console.error('Constructor points by year:', error.message); return []; }
+  return (data || []).map(r => ({ year: r.year, points: r.points ?? 0, position: r.position_number ?? null }));
 }
 
 // ─── SEASON CONFIG ────────────────────────────────────────────────────────────
