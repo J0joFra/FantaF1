@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import InfoTip from "@/components/InfoTip";
+import { useI18n } from "@/lib/i18n";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function ageFrom(dob) {
@@ -123,14 +124,14 @@ function DriverPanel({ d, color, lead }) {
 }
 
 // ── selector card ─────────────────────────────────────────────────────────────
-function DriverSelect({ label, value, onChange, options, color, d }) {
+function DriverSelect({ label, placeholder, value, onChange, options, color, d }) {
   return (
     <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100 relative overflow-hidden">
       {d && <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: color }} />}
       <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mb-2">{label}</p>
       <Select value={value || ""} onValueChange={onChange}>
         <SelectTrigger className="w-full text-xs font-heading font-bold h-9 px-2.5 border-gray-200 rounded-xl">
-          <SelectValue placeholder="Seleziona pilota…" />
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
           {options.map(x => (
@@ -150,6 +151,7 @@ function DriverSelect({ label, value, onChange, options, color, d }) {
 
 // ── main ────────────────────────────────────────────────────────────────────────
 export default function Compare() {
+  const { t } = useI18n();
   const [id1, setId1] = useState(null);
   const [id2, setId2] = useState(null);
   const [mode, setMode] = useState("season"); // 'season' | 'career'
@@ -169,28 +171,28 @@ export default function Compare() {
   const s2 = seasonStats[id2] || {};
 
   const seasonRows = [
-    { icon: Zap,         label: "Punti",                get: (d) => d.points },
-    { icon: Trophy,      label: "Vittorie",             get: (_, s) => s.wins ?? 0 },
-    { icon: Medal,       label: "Podi",                 get: (_, s) => s.podiums ?? 0, tip: "Arrivi nei primi 3 (1°, 2° o 3°)." },
-    { icon: Target,      label: "Pole position",        get: (_, s) => s.poles ?? 0, tip: "Volte in cui ha segnato il giro più veloce in qualifica, partendo 1°." },
-    { icon: Timer,       label: "Giri veloci",          get: (_, s) => s.fastest_laps ?? 0, tip: "Giro più veloce in gara." },
-    { icon: Star,        label: "Arrivi a punti",       get: (_, s) => s.points_finishes ?? 0, tip: "Gare concluse nei primi 10 (zona punti)." },
-    { icon: Award,       label: "Driver of the Day",    get: (_, s) => s.dotd ?? 0, tip: "Premio \"pilota del giorno\" votato dai tifosi a fine gara." },
-    { icon: TrendingUp,  label: "Posizioni guadagnate", get: (_, s) => s.positions_gained ?? 0, tip: "Posizioni recuperate dalla griglia di partenza al traguardo, sommate nella stagione." },
-    { icon: Crown,       label: "Miglior arrivo",       get: (_, s) => s.best_finish, lowerBetter: true, tip: "Miglior piazzamento ottenuto in gara (1 = vittoria)." },
-    { icon: Gauge,       label: "Arrivo medio",         get: (_, s) => s.avg_finish, lowerBetter: true, tip: "Posizione media al traguardo: più bassa è meglio." },
-    { icon: ShieldAlert, label: "Ritiri (DNF)",         get: (_, s) => s.dnf ?? 0, lowerBetter: true, tip: "DNF = Did Not Finish: gare non concluse (ritiri)." },
+    { icon: Zap,         label: t("st_points"),          get: (d) => d.points },
+    { icon: Trophy,      label: t("st_wins"),            get: (_, s) => s.wins ?? 0 },
+    { icon: Medal,       label: t("st_podiums"),         get: (_, s) => s.podiums ?? 0, tip: "Arrivi nei primi 3 (1°, 2° o 3°)." },
+    { icon: Target,      label: t("st_poles"),           get: (_, s) => s.poles ?? 0, tip: "Volte in cui ha segnato il giro più veloce in qualifica, partendo 1°." },
+    { icon: Timer,       label: t("st_fastestLaps"),     get: (_, s) => s.fastest_laps ?? 0, tip: "Giro più veloce in gara." },
+    { icon: Star,        label: t("st_pointsFinishes"),  get: (_, s) => s.points_finishes ?? 0, tip: "Gare concluse nei primi 10 (zona punti)." },
+    { icon: Award,       label: t("st_dotd"),            get: (_, s) => s.dotd ?? 0, tip: "Premio \"pilota del giorno\" votato dai tifosi a fine gara." },
+    { icon: TrendingUp,  label: t("st_positionsGained"), get: (_, s) => s.positions_gained ?? 0, tip: "Posizioni recuperate dalla griglia di partenza al traguardo, sommate nella stagione." },
+    { icon: Crown,       label: t("st_bestFinish"),      get: (_, s) => s.best_finish, lowerBetter: true, tip: "Miglior piazzamento ottenuto in gara (1 = vittoria)." },
+    { icon: Gauge,       label: t("st_avgFinish"),       get: (_, s) => s.avg_finish, lowerBetter: true, tip: "Posizione media al traguardo: più bassa è meglio." },
+    { icon: ShieldAlert, label: t("st_dnf"),             get: (_, s) => s.dnf ?? 0, lowerBetter: true, tip: "DNF = Did Not Finish: gare non concluse (ritiri)." },
   ];
 
   const careerRows = [
-    { icon: Crown,   label: "Titoli mondiali", get: (d) => d.career?.titles ?? 0 },
-    { icon: Trophy,  label: "Vittorie",        get: (d) => d.career?.wins ?? 0 },
-    { icon: Medal,   label: "Podi",            get: (d) => d.career?.podiums ?? 0 },
-    { icon: Target,  label: "Pole position",   get: (d) => d.career?.poles ?? 0 },
-    { icon: Timer,   label: "Giri veloci",     get: (d) => d.career?.fastest_laps ?? 0 },
-    { icon: Zap,     label: "Punti carriera",  get: (d) => d.career?.points ?? 0 },
-    { icon: Flag,    label: "Gare disputate",  get: (d) => d.career?.starts ?? 0 },
-    { icon: Star,    label: "Miglior arrivo",  get: (d) => d.career?.best_finish, lowerBetter: true },
+    { icon: Crown,   label: t("st_titles"),       get: (d) => d.career?.titles ?? 0 },
+    { icon: Trophy,  label: t("st_wins"),         get: (d) => d.career?.wins ?? 0 },
+    { icon: Medal,   label: t("st_podiums"),      get: (d) => d.career?.podiums ?? 0 },
+    { icon: Target,  label: t("st_poles"),        get: (d) => d.career?.poles ?? 0 },
+    { icon: Timer,   label: t("st_fastestLaps"),  get: (d) => d.career?.fastest_laps ?? 0 },
+    { icon: Zap,     label: t("st_careerPoints"), get: (d) => d.career?.points ?? 0 },
+    { icon: Flag,    label: t("st_racesEntered"), get: (d) => d.career?.starts ?? 0 },
+    { icon: Star,    label: t("st_bestFinish"),   get: (d) => d.career?.best_finish, lowerBetter: true },
   ];
 
   const rows = mode === "season" ? seasonRows : careerRows;
@@ -219,7 +221,7 @@ export default function Compare() {
   const share = () => {
     if (!d1 || !d2) return;
     const winner = lead === 1 ? d1.driver_name : lead === 2 ? d2.driver_name : "Pareggio";
-    const text = `🏎️ ${d1.driver_name} vs ${d2.driver_name} — ${mode === "season" ? "Stagione" : "Carriera"}: ${h2h.w1}–${h2h.w2} (${winner})`;
+    const text = `🏎️ ${d1.driver_name} vs ${d2.driver_name} — ${mode === "season" ? t("season") : t("career")}: ${h2h.w1}–${h2h.w2} (${winner})`;
     if (navigator.share) navigator.share({ title: "Confronto F1", text });
     else { navigator.clipboard.writeText(text); alert("📋 Copiato negli appunti!"); }
   };
@@ -232,9 +234,9 @@ export default function Compare() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
-      <PageHeader icon={GitCompare} title="Confronta" right={
+      <PageHeader icon={GitCompare} title={t("nav_compare")} right={
         <>
-          <button onClick={shuffle} title="Pescaggio casuale"
+          <button onClick={shuffle} title={t("cmp_random")}
             className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-muted-foreground border border-gray-200 active:scale-95 transition-transform">
             <Shuffle className="w-4 h-4" />
           </button>
@@ -250,13 +252,13 @@ export default function Compare() {
       <div className="px-4 py-5 space-y-4">
         {/* ── SELECTORS + swap ── */}
         <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-end">
-          <DriverSelect label="Pilota 1" value={id1} onChange={setId1} color={c1} d={d1}
+          <DriverSelect label={t("cmp_pilot1")} placeholder={t("cmp_selectDriver")} value={id1} onChange={setId1} color={c1} d={d1}
             options={drivers.filter(x => x.id !== id2)} />
           <button onClick={swap} disabled={!id1 && !id2} title="Scambia"
             className="mb-3 w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-primary disabled:opacity-30 active:scale-90 transition-transform">
             <ArrowLeftRight className="w-4 h-4" />
           </button>
-          <DriverSelect label="Pilota 2" value={id2} onChange={setId2} color={c2} d={d2}
+          <DriverSelect label={t("cmp_pilot2")} placeholder={t("cmp_selectDriver")} value={id2} onChange={setId2} color={c2} d={d2}
             options={drivers.filter(x => x.id !== id1)} />
         </div>
 
@@ -277,9 +279,9 @@ export default function Compare() {
                 <span className="font-heading font-black text-2xl tabular-nums"
                       style={{ color: lead === 1 ? c1 : "#9ca3af" }}>{h2h.w1}</span>
                 <div className="text-center">
-                  <p className="font-body text-[9px] text-muted-foreground uppercase tracking-widest">Testa a testa</p>
+                  <p className="font-body text-[9px] text-muted-foreground uppercase tracking-widest">{t("cmp_headToHead")}</p>
                   <p className="font-heading font-black text-xs text-gray-700">
-                    {lead === 0 ? "In equilibrio" : `${(lead === 1 ? d1 : d2).driver_name} avanti`}
+                    {lead === 0 ? t("cmp_balanced") : `${(lead === 1 ? d1 : d2).driver_name} ${t("cmp_ahead")}`}
                   </p>
                 </div>
                 <span className="font-heading font-black text-2xl tabular-nums"
@@ -294,8 +296,8 @@ export default function Compare() {
             {/* ── MODE toggle ── */}
             <div className="grid grid-cols-2 gap-1 bg-gray-200/70 p-1 rounded-xl">
               {[
-                { k: "season", label: "Stagione" },
-                { k: "career", label: "Carriera" },
+                { k: "season", label: t("season") },
+                { k: "career", label: t("career") },
               ].map(m => (
                 <button key={m.k} onClick={() => setMode(m.k)}
                   className={`py-2 rounded-lg font-heading font-bold text-sm uppercase tracking-wide transition-all
@@ -320,9 +322,7 @@ export default function Compare() {
             </AnimatePresence>
 
             <p className="text-[10px] text-muted-foreground text-center font-body">
-              {mode === "season"
-                ? "Statistiche della stagione in corso"
-                : "Statistiche di carriera (tutte le stagioni)"}
+              {mode === "season" ? t("cmp_seasonStats") : t("cmp_careerStats")}
             </p>
           </motion.div>
         )}
@@ -333,11 +333,11 @@ export default function Compare() {
             <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100 flex flex-col items-center gap-3">
               <Users className="w-10 h-10 text-gray-300" />
               <p className="font-heading font-bold text-sm text-muted-foreground uppercase tracking-wide">
-                Seleziona due piloti
+                {t("cmp_selectTwo")}
               </p>
               <button onClick={shuffle}
                 className="flex items-center gap-1.5 text-xs font-heading font-bold text-primary border border-primary/30 rounded-full px-3 py-1.5 active:scale-95 transition-transform">
-                <Shuffle className="w-3.5 h-3.5" /> Pescaggio casuale
+                <Shuffle className="w-3.5 h-3.5" /> {t("cmp_random")}
               </button>
             </div>
           </div>

@@ -1,15 +1,17 @@
 import { Outlet, useLocation, Link } from "react-router-dom";
 import { BarChart2, Calculator, GitCompare, Shield } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 const tabs = [
-  { path: "/",           label: "Panoramica", icon: BarChart2  },
-  { path: "/calculator", label: "Scenari",    icon: Calculator },
-  { path: "/compare",    label: "Confronta",  icon: GitCompare },
-  { path: "/ferrari",    label: "Scuderie",   icon: Shield     },
+  { path: "/",           key: "nav_overview",  icon: BarChart2  },
+  { path: "/calculator", key: "nav_scenarios", icon: Calculator },
+  { path: "/compare",    key: "nav_compare",   icon: GitCompare },
+  { path: "/ferrari",    key: "nav_teams",     icon: Shield     },
 ];
 
 export default function AppLayout() {
   const { pathname } = useLocation();
+  const { t } = useI18n();
 
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-[430px] mx-auto">
@@ -22,7 +24,7 @@ export default function AppLayout() {
                       bg-white border-t border-border safe-bottom"
            style={{ boxShadow: "0 -1px 0 rgba(0,0,0,0.06), 0 -4px 16px rgba(0,0,0,0.06)" }}>
         <div className="grid grid-cols-4 h-16">
-          {tabs.map(({ path, label, icon: Icon }) => {
+          {tabs.map(({ path, key, icon: Icon }) => {
             const active = pathname === path;
             return (
               <Link key={path} to={path}
@@ -33,7 +35,7 @@ export default function AppLayout() {
                 <span className={`text-[10px] font-body font-semibold mt-0.5
                   ${active ? "text-primary" : "text-muted-foreground/70"}`}
                       style={{ fontFamily: "var(--font-body)" }}>
-                  {label}
+                  {t(key)}
                 </span>
               </Link>
             );

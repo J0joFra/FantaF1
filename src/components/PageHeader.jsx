@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 /**
  * Shared sticky page header — one visual language across all pages.
@@ -27,6 +28,7 @@ export default function PageHeader({ icon: Icon, title, color = "#E8002D", right
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {right}
+          <LanguageSwitcher />
           <ThemeToggle />
         </div>
       </div>
