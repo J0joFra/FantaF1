@@ -17,7 +17,7 @@ function currentYear() {
 export async function getDriverStandings() {
   // The current_season_driver_standings view has NO team/constructor column,
   // so we enrich it: driver_id -> constructor (via season_entrant_driver) -> name,
-  // plus the official 3-letter code from the driver table.
+  // plus the official 3-letter code, nationality and career totals from the driver table.
   const { data: standings, error: stErr } = await supabase
     .from('current_season_driver_standings')
     .select('*')
@@ -66,7 +66,7 @@ export async function getDriverStandings() {
     }
   });
 
-  // driver id -> metadata (abbreviation / number / career)
+  // driver id -> metadata
   const driverMetaMap = {};
   (driversMeta || []).forEach(d => { driverMetaMap[d.id] = d; });
 
@@ -77,7 +77,6 @@ export async function getDriverStandings() {
       ...row,
       constructor_name: driverTeamMap[row.driver_id] || row.constructor_name || '',
       abbreviation: meta.abbreviation || row.abbreviation || '',
-      permanent_number: meta.permanent_number ?? row.permanent_number ?? null,
     });
     return {
       ...base,
@@ -140,9 +139,9 @@ export async function getDriverSeasonStats(season = currentYear()) {
         if (p) { s._fin++; s._sum += p; if (s.best_finish === null || p < s.best_finish) s.best_finish = p; }
         if (r.race_positions_gained) s.positions_gained += r.race_positions_gained;
         break;
-      case 'QUALIFYING_RESULT': if (p === 1) s.poles++; break;
-      case 'FASTEST_LAP':       if (p === 1) s.fastest_laps++; break;
-      case 'SPRINT_RACE_RESULT':if (p === 1) s.sprint_wins++; break;
+      case 'QUALIFYING_RESULT':        if (p === 1) s.poles++; break;
+      case 'FASTEST_LAP':              if (p === 1) s.fastest_laps++; break;
+      case 'SPRINT_RACE_RESULT':       if (p === 1) s.sprint_wins++; break;
       case 'DRIVER_OF_THE_DAY_RESULT': if (p === 1) s.dotd++; break;
       default: break;
     }
