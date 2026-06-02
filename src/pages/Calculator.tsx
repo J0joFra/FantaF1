@@ -245,7 +245,7 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
         </div>
         <h3 className="font-bold text-2xl mb-2">{t("sc_champion")}</h3>
         <p className="text-emerald-100 text-sm">
-          {analysis.driver.driver_name} ha già vinto matematicamente il campionato.
+          {t("mc_alreadyWon", { driver: analysis.driver.driver_name })}
         </p>
       </div>
     );
@@ -257,7 +257,7 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
         <AlertTriangle className="w-16 h-16 mx-auto mb-3 text-gray-400" />
         <h3 className="font-bold text-2xl mb-2">{t("sc_out")}</h3>
         <p className="text-gray-300 text-sm">
-          {analysis.driver.driver_name} non può più vincere il campionato.
+          {t("mc_cantWin", { driver: analysis.driver.driver_name })}
         </p>
       </div>
     );
@@ -335,30 +335,25 @@ function MosaicDiagram({
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="font-black text-gray-900 text-base leading-tight">{t("sc_mosaic")}</h3>
-          <p className="text-[11px] text-gray-500 leading-tight">Tocca una cella per i dettagli</p>
+          <p className="text-[11px] text-gray-500 leading-tight">{t("sc_tapCell")}</p>
         </div>
         <div className="text-right shrink-0">
           <div className="text-sm font-bold text-gray-900">{racesLeft}</div>
-          <div className="text-[10px] text-gray-500 -mt-0.5">gare</div>
+          <div className="text-[10px] text-gray-500 -mt-0.5">{t("mos_raceMany")}</div>
         </div>
       </div>
 
       {/* Come si legge */}
       <div className="mb-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
         <p className="text-[11px] text-gray-700 leading-snug">
-          Ogni casella = un <strong>"e se ogni gara finisse così?"</strong>.
-          Scegli la posizione di <strong className="text-rose-600">{yourDriver.driver_name}</strong> (riga) e
-          quella di <strong className="text-rose-600">{rival.driver_name}</strong> (colonna):
-          il numero dentro è <strong className="text-gray-900">quante gare</strong> servono per il sorpasso.
+          {t("mos_howto", { you: yourDriver.driver_name, rival: rival.driver_name })}
         </p>
         <p className="text-[11px] text-gray-500 leading-snug mt-2 pt-2 border-t border-gray-200">
-          📌 <strong>Esempio:</strong> {yourDriver.driver_name} sempre 1° (riga&nbsp;1),
-          {" "}{rival.driver_name} sempre 4° (colonna&nbsp;4)
-          → guadagna punti ogni gara finché lo sorpassa. Numero più basso = più facile.
+          {t("mos_example", { you: yourDriver.driver_name, rival: rival.driver_name })}
         </p>
         {sprintsLeft > 0 && (
           <p className="text-[11px] text-amber-700 leading-snug mt-2 pt-2 border-t border-gray-200">
-            🏁 Il calcolo include anche i <strong>{sprintsLeft} weekend con sprint</strong> rimasti (punti extra).
+            {t("mos_sprintNote", { n: sprintsLeft })}
           </p>
         )}
       </div>
@@ -366,21 +361,19 @@ function MosaicDiagram({
       {/* Scala colori */}
       <div className="mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-emerald-600 shrink-0">Facile</span>
+          <span className="text-[10px] font-bold text-emerald-600 shrink-0">{t("mos_easy")}</span>
           <div
             className="h-2 flex-1 rounded-full"
             style={{ background: "linear-gradient(to right, #10b981, #84cc16, #f59e0b, #f97316)" }}
           />
-          <span className="text-[10px] font-bold text-orange-600 shrink-0">Difficile</span>
+          <span className="text-[10px] font-bold text-orange-600 shrink-0">{t("mos_hard")}</span>
         </div>
-        <p className="text-[10px] text-gray-400 mt-1.5 text-center">
-          Caselle <span className="text-gray-300 font-bold">grigie</span> = non recuperi (pari o peggio del rivale)
-        </p>
+        <p className="text-[10px] text-gray-400 mt-1.5 text-center">{t("mos_grey")}</p>
       </div>
 
       {/* Etichetta asse colonne (rivale) */}
       <div className="flex items-center justify-center gap-1 mb-1 text-[11px] font-bold text-gray-600">
-        <span className="text-rose-500">→</span> Posizione di {rival.driver_name}
+        <span className="text-rose-500">→</span> {t("mos_rivalPos", { rival: rival.driver_name })}
       </div>
 
       {/* Matrice mosaico - adatta alla larghezza dello schermo */}
@@ -441,14 +434,14 @@ function MosaicDiagram({
         >
           <div className="flex items-center gap-2 mb-1.5">
             <Trophy className="w-4 h-4 text-rose-600 shrink-0" />
-            <span className="text-xs font-bold text-gray-700">Strategia più veloce</span>
+            <span className="text-xs font-bold text-gray-700">{t("mos_fastest")}</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
             <span className="font-bold text-gray-900">{yourDriver.driver_code} {bestCombination.yourPos}°</span>
-            <span className="text-gray-400">vs</span>
+            <span className="text-gray-400">{t("vs")}</span>
             <span className="font-bold text-gray-900">{rival.driver_code} {bestCombination.rivalPos}°</span>
             <span className="ml-auto text-emerald-600 font-bold whitespace-nowrap">
-              {bestCombination.racesNeeded} {bestCombination.racesNeeded === 1 ? "gara" : "gare"}
+              {bestCombination.racesNeeded} {bestCombination.racesNeeded === 1 ? t("mos_raceOne") : t("mos_raceMany")}
             </span>
           </div>
         </button>
@@ -484,6 +477,7 @@ function CellDetailModal({
 
   const details = generateDetailedCombination(yourDriver, rival, yourPos, rivalPos, racesLeft, sprintsLeft);
   const racesNeeded = details.overtakeAtRace > 0 ? details.overtakeAtRace : null;
+  const { t } = useI18n();
   
   return (
     <AnimatePresence>
@@ -506,7 +500,7 @@ function CellDetailModal({
             <div className="bg-gradient-to-r from-rose-600 to-rose-700 p-6 text-white">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Dettaglio Combinazione</h2>
+                  <h2 className="text-2xl font-bold mb-2">{t("cd_title")}</h2>
                   <div className="flex items-center gap-3 text-rose-100">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl">{yourPosData.emoji}</span>
@@ -537,22 +531,22 @@ function CellDetailModal({
               {/* Statistiche */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                  <div className="text-xs text-gray-500">Guadagno a gara</div>
-                  <div className="text-xl font-bold text-emerald-600">{gainPerRace >= 0 ? "+" : ""}{gainPerRace} pt</div>
+                  <div className="text-xs text-gray-500">{t("cd_gainPerRace")}</div>
+                  <div className="text-xl font-bold text-emerald-600">{gainPerRace >= 0 ? "+" : ""}{gainPerRace} {t("pts")}</div>
                   {sprintsLeft > 0 && (
-                    <div className="text-[10px] text-gray-400 mt-0.5">{sprintGain >= 0 ? "+" : ""}{sprintGain} pt nella sprint</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">{t("cd_inSprint", { g: `${sprintGain >= 0 ? "+" : ""}${sprintGain}` })}</div>
                   )}
                 </div>
                 <div className="bg-blue-50 rounded-xl p-3 text-center">
-                  <div className="text-xs text-gray-500">Gare necessarie</div>
+                  <div className="text-xs text-gray-500">{t("cd_racesNeeded")}</div>
                   <div className="text-xl font-bold text-blue-600">{racesNeeded ?? "—"}</div>
                 </div>
                 <div className="bg-amber-50 rounded-xl p-3 text-center">
-                  <div className="text-xs text-gray-500">Partenza</div>
+                  <div className="text-xs text-gray-500">{t("cd_start")}</div>
                   <div className="text-sm font-bold">{yourDriver.points} - {rival.points}</div>
                 </div>
                 <div className="bg-rose-50 rounded-xl p-3 text-center">
-                  <div className="text-xs text-gray-500">Arrivo</div>
+                  <div className="text-xs text-gray-500">{t("cd_finish")}</div>
                   <div className="text-sm font-bold">{details.finalYourPoints} - {details.finalRivalPoints}</div>
                 </div>
               </div>
@@ -560,7 +554,7 @@ function CellDetailModal({
               {/* Timeline gare */}
               <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-rose-500" />
-                Andamento gara per gara
+                {t("cd_timeline")}
               </h4>
               <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
                 {details.results.map(result => (
@@ -579,17 +573,17 @@ function CellDetailModal({
                         }`}>
                           {result.raceNumber}
                         </div>
-                        <span className="font-medium text-gray-700">GP {result.raceNumber}</span>
+                        <span className="font-medium text-gray-700">{t("cd_gp")} {result.raceNumber}</span>
                         {result.isSprint && (
                           <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
-                            +Sprint
+                            {t("cd_sprint")}
                           </span>
                         )}
                       </div>
                       {result.isOvertake && (
                         <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500 text-white rounded-full text-xs font-bold">
                           <Zap className="w-3 h-3" />
-                          SORPASSO!
+                          {t("cd_overtake")}
                         </div>
                       )}
                     </div>
@@ -609,7 +603,7 @@ function CellDetailModal({
                     </div>
                     <div className="mt-2 pt-2 border-t border-gray-200">
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500">Differenza:</span>
+                        <span className="text-gray-500">{t("cd_diff")}</span>
                         <span className={`font-bold ${result.yourTotal - result.rivalTotal > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                           {result.yourTotal - result.rivalTotal > 0 ? '+' : ''}{result.yourTotal - result.rivalTotal} pt
                         </span>
@@ -631,13 +625,14 @@ function RivalCard({
   isMain, 
   onCardClick 
 }: { 
-  rival: RivalAnalysis; 
-  driverName: string; 
+  rival: RivalAnalysis;
+  driverName: string;
   isMain?: boolean;
   onCardClick: () => void;
 }) {
+  const { t } = useI18n();
   return (
-    <div 
+    <div
       onClick={onCardClick}
       className={`bg-white rounded-xl p-4 shadow-sm border cursor-pointer transition-all hover:shadow-md ${
         isMain ? 'border-rose-300 bg-rose-50/50 hover:bg-rose-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
@@ -649,7 +644,7 @@ function RivalCard({
             <p className="font-bold text-gray-900">{rival.driver.driver_name}</p>
             {isMain && (
               <span className="text-xs bg-gradient-to-r from-rose-500 to-rose-600 text-white px-2 py-0.5 rounded-full shadow-sm">
-                Principale
+                {t("rc_main")}
               </span>
             )}
           </div>
@@ -665,7 +660,7 @@ function RivalCard({
         <div className="flex items-center gap-1">
           <Target className="w-3 h-3 text-rose-500" />
           <p className="text-sm font-medium text-gray-700">
-            Servono <span className="text-rose-600 font-bold">{rival.pointsNeeded} pt</span> in più
+            {t("rc_needed", { n: rival.pointsNeeded })}
           </p>
         </div>
         <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -795,7 +790,7 @@ export default function ScenariosPage() {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Caricamento dati F1 2026...</p>
+          <p className="text-gray-600 font-medium">{t("loading_data")}</p>
         </div>
       </div>
     );
@@ -824,7 +819,7 @@ export default function ScenariosPage() {
               onClick={() => window.location.reload()}
               className="mt-2 text-xs text-red-600 font-medium hover:text-red-700"
             >
-              Riprova ↻
+              {t("err_retry")}
             </button>
           </div>
         )}
@@ -922,8 +917,8 @@ export default function ScenariosPage() {
                     {activeRivals.length === 0 ? (
                       <div className="text-center py-6">
                         <Award className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                        <p className="text-gray-600 font-medium">Sei in testa alla classifica! 🎯</p>
-                        <p className="text-xs text-gray-400 mt-1">Nessun pilota davanti a te</p>
+                        <p className="text-gray-600 font-medium">{t("rivals_lead")}</p>
+                        <p className="text-xs text-gray-400 mt-1">{t("rivals_noneAhead")}</p>
                       </div>
                     ) : (
                       <>
@@ -1022,7 +1017,7 @@ export default function ScenariosPage() {
             {savedScenarios.length > 0 && (
               <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  Ultime simulazioni
+                  {t("sv_title")}
                 </p>
                 <div className="space-y-2">
                   {savedScenarios.map(s => (
@@ -1032,7 +1027,7 @@ export default function ScenariosPage() {
                         <p className="text-xs text-gray-400">{s.driverTeam}</p>
                       </div>
                       <span className={`font-mono text-sm font-bold ${s.isChampion ? 'text-emerald-600' : s.isOut ? 'text-gray-400' : 'text-rose-600'}`}>
-                        {s.isChampion ? "🏆 Campione" : s.isOut ? "❌ Fuori" : `+${s.magicNumber} pt`}
+                        {s.isChampion ? t("sv_champion") : s.isOut ? t("sv_out") : `+${s.magicNumber} ${t("pts")}`}
                       </span>
                     </div>
                   ))}
@@ -1045,8 +1040,8 @@ export default function ScenariosPage() {
         {!selectedDriver && drivers.length > 0 && (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-100 shadow-md">
             <Calculator className="w-16 h-16 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">Seleziona un pilota</p>
-            <p className="text-xs text-gray-400 mt-2">per iniziare l'analisi</p>
+            <p className="text-gray-500 font-medium">{t("nd_select")}</p>
+            <p className="text-xs text-gray-400 mt-2">{t("nd_hint")}</p>
           </div>
         )}
       </div>
@@ -1084,59 +1079,56 @@ export default function ScenariosPage() {
             >
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-black text-xl bg-gradient-to-r from-rose-600 to-rose-700 bg-clip-text text-transparent">
-                  Diagramma a Mosaico
+                  {t("im_title")}
                 </h3>
                 <button onClick={() => setShowInfo(false)} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
                   <X className="w-4 h-4 mx-auto" />
                 </button>
               </div>
               <div className="space-y-4 text-sm text-gray-600">
-                <p>
-                  Il <strong className="text-rose-600">diagramma a mosaico</strong> mostra tutte le possibili combinazioni di piazzamenti:
-                </p>
+                <p>{t("im_intro")}</p>
 
                 {/* Come leggerlo */}
                 <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-2">
-                  <p className="font-bold text-gray-800">Come si legge</p>
+                  <p className="font-bold text-gray-800">{t("im_howRead")}</p>
                   <p className="text-xs leading-snug">
                     <span className="inline-block w-5 font-bold text-rose-600">↓</span>
-                    Le <strong>righe</strong> sono la posizione di arrivo del <strong>pilota selezionato</strong> (1°–10°).
+                    {t("im_rows")}
                   </p>
                   <p className="text-xs leading-snug">
                     <span className="inline-block w-5 font-bold text-rose-600">→</span>
-                    Le <strong>colonne</strong> sono la posizione del <strong>rivale</strong> (1°–10°).
+                    {t("im_cols")}
                   </p>
                   <p className="text-xs leading-snug">
                     <span className="inline-block w-5">🔢</span>
-                    Il numero nella casella = <strong>quante gare</strong> servono, se ogni gara
-                    finisse così, perché il pilota selezionato lo sorpassi. Più basso = più facile.
+                    {t("im_number")}
                   </p>
                 </div>
 
                 <ul className="space-y-2">
                   <li className="flex items-center gap-2 p-2 bg-emerald-50 rounded-lg">
                     <div className="w-4 h-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded shadow-sm"></div>
-                    <span><strong>Verde</strong> → Possibile in ≤30% delle gare</span>
+                    <span>{t("im_green")}</span>
                   </li>
                   <li className="flex items-center gap-2 p-2 bg-lime-50 rounded-lg">
                     <div className="w-4 h-4 bg-gradient-to-br from-lime-500 to-lime-600 rounded shadow-sm"></div>
-                    <span><strong>Lime</strong> → Possibile in 31-50% delle gare</span>
+                    <span>{t("im_lime")}</span>
                   </li>
                   <li className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg">
                     <div className="w-4 h-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded shadow-sm"></div>
-                    <span><strong>Ambra</strong> → Possibile in 51-70% delle gare</span>
+                    <span>{t("im_amber")}</span>
                   </li>
                   <li className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg">
                     <div className="w-4 h-4 bg-gradient-to-br from-orange-500 to-orange-600 rounded shadow-sm"></div>
-                    <span><strong>Arancione</strong> → Possibile in &gt;70% delle gare</span>
+                    <span>{t("im_orange")}</span>
                   </li>
                   <li className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
                     <div className="w-4 h-4 bg-gray-300 rounded"></div>
-                    <span><strong>Grigio</strong> → Impossibile</span>
+                    <span>{t("im_grey")}</span>
                   </li>
                 </ul>
                 <p className="text-xs text-gray-400 pt-2 border-t border-gray-100">
-                  💡 Clicca su una cella colorata per vedere il dettaglio gara per gara!
+                  {t("im_clickHint")}
                 </p>
               </div>
             </motion.div>
