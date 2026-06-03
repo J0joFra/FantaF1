@@ -46,6 +46,15 @@
         box-shadow: 0 4px 14px rgba(232, 0, 45, 0.35);
       }
       h1 { font-size: 1.5rem; margin: 0; letter-spacing: -0.01em; }
+      .back {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin: 0 0 18px; padding: 8px 14px; border-radius: 999px;
+        border: 1px solid var(--border); background: var(--card);
+        color: var(--muted); font-size: 0.9rem; font-weight: 600;
+        text-decoration: none; transition: all .15s ease;
+      }
+      .back:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
+      .back svg { width: 16px; height: 16px; }
       .eff { color: var(--muted); font-size: 0.85rem; margin: 4px 0 20px; }
       .langbar { display: flex; gap: 6px; margin: 0 0 24px; flex-wrap: wrap; }
       .langbar button {
@@ -73,6 +82,10 @@
   </head>
   <body>
     <div class="wrap">
+      <a class="back" href="/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        <span id="backText">Torna alla app</span>
+      </a>
       <header>
         <div class="badge">GU</div>
         <h1>Privacy Policy</h1>
@@ -176,6 +189,8 @@
           sections.forEach(function (s) { s.classList.toggle("active", s.getAttribute("data-lang") === code); });
           buttons.forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-set") === code ? "true" : "false"); });
           document.documentElement.lang = code;
+          var back = document.getElementById("backText");
+          if (back) back.textContent = code === "en" ? "Back to app" : "Torna alla app";
         }
         buttons.forEach(function (b) {
           b.addEventListener("click", function () { setLang(b.getAttribute("data-set")); });
