@@ -51,6 +51,18 @@ function encodePng(width, height, rgba) {
 }
 
 // ── Icon renderer ────────────────────────────────────────────────────────────
+const RED = [0xe8, 0x00, 0x2d]; // brand red for the F1 wordmark
+const GRID = [220, 222, 228]; // light-grey grid lines on the white panel
+
+function distSeg(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const l2 = dx * dx + dy * dy;
+  let tt = l2 ? ((px - x1) * dx + (py - y1) * dy) / l2 : 0;
+  tt = Math.max(0, Math.min(1, tt));
+  const cx = x1 + tt * dx, cy = y1 + tt * dy;
+  return Math.hypot(px - cx, py - cy);
+}
+
 function render(size, inset) {
   const SS = 3; // supersample factor
   const S = size * SS;
@@ -58,9 +70,36 @@ function render(size, inset) {
   const b = S - inset * S;
   const ps = b - a; // panel side
   const rad = ps * 0.22; // corner radius
-  const t = ps * 0.06; // gridline thickness
+  const t = ps * 0.045; // gridline thickness
   const f1 = a + ps / 3;
   const f2 = a + (2 * ps) / 3;
+
+  // ── "F1" wordmark geometry (centered on the panel) ──
+  const H = ps * 0.46; // glyph height
+  const st = H * 0.22; // stroke thickness
+  const wF = H * 0.52; // F width
+  const w1 = H * 0.42; // 1 width
+  const gap = H * 0.16;
+  const totalW = wF + gap + w1;
+  const ty0 = a + (ps - H) / 2;
+  const ty1 = ty0 + H;
+  const fx0 = a + (ps - totalW) / 2; // F left
+  const ox0 = fx0 + wF + gap; // 1 left
+  const sx = ox0 + (w1 - st) * 0.6; // 1 stem left
+
+  function inF(x, y) {
+    if (x >= fx0 && x <= fx0 + st && y >= ty0 && y <= ty1) return true; // stem
+    if (y >= ty0 && y <= ty0 + st && x >= fx0 && x <= fx0 + wF) return true; // top bar
+    const my0 = ty0 + (H - st) / 2 - H * 0.02;
+    if (y >= my0 && y <= my0 + st && x >= fx0 && x <= fx0 + wF * 0.8) return true; // mid bar
+    return false;
+  }
+  function in1(x, y) {
+    if (x >= sx && x <= sx + st && y >= ty0 && y <= ty1) return true; // stem
+    if (y >= ty1 - st && y <= ty1 && x >= ox0 && x <= ox0 + w1) return true; // foot
+    if (distSeg(x, y, ox0, ty0 + H * 0.24, sx + st * 0.5, ty0) <= st * 0.55) return true; // flag
+    return false;
+  }
 
   function sample(x, y) {
     // vertical brand-red gradient #E8002D -> #B80024
@@ -75,12 +114,13 @@ function render(size, inset) {
       const dx = x - cx;
       const dy = y - cy;
       if (dx * dx + dy * dy <= rad * rad) {
+        if (inF(x, y) || in1(x, y)) return RED; // F1 wordmark on top
         const onGrid =
           Math.abs(x - f1) < t / 2 ||
           Math.abs(x - f2) < t / 2 ||
           Math.abs(y - f1) < t / 2 ||
           Math.abs(y - f2) < t / 2;
-        return onGrid ? [r, g, bl] : [255, 255, 255];
+        return onGrid ? GRID : [255, 255, 255];
       }
     }
     return [r, g, bl];
