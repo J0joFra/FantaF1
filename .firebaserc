@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "formula-rossa-69c87"
+  },
+  "targets": {
+    "formula-rossa-69c87": {
+      "hosting": {
+        "gridup": ["gridup"]
+      }
+    }
+  }
+}
