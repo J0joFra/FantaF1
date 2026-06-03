@@ -13,7 +13,7 @@ import {
 } from "@/lib/f1Utils";
 import { raceFlagUrl, gpIso, flagUrl } from "@/lib/flagUtils";
 import GpCountdown from "@/components/GpCountdown";
-import { Loader2, AlertCircle, ChevronDown, ChevronUp, Info, Trophy, Settings } from "lucide-react";
+import { Loader2, AlertCircle, ChevronDown, ChevronUp, Info, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
@@ -225,11 +225,13 @@ export default function Home() {
                 {config?.season ?? new Date().getFullYear()}
               </span>
             </div>
-            <Link to="/privacy"
+            <a href="/privacy.html"
+              aria-label="Privacy Policy"
+              title="Privacy Policy"
               className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center
                          text-muted-foreground border border-gray-200 shrink-0">
-              <Settings className="w-4 h-4" />
-            </Link>
+              <Info className="w-4 h-4" />
+            </a>
           </>
         }
       />

@@ -21,9 +21,6 @@ function App() {
               <Route path="/calculator" element={<Calculator />} />
               <Route path="/compare" element={<Compare />} />
               <Route path="/ferrari" element={<Ferrari />} />
-              <a href="/privacy.html" target="_blank" rel="noopener noreferrer">
-                Privacy Policy
-              </a>
             </Route>
             <Route path="*" element={<PageNotFound />} />
           </Routes>
