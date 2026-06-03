@@ -1,5 +1,5 @@
 import { Outlet, useLocation, Link } from "react-router-dom";
-import { BarChart2, Calculator, GitCompare, Shield } from "lucide-react";
+import { BarChart2, Calculator, GitCompare, Shield, Settings } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 const tabs = [
@@ -7,6 +7,7 @@ const tabs = [
   { path: "/calculator", key: "nav_scenarios", icon: Calculator },
   { path: "/compare",    key: "nav_compare",   icon: GitCompare },
   { path: "/ferrari",    key: "nav_teams",     icon: Shield     },
+  { path: "/privacy",    key: "nav_privacy",   icon: Settings   },
 ];
 
 export default function AppLayout() {

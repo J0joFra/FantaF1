@@ -9,6 +9,7 @@ import Home from './pages/Home';
 import Calculator from './pages/Calculator';
 import Compare from './pages/Compare';
 import Ferrari from './pages/Ferrari';
+import Privacy from '../public/privacy';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
               <Route path="/calculator" element={<Calculator />} />
               <Route path="/compare" element={<Compare />} />
               <Route path="/ferrari" element={<Ferrari />} />
+              <Route path="/privacy" element={<Privacy />} />
             </Route>
             <Route path="*" element={<PageNotFound />} />
           </Routes>
