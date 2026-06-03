@@ -5,7 +5,7 @@
   "targets": {
     "formula-rossa-69c87": {
       "hosting": {
-        "gridup": ["gridup"]
+        "gridup": ["gridup-f1"]
       }
     }
   }
