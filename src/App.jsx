@@ -9,7 +9,6 @@ import Home from './pages/Home';
 import Calculator from './pages/Calculator';
 import Compare from './pages/Compare';
 import Ferrari from './pages/Ferrari';
-import Privacy from './components/Privacy'
 
 function App() {
   return (
