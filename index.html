@@ -9,6 +9,34 @@
     <link rel="icon" type="image/png" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>GridUp</title>
+    <style>
+      /* Schermata di avvio mostrata fino al mount di React (poi rimossa) */
+      #app-loader {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; align-items: center; justify-content: center;
+        background: #ffffff;
+      }
+      #app-loader .al-card {
+        display: flex; flex-direction: column; align-items: center; gap: 22px;
+      }
+      #app-loader .al-icon {
+        width: 104px; height: 104px; border-radius: 24px;
+        box-shadow: 0 14px 34px rgba(232, 0, 45, 0.28);
+        animation: al-pulse 1.4s ease-in-out infinite;
+      }
+      #app-loader .al-spin {
+        width: 32px; height: 32px; border-radius: 50%;
+        border: 3px solid rgba(232, 0, 45, 0.18);
+        border-top-color: #E8002D;
+        animation: al-rot 0.8s linear infinite;
+      }
+      #app-loader .al-name {
+        font: 800 22px/1 "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        letter-spacing: 0.5px; color: #1a1a1e;
+      }
+      @keyframes al-rot { to { transform: rotate(360deg); } }
+      @keyframes al-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    </style>
     <script>
       // Applica il tema prima del render per evitare il flash
       (function () {
@@ -21,7 +49,15 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-loader">
+        <div class="al-card">
+          <img class="al-icon" src="/icons/icon-192.png" alt="GridUp" />
+          <div class="al-spin"></div>
+          <div class="al-name">GridUp</div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
