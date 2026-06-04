@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.gridup.app",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_YOUR_APP_SIGNING_SHA256_FINGERPRINT"
+        "D9:84:C0:6D:B2:A5:02:12:5A:C2:3A:AA:CD:82:2C:3B:74:36:B5:34:FE:64:93:B9:16:79:6D:E1:C3:B9:3E:5F",
+        "D1:32:CF:7D:C9:EC:2E:F1:35:E3:05:B5:7B:B1:B3:5E:3A:3B:11:0E:FB:5C:AA:86:F6:B6:78:E1:4E:25:EF:BA"
       ]
     }
   }
