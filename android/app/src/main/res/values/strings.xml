@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">GridUp</string>
-    <string name="title_activity_main">GridUp</string>
+    <string name="app_name">GridUP</string>
+    <string name="title_activity_main">GridUP</string>
     <string name="package_name">app.web.gridup_f1.twa</string>
     <string name="custom_url_scheme">app.web.gridup_f1.twa</string>
 </resources>
