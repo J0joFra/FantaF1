@@ -1,0 +1,9 @@
+{
+  "appId": "app.web.gridup_f1.twa",
+  "appName": "GridUp",
+  "webDir": "dist",
+  "server": {
+    "url": "https://gridup-f1.web.app",
+    "cleartext": false
+  }
+}
