@@ -227,6 +227,8 @@ export default function Compare() {
       fileName: `gridup-${d1.driver_code}-vs-${d2.driver_code}.png`,
       title: "GridUP",
       text: `🏎️ ${d1.driver_name} vs ${d2.driver_name} — ${mode === "season" ? t("season") : t("career")}: ${h2h.w1}–${h2h.w2} (${winner})`,
+      heading: t("nav_compare"),
+      sub: `${d1.driver_name} vs ${d2.driver_name}`,
     });
   };
 

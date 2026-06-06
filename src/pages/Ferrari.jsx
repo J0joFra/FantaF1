@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield, Trophy, TrendingUp, Loader2, Users, Flag, Crown,
-  Target, Timer, Star, ShieldAlert, Zap, Medal,
+  Target, Timer, Star, ShieldAlert, Zap, Medal, Share2,
 } from "lucide-react";
+import { shareElementAsImage } from "@/lib/shareImage";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -98,6 +99,7 @@ export default function Ferrari() {
   const [selectedId, setSelectedId] = useState(null);
   const [compareId, setCompareId] = useState(null);
   const [mode, setMode] = useState("season");
+  const cmpRef = useRef(null);
 
   const { data: teams = [], isLoading } = useQuery({
     queryKey: ["constructorStandings"], queryFn: getConstructorStandings, staleTime: 5 * 60 * 1000,
@@ -347,6 +349,21 @@ export default function Ferrari() {
           <div className="flex items-center gap-2 mb-3">
             <Users className="w-4 h-4 text-gray-500" />
             <h3 className="font-heading font-black text-sm uppercase tracking-wide">{tr("tm_compare")}</h3>
+            {compare && (
+              <button
+                onClick={() => shareElementAsImage(cmpRef.current, {
+                  fileName: `gridup-scuderie-${selected.team_name}-vs-${compare.team_name}.png`.replace(/\s+/g, "-"),
+                  title: "GridUP",
+                  text: `${selected.team_name} vs ${compare.team_name} — ${tr("tm_compare")}`,
+                  heading: tr("tm_compare"),
+                  sub: `${selected.team_name} vs ${compare.team_name}`,
+                })}
+                title={tr("share")}
+                className="ml-auto w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 active:scale-95 transition-transform shrink-0"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           {/* opponent selector */}
@@ -385,7 +402,7 @@ export default function Ferrari() {
                 ))}
               </div>
               <AnimatePresence mode="wait">
-                <motion.div key={mode + compareId}
+                <motion.div key={mode + compareId} ref={cmpRef}
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.2 }}>
                   {rows.map(r => (

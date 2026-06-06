@@ -349,6 +349,8 @@ function MosaicDiagram({
             fileName: `gridup-mosaico-${yourDriver.driver_code}-${rival.driver_code}.png`,
             title: "GridUP",
             text: `${yourDriver.driver_name} vs ${rival.driver_name} — ${t("sc_mosaic")}`,
+            heading: t("sc_mosaic"),
+            sub: `${yourDriver.driver_name} vs ${rival.driver_name}`,
           })}
           title={t("share")}
           className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 active:scale-95 transition-transform shrink-0"
