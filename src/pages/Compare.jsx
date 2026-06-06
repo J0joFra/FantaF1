@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { shareElementAsImage } from "@/lib/shareImage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getTeamColor } from "@/lib/f1Utils";
 import { getDriverStandings, getDriverSeasonStats } from "@/lib/supabaseData";
@@ -155,6 +156,7 @@ export default function Compare() {
   const [id1, setId1] = useState(null);
   const [id2, setId2] = useState(null);
   const [mode, setMode] = useState("season"); // 'season' | 'career'
+  const shareRef = useRef(null);
 
   const { data: drivers = [], isLoading } = useQuery({
     queryKey: ["driverStandings"], queryFn: getDriverStandings, staleTime: 5 * 60 * 1000,
@@ -218,12 +220,14 @@ export default function Compare() {
     while (j === i) j = Math.floor(Math.random() * drivers.length);
     setId1(drivers[i].id); setId2(drivers[j].id);
   };
-  const share = () => {
+  const share = async () => {
     if (!d1 || !d2) return;
     const winner = lead === 1 ? d1.driver_name : lead === 2 ? d2.driver_name : "Pareggio";
-    const text = `🏎️ ${d1.driver_name} vs ${d2.driver_name} — ${mode === "season" ? t("season") : t("career")}: ${h2h.w1}–${h2h.w2} (${winner})`;
-    if (navigator.share) navigator.share({ title: "Confronto F1", text });
-    else { navigator.clipboard.writeText(text); alert("📋 Copiato negli appunti!"); }
+    await shareElementAsImage(shareRef.current, {
+      fileName: `gridup-${d1.driver_code}-vs-${d2.driver_code}.png`,
+      title: "GridUP",
+      text: `🏎️ ${d1.driver_name} vs ${d2.driver_name} — ${mode === "season" ? t("season") : t("career")}: ${h2h.w1}–${h2h.w2} (${winner})`,
+    });
   };
 
   if (isLoading) return (
@@ -263,7 +267,7 @@ export default function Compare() {
         </div>
 
         {d1 && d2 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <motion.div ref={shareRef} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {/* ── VS HERO ── */}
             <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
               <DriverPanel d={d1} color={c1} lead={lead === 1} />

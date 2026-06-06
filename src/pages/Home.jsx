@@ -213,8 +213,8 @@ export default function Home() {
       <PageHeader
         icon={Trophy}
         title={
-          <div className="font-heading font-black text-lg leading-none truncate">
-            <span className="text-primary">F1</span> CHAMP <span className="text-primary">POINTS</span>
+          <div className="font-heading font-black text-lg leading-none truncate text-white">
+            F1 CHAMP <span className="text-white/75">POINTS</span>
           </div>
         }
         right={

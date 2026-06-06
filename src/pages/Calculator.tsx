@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { shareElementAsImage } from "@/lib/shareImage";
 import {
   Calculator, Info, X, Share2, Bookmark, ChevronDown, ChevronUp,
   Trophy, AlertTriangle, Sparkles, Target, TrendingUp, Award, Eye, HelpCircle,
@@ -310,6 +311,7 @@ function MosaicDiagram({
   onCellClick: (yourPos: number, rivalPos: number) => void;
 }) {
   const { t } = useI18n();
+  const mosaicRef = useRef<HTMLDivElement>(null);
   const matrix: (MosaicCell | null)[][] = Array(10).fill(null).map(() => Array(10).fill(null));
 
   cells.forEach(cell => {
@@ -327,7 +329,7 @@ function MosaicDiagram({
   };
 
   return (
-    <div className="bg-white rounded-2xl p-3 shadow-lg border border-gray-200 overflow-hidden">
+    <div ref={mosaicRef} className="bg-white rounded-2xl p-3 shadow-lg border border-gray-200 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-2 rounded-xl shadow-md shrink-0">
@@ -341,6 +343,18 @@ function MosaicDiagram({
           <div className="text-sm font-bold text-gray-900">{racesLeft}</div>
           <div className="text-[10px] text-gray-500 -mt-0.5">{t("mos_raceMany")}</div>
         </div>
+        <button
+          data-html2canvas-ignore
+          onClick={() => shareElementAsImage(mosaicRef.current, {
+            fileName: `gridup-mosaico-${yourDriver.driver_code}-${rival.driver_code}.png`,
+            title: "GridUP",
+            text: `${yourDriver.driver_name} vs ${rival.driver_name} — ${t("sc_mosaic")}`,
+          })}
+          title={t("share")}
+          className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 active:scale-95 transition-transform shrink-0"
+        >
+          <Share2 className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Come si legge */}
