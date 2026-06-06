@@ -116,16 +116,21 @@ export async function shareElementAsImage(
 
   // ── Native (Capacitor) ──
   if (Capacitor?.isNativePlatform?.()) {
-    const base64 = card.toDataURL("image/png").split(",")[1];
-    const [{ Filesystem, Directory }, { Share }] = await Promise.all([
-      import("@capacitor/filesystem"),
-      import("@capacitor/share"),
-    ]);
-    const path = `gridup-${Date.now()}.png`;
-    await Filesystem.writeFile({ path, data: base64, directory: Directory.Cache });
-    const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
-    await Share.share({ title, text, files: [uri] });
-    return "shared-native";
+    try {
+      const base64 = card.toDataURL("image/png").split(",")[1];
+      const [{ Filesystem, Directory }, { Share }] = await Promise.all([
+        import("@capacitor/filesystem"),
+        import("@capacitor/share"),
+      ]);
+      const path = `gridup-${Date.now()}.png`;
+      await Filesystem.writeFile({ path, data: base64, directory: Directory.Cache });
+      const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
+      await Share.share({ title, text, files: [uri] });
+      return "shared-native";
+    } catch (e) {
+      // Plugin missing (older build) or share failed — fall through to web fallback
+      console.warn("[shareImage] native share failed, falling back:", e);
+    }
   }
 
   // ── Web ──
