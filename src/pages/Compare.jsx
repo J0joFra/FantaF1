@@ -269,7 +269,8 @@ export default function Compare() {
         </div>
 
         {d1 && d2 && (
-          <motion.div ref={shareRef} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <div ref={shareRef} className="space-y-4">
             {/* ── VS HERO ── */}
             <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
               <DriverPanel d={d1} color={c1} lead={lead === 1} />
@@ -297,6 +298,7 @@ export default function Compare() {
                 <div style={{ width: `${(h2h.w1 / Math.max(h2h.w1 + h2h.w2, 1)) * 100}%`, backgroundColor: c1 }} />
                 <div style={{ width: `${(h2h.w2 / Math.max(h2h.w1 + h2h.w2, 1)) * 100}%`, backgroundColor: c2 }} />
               </div>
+            </div>
             </div>
 
             {/* ── MODE toggle ── */}

@@ -345,7 +345,7 @@ export default function Ferrari() {
         </div>
 
         {/* ── HEAD-TO-HEAD COMPARE ── */}
-        <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
+        <div ref={cmpRef} className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
           <div className="flex items-center gap-2 mb-3">
             <Users className="w-4 h-4 text-gray-500" />
             <h3 className="font-heading font-black text-sm uppercase tracking-wide">{tr("tm_compare")}</h3>
@@ -359,6 +359,7 @@ export default function Ferrari() {
                   sub: `${selected.team_name} vs ${compare.team_name}`,
                 })}
                 title={tr("share")}
+                data-html2canvas-ignore
                 className="ml-auto w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 active:scale-95 transition-transform shrink-0"
               >
                 <Share2 className="w-4 h-4" />
@@ -402,7 +403,7 @@ export default function Ferrari() {
                 ))}
               </div>
               <AnimatePresence mode="wait">
-                <motion.div key={mode + compareId} ref={cmpRef}
+                <motion.div key={mode + compareId}
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.2 }}>
                   {rows.map(r => (

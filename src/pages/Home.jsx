@@ -219,7 +219,7 @@ export default function Home() {
         }
         right={
           <>
-            <div className="flex items-center gap-1.5 bg-gray-100 rounded-full px-2.5 py-1 border border-gray-200">
+            <div className="flex items-center gap-1.5 bg-white/90 rounded-full px-2.5 py-1 border border-white/40 text-gray-800">
               <span className="text-xs">🗓</span>
               <span className="font-heading font-bold text-sm">
                 {config?.season ?? new Date().getFullYear()}
