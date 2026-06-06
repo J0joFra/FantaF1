@@ -1,5 +1,6 @@
 import html2canvas from "html2canvas";
 import { Capacitor } from "@capacitor/core";
+import { toast } from "sonner";
 
 // ── rounded rect path ─────────────────────────────────────────────────────────
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -106,17 +107,18 @@ export async function shareElementAsImage(
 ) {
   if (!el) return "no-element";
 
-  const snap = await html2canvas(el, {
-    backgroundColor: "#ffffff",
-    scale: Math.min(3, Math.max(2, window.devicePixelRatio || 2)),
-    useCORS: true,
-    logging: false,
-  });
-  const card = buildBrandedCanvas(snap, { heading, sub });
+  const tId = toast.loading("Preparo l'immagine…");
+  try {
+    const snap = await html2canvas(el, {
+      backgroundColor: "#ffffff",
+      scale: Math.min(3, Math.max(2, window.devicePixelRatio || 2)),
+      useCORS: true,
+      logging: false,
+    });
+    const card = buildBrandedCanvas(snap, { heading, sub });
 
-  // ── Native (Capacitor) ──
-  if (Capacitor?.isNativePlatform?.()) {
-    try {
+    // ── Native (Capacitor) ──
+    if (Capacitor?.isNativePlatform?.()) {
       const base64 = card.toDataURL("image/png").split(",")[1];
       const [{ Filesystem, Directory }, { Share }] = await Promise.all([
         import("@capacitor/filesystem"),
@@ -127,33 +129,38 @@ export async function shareElementAsImage(
       const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
       await Share.share({ title, text, files: [uri] });
       return "shared-native";
-    } catch (e) {
-      // Plugin missing (older build) or share failed — fall through to web fallback
-      console.warn("[shareImage] native share failed, falling back:", e);
     }
-  }
 
-  // ── Web ──
-  const blob = await new Promise((res) => card.toBlob(res, "image/png", 0.95));
-  if (!blob) return "error";
-  const file = new File([blob], fileName, { type: "image/png" });
+    // ── Web ──
+    const blob = await new Promise((res) => card.toBlob(res, "image/png", 0.95));
+    if (!blob) throw new Error("toBlob failed");
+    const file = new File([blob], fileName, { type: "image/png" });
 
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title, text });
-      return "shared-web";
-    } catch (e) {
-      if (e && e.name === "AbortError") return "cancelled";
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title, text });
+        return "shared-web";
+      } catch (e) {
+        if (e && e.name === "AbortError") return "cancelled";
+      }
     }
-  }
 
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-  return "downloaded";
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast.success("Immagine salvata");
+    return "downloaded";
+  } catch (e) {
+    const msg = (e && (e.message || e.errorMessage)) || String(e);
+    toast.error("Condivisione non riuscita: " + msg);
+    console.error("[shareImage]", e);
+    return "error";
+  } finally {
+    toast.dismiss(tId);
+  }
 }
