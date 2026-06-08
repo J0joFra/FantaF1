@@ -273,59 +273,59 @@ export async function getConstructorPointsByYear(constructorId) {
 }
 
 // ─── SEASON CONFIG ────────────────────────────────────────────────────────────
-// View: race_calendar_with_results (14 cols)
+// Built from the authoritative `race` table (the race_calendar_with_results view
+// is incomplete: it omits some races, which gave wrong GP counts like 992/1000).
 export async function getSeasonConfig() {
-  const { data, error } = await supabase
-    .from('race_calendar_with_results')
-    .select('*')
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+
+  // Current season = year of the next upcoming race, else the most recent year.
+  let season = null;
+  const { data: nextUp } = await supabase
+    .from('race')
+    .select('year')
+    .gte('date', today)
+    .order('date', { ascending: true })
+    .limit(1);
+  season = nextUp?.[0]?.year ?? null;
+  if (!season) {
+    const { data: latest } = await supabase
+      .from('race').select('year').order('year', { ascending: false }).limit(1);
+    season = latest?.[0]?.year ?? now.getFullYear();
+  }
+
+  const { data: races, error } = await supabase
+    .from('race')
+    .select('id, round, date, sprint_race_date, official_name, grand_prix_id')
+    .eq('year', season)
     .order('round', { ascending: true });
 
   throwIfError(error, 'Season config');
 
-  const all = data || [];
-  const now = new Date();
+  const list = races || [];
+  const completed = list.filter(r => r.date && new Date(r.date) < now);
+  const upcoming  = list.find(r => r.date && new Date(r.date) >= now);
+  const sprintRaces      = list.filter(r => r.sprint_race_date);
+  const completedSprints = completed.filter(r => r.sprint_race_date);
 
-  // The race_calendar_with_results view returns ALL seasons, so we scope it to
-  // the current one: the year of the next upcoming race, else the latest year.
-  const yearOf = (r) => {
-    if (r.year) return r.year;
-    if (r.season) return r.season;
-    const d = r.race_date || r.date;
-    return d ? new Date(d).getFullYear() : null;
-  };
-  const upcomingAll = all.find(r => {
-    const d = r.race_date || r.date;
-    return d && new Date(d) >= now;
-  });
-  const years = all.map(yearOf).filter(Boolean);
-  const currentSeason = (upcomingAll && yearOf(upcomingAll))
-    || (years.length ? Math.max(...years) : now.getFullYear());
-
-  const races = all.filter(r => yearOf(r) === currentSeason);
-
-  const completed = races.filter(r => {
-    const d = r.race_date || r.date;
-    return d && new Date(d) < now;
-  });
-
-  const upcoming = races.find(r => {
-    const d = r.race_date || r.date;
-    return d && new Date(d) >= now;
-  });
-
-  const sprintRaces      = races.filter(r => r.sprint_race_date || r.has_sprint_race);
-  const completedSprints = completed.filter(r => r.sprint_race_date || r.has_sprint_race);
+  // Next-race name from the grand_prix table (same source as getUpcomingRaces).
+  let nextName = upcoming?.official_name || null;
+  if (upcoming?.grand_prix_id) {
+    const { data: gp } = await supabase
+      .from('grand_prix').select('name').eq('id', upcoming.grand_prix_id).maybeSingle();
+    if (gp?.name) nextName = gp.name;
+  }
 
   return {
-    season:               currentSeason,
-    total_races:          races.length,
+    season,
+    total_races:          list.length,
     races_completed:      completed.length,
     total_sprints:        sprintRaces.length,
     sprints_completed:    completedSprints.length,
-    next_race_name:       upcoming?.grand_prix_name || upcoming?.official_name || upcoming?.race_name || upcoming?.name || null,
-    next_race_circuit:    upcoming?.circuit_name    || upcoming?.circuit       || '',
-    next_race_date:       upcoming?.race_date       || upcoming?.date          || null,
-    next_race_has_sprint: !!(upcoming?.sprint_race_date || upcoming?.has_sprint_race),
+    next_race_name:       nextName,
+    next_race_circuit:    '',
+    next_race_date:       upcoming?.date || null,
+    next_race_has_sprint: !!(upcoming?.sprint_race_date),
   };
 }
 
