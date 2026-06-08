@@ -282,8 +282,26 @@ export async function getSeasonConfig() {
 
   throwIfError(error, 'Season config');
 
-  const races = data || [];
-  const now   = new Date();
+  const all = data || [];
+  const now = new Date();
+
+  // The race_calendar_with_results view returns ALL seasons, so we scope it to
+  // the current one: the year of the next upcoming race, else the latest year.
+  const yearOf = (r) => {
+    if (r.year) return r.year;
+    if (r.season) return r.season;
+    const d = r.race_date || r.date;
+    return d ? new Date(d).getFullYear() : null;
+  };
+  const upcomingAll = all.find(r => {
+    const d = r.race_date || r.date;
+    return d && new Date(d) >= now;
+  });
+  const years = all.map(yearOf).filter(Boolean);
+  const currentSeason = (upcomingAll && yearOf(upcomingAll))
+    || (years.length ? Math.max(...years) : now.getFullYear());
+
+  const races = all.filter(r => yearOf(r) === currentSeason);
 
   const completed = races.filter(r => {
     const d = r.race_date || r.date;
@@ -299,7 +317,7 @@ export async function getSeasonConfig() {
   const completedSprints = completed.filter(r => r.sprint_race_date || r.has_sprint_race);
 
   return {
-    season:               upcoming?.year || upcoming?.season || new Date().getFullYear(),
+    season:               currentSeason,
     total_races:          races.length,
     races_completed:      completed.length,
     total_sprints:        sprintRaces.length,
