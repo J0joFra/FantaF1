@@ -700,6 +700,7 @@ export default function ScenariosPage() {
   const [selectedRival, setSelectedRival] = useState<Driver | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ yourPos: number; rivalPos: number } | null>(null);
   const [rivalsOpen, setRivalsOpen] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -766,6 +767,13 @@ export default function ScenariosPage() {
     if (!selectedDriver || !selectedRival || racesLeft === 0) return null;
     return generateMosaic(selectedDriver, selectedRival, racesLeft, Math.min(sprintsLeft, racesLeft));
   }, [selectedDriver, selectedRival, racesLeft, sprintsLeft]);
+
+  // Scenario contro il rivale principale (per la vista semplice, senza scegliere a mano)
+  const mainRivalMosaic = useMemo(() => {
+    const mr = analysis?.mainRival?.driver;
+    if (!selectedDriver || !mr || racesLeft === 0) return null;
+    return generateMosaic(selectedDriver, mr, racesLeft, Math.min(sprintsLeft, racesLeft));
+  }, [selectedDriver, analysis, racesLeft, sprintsLeft]);
 
   const maxPossiblePoints = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
   const leader = drivers.length > 0 ? drivers.reduce((a, b) => a.points > b.points ? a : b) : null;
@@ -864,7 +872,8 @@ export default function ScenariosPage() {
           )}
         </div>
 
-        {/* Races counter */}
+        {/* Races counter — solo vista avanzata */}
+        {advanced && selectedDriver && (
         <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
           <div className="flex justify-between items-center">
             <div>
@@ -893,6 +902,7 @@ export default function ScenariosPage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Analysis results */}
         {selectedDriver && analysis && (
@@ -902,6 +912,86 @@ export default function ScenariosPage() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-5"
           >
+            {/* ─── VISTA SEMPLICE ─── */}
+            {!advanced && (
+              <>
+                {analysis.isAlreadyChampion ? (
+                  <div className="bg-white rounded-2xl p-6 shadow-md border border-emerald-200 text-center">
+                    <Trophy className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
+                    <p className="font-heading font-black text-xl text-emerald-600">{t("sc_champion")}</p>
+                    <p className="text-sm text-gray-500 mt-1">{selectedDriver.driver_name}</p>
+                  </div>
+                ) : analysis.isMathematicallyOut ? (
+                  <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-200 text-center">
+                    <AlertTriangle className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                    <p className="font-heading font-black text-xl text-gray-500">{t("sc_out")}</p>
+                    <p className="text-sm text-gray-500 mt-1">{selectedDriver.driver_name}</p>
+                  </div>
+                ) : (
+                  <div className="dark-card rounded-2xl px-5 py-6 text-center">
+                    <p className="text-white/70 text-sm font-body">
+                      <span className="font-heading font-black text-white">{selectedDriver.driver_name}</span>
+                      {selectedDriver.position === 1 ? ` ${t("sc_isLeading")}` : ""}
+                    </p>
+                    <div className="flex items-baseline justify-center gap-1 mt-2">
+                      <span className="font-heading font-black text-primary" style={{ fontSize: "4rem", lineHeight: 1 }}>
+                        {analysis.magicNumber}
+                      </span>
+                      <span className="font-heading font-black text-2xl text-primary/70">PTI</span>
+                    </div>
+                    <p className="text-white/60 text-sm mt-1">{t("sc_neededShort")}</p>
+                  </div>
+                )}
+
+                {/* Come superare il rivale principale (in chiaro) */}
+                {!analysis.isAlreadyChampion && !analysis.isMathematicallyOut && analysis.mainRival && mainRivalMosaic && (
+                  <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                      {t("sc_howToBeat", { rival: analysis.mainRival.driver.driver_name })}
+                    </p>
+                    {mainRivalMosaic.bestCombination ? (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="font-heading font-black text-white text-xs bg-primary rounded-lg px-2 py-1">{selectedDriver.driver_code}</span>
+                            <span className="text-xl font-black text-gray-900">P{mainRivalMosaic.bestCombination.yourPos}</span>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-gray-300" />
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="font-heading font-black text-gray-700 text-xs bg-gray-200 rounded-lg px-2 py-1">{analysis.mainRival.driver.driver_code}</span>
+                            <span className="text-xl font-black text-gray-900">P{mainRivalMosaic.bestCombination.rivalPos}</span>
+                          </div>
+                          <div className="ml-auto text-right">
+                            <span className="font-heading font-black text-3xl text-emerald-600">{mainRivalMosaic.bestCombination.racesNeeded}</span>
+                            <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+                              {mainRivalMosaic.bestCombination.racesNeeded === 1 ? t("mos_raceOne") : t("mos_raceMany")}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-3 leading-snug">
+                          {t("sc_scenario", {
+                            a: mainRivalMosaic.bestCombination.yourPos,
+                            rival: analysis.mainRival.driver.driver_code,
+                            b: mainRivalMosaic.bestCombination.rivalPos,
+                            n: mainRivalMosaic.bestCombination.racesNeeded,
+                          })}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-gray-500">{t("sc_hardToBeat")}</p>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-center text-xs text-muted-foreground font-body">
+                  {racesLeft} GP{sprintsLeft > 0 ? ` · ${Math.min(sprintsLeft, racesLeft)} sprint` : ""}
+                </p>
+              </>
+            )}
+
+            {/* ─── VISTA AVANZATA ─── */}
+            {advanced && (
+            <>
             <MagicNumberCard analysis={analysis} driverColor="red" />
 
             {/* Rivals section (semi-aperta: mostra il rivale più distante, gli altri a tendina) */}
@@ -1012,6 +1102,17 @@ export default function ScenariosPage() {
                 onCellClick={(yourPos, rivalPos) => setSelectedCell({ yourPos, rivalPos })}
               />
             )}
+            </>
+            )}
+
+            {/* Toggle vista semplice / avanzata */}
+            <button
+              onClick={() => setAdvanced(a => !a)}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors active:scale-[0.98] border border-rose-200"
+            >
+              {advanced ? t("sc_simpleView") : t("sc_advanced")}
+              <ChevronDown className={`w-4 h-4 transition-transform ${advanced ? "rotate-180" : ""}`} />
+            </button>
 
             {/* Actions */}
             <div className="grid grid-cols-2 gap-3">
