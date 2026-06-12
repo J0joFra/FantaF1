@@ -778,6 +778,15 @@ export default function ScenariosPage() {
   const maxPossiblePoints = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
   const leader = drivers.length > 0 ? drivers.reduce((a, b) => a.points > b.points ? a : b) : null;
 
+  // Punti per essere sicuri del titolo: per chi insegue usa l'analisi; per il
+  // leader (magicNumber=0) calcola la soglia matematica come nella Panoramica.
+  const titleNeeded = (analysis && analysis.magicNumber > 0)
+    ? analysis.magicNumber
+    : (selectedDriver
+        ? Math.max(0, drivers.filter(d => d.id !== selectedDriver.id).reduce((m, d) => Math.max(m, d.points), 0)
+            + maxPossiblePoints - selectedDriver.points + 1)
+        : 0);
+
   const handleShare = () => {
     if (!analysis) return;
     
@@ -935,7 +944,7 @@ export default function ScenariosPage() {
                     </p>
                     <div className="flex items-baseline justify-center gap-1 mt-2">
                       <span className="font-heading font-black text-primary" style={{ fontSize: "4rem", lineHeight: 1 }}>
-                        {analysis.magicNumber}
+                        {titleNeeded}
                       </span>
                       <span className="font-heading font-black text-2xl text-primary/70">PTI</span>
                     </div>
