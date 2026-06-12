@@ -775,6 +775,16 @@ export default function ScenariosPage() {
     return generateMosaic(selectedDriver, mr, racesLeft, Math.min(sprintsLeft, racesLeft));
   }, [selectedDriver, analysis, racesLeft, sprintsLeft]);
 
+  // Cambiando pilota azzera il rivale; in vista avanzata pre-seleziona il rivale principale
+  useEffect(() => { setSelectedRival(null); }, [selectedDriverId]);
+  useEffect(() => {
+    if (advanced && !selectedRival && analysis) {
+      const active = analysis.allRivals.filter(r => !r.isMathematicallyEliminated);
+      const def = analysis.mainRival?.driver || active[0]?.driver || null;
+      if (def) setSelectedRival(def);
+    }
+  }, [advanced, selectedRival, analysis]);
+
   const maxPossiblePoints = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
   const leader = drivers.length > 0 ? drivers.reduce((a, b) => a.points > b.points ? a : b) : null;
 
@@ -881,37 +891,7 @@ export default function ScenariosPage() {
           )}
         </div>
 
-        {/* Races counter — solo vista avanzata */}
-        {advanced && selectedDriver && (
-        <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm font-bold text-gray-900">🏁 {t("sc_gpRemaining")}</p>
-              <p className="text-xs text-gray-500">
-                {t("sc_untilEnd")}
-                {sprintsLeft > 0 && (
-                  <> · <span className="text-amber-600 font-semibold">{Math.min(sprintsLeft, racesLeft)} {t("sc_withSprint")}</span></>
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setRacesLeft(Math.max(0, racesLeft - 1))}
-                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-              >
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              <span className="w-12 text-center font-mono font-bold text-2xl text-gray-900">{racesLeft}</span>
-              <button
-                onClick={() => setRacesLeft(racesLeft + 1)}
-                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-              >
-                <ChevronUp className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-        )}
+        {/* (contatore GP rimosso: il numero di gare è automatico dalla stagione) */}
 
         {/* Analysis results */}
         {selectedDriver && analysis && (
@@ -1001,104 +981,38 @@ export default function ScenariosPage() {
             {/* ─── VISTA AVANZATA ─── */}
             {advanced && (
             <>
-            <MagicNumberCard analysis={analysis} driverColor="red" />
-
-            {/* Rivals section (semi-aperta: mostra il rivale più distante, gli altri a tendina) */}
+            {/* Selettore rivale compatto: il mosaico mostra tutte le combinazioni vs questo pilota */}
             {(() => {
               const activeRivals = analysis.allRivals.filter(r => !r.isMathematicallyEliminated);
-              const farthestRival = activeRivals[0] ?? null;
-              const otherRivals = activeRivals.slice(1);
-
+              if (activeRivals.length === 0) {
+                return (
+                  <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 text-center">
+                    <Award className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
+                    <p className="text-gray-600 font-medium">{t("rivals_lead")}</p>
+                    <p className="text-xs text-gray-400 mt-1">{t("rivals_noneAhead")}</p>
+                  </div>
+                );
+              }
+              const current = selectedRival || activeRivals[0].driver;
               return (
-                <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-                  <div className="p-4 pb-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-rose-500" />
-                        {t("sc_driversToBeat")}
-                      </h3>
-                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                        {activeRivals.length} {t("sc_toBeat")}
-                      </span>
-                    </div>
-                    {activeRivals.length > 0 && (
-                      <p className="text-xs text-rose-600 font-medium mt-1.5">
-                        {t("sc_tapDriver")}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="px-4 pb-4 space-y-2">
-                    {activeRivals.length === 0 ? (
-                      <div className="text-center py-6">
-                        <Award className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                        <p className="text-gray-600 font-medium">{t("rivals_lead")}</p>
-                        <p className="text-xs text-gray-400 mt-1">{t("rivals_noneAhead")}</p>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Rivale più distante: sempre visibile */}
-                        {farthestRival && (
-                          <RivalCard
-                            key={farthestRival.driver.id}
-                            rival={farthestRival}
-                            driverName={selectedDriver.driver_name}
-                            isMain={analysis.mainRival?.driver.id === farthestRival.driver.id}
-                            onCardClick={() => setSelectedRival(farthestRival.driver)}
-                          />
-                        )}
-
-                        {/* Gli altri rivali: a tendina */}
-                        <AnimatePresence initial={false}>
-                          {rivalsOpen && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.25 }}
-                              className="overflow-hidden space-y-2"
-                            >
-                              {otherRivals.map(rival => (
-                                <RivalCard
-                                  key={rival.driver.id}
-                                  rival={rival}
-                                  driverName={selectedDriver.driver_name}
-                                  isMain={analysis.mainRival?.driver.id === rival.driver.id}
-                                  onCardClick={() => setSelectedRival(rival.driver)}
-                                />
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-
-                        {/* Toggle per gli altri rivali */}
-                        {otherRivals.length > 0 && (
-                          <button
-                            onClick={() => setRivalsOpen(o => !o)}
-                            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors active:scale-[0.98]"
-                          >
-                            {rivalsOpen ? "Mostra meno" : `Vedi altri ${otherRivals.length} piloti`}
-                            <ChevronDown
-                              className={`w-4 h-4 transition-transform ${rivalsOpen ? "rotate-180" : ""}`}
-                            />
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
+                <div className="bg-white rounded-xl p-3 shadow-md border border-gray-100">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                    {t("sc_chooseDriver")}
+                  </label>
+                  <select
+                    value={current.id}
+                    onChange={(e) => setSelectedRival(activeRivals.find(r => r.driver.id === e.target.value)?.driver || null)}
+                    className="w-full h-10 bg-gray-50 border-0 rounded-lg px-3 text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+                  >
+                    {activeRivals.map(r => (
+                      <option key={r.driver.id} value={r.driver.id}>
+                        {r.driver.driver_name} — {r.driver.points} pt
+                      </option>
+                    ))}
+                  </select>
                 </div>
               );
             })()}
-
-            {/* Mosaic Diagram */}
-            {/* Prompt: nessun rivale selezionato ma ce ne sono da battere */}
-            {!selectedRival && analysis.allRivals.some(r => !r.isMathematicallyEliminated) && (
-              <div className="bg-white rounded-2xl p-6 shadow-md border border-dashed border-rose-200 text-center">
-                <Grid3x3 className="w-10 h-10 text-rose-300 mx-auto mb-2" />
-                <p className="font-bold text-gray-700">{t("sc_chooseDriver")}</p>
-                <p className="text-xs text-gray-400 mt-1">{t("sc_chooseHint")}</p>
-              </div>
-            )}
 
             {selectedRival && mosaicData && (
               <MosaicDiagram
