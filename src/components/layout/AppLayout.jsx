@@ -14,8 +14,8 @@ export default function AppLayout() {
   const { t } = useI18n();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-[430px] mx-auto">
-      <main className="flex-1 overflow-y-auto pb-nav">
+    <div className="min-h-screen bg-background flex flex-col max-w-[430px] mx-auto overflow-x-hidden">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden pb-nav">
         <Outlet />
       </main>
 
