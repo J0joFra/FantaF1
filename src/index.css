@@ -48,30 +48,30 @@
     --radius: 1.25rem;
   }
 
-  /* ─── DARK THEME — slate morbido, con stacchi di tono ──────────────────── */
+  /* ─── DARK THEME — superfici stratificate e più vive (meno monotono) ───── */
   .dark {
-    --background:           220 18% 14%;
-    --foreground:           0 0% 95%;
+    --background:           224 22% 15%;
+    --foreground:           0 0% 96%;
 
-    --card:                 220 16% 19%;
-    --card-foreground:      0 0% 95%;
+    --card:                 224 18% 22%;
+    --card-foreground:      0 0% 96%;
 
-    --popover:              220 16% 19%;
-    --popover-foreground:   0 0% 95%;
+    --popover:              224 18% 22%;
+    --popover-foreground:   0 0% 96%;
 
-    --secondary:            220 14% 26%;
-    --secondary-foreground: 0 0% 92%;
+    --secondary:            224 15% 30%;
+    --secondary-foreground: 0 0% 94%;
 
-    --muted:                220 14% 26%;
-    --muted-foreground:     220 13% 70%;
+    --muted:                224 14% 28%;
+    --muted-foreground:     223 14% 72%;
 
-    --accent:               3 90% 52%;
+    --accent:               3 96% 56%;
     --accent-foreground:    0 0% 100%;
 
-    --border:               220 14% 28%;
-    --input:                220 14% 28%;
+    --border:               224 14% 31%;
+    --input:                224 14% 31%;
 
-    --dark-card:            220 18% 22%;
+    --dark-card:            224 20% 24%;
     --dark-card-fg:         0 0% 98%;
   }
 }
@@ -141,12 +141,13 @@
 /* Regole non-layered: hanno priorità sulle utility Tailwind senza !important.   */
 
 /* superfici — stacchi di tono: bg < card < chip < elevato */
-.dark .bg-white        { background-color: hsl(220 16% 19%); }
-.dark .bg-white\/80    { background-color: hsl(220 18% 15% / 0.85); }
-.dark .bg-gray-50      { background-color: hsl(220 15% 22%); }
-.dark .bg-gray-100     { background-color: hsl(220 14% 26%); }
+.dark .bg-white        { background-color: hsl(224 18% 22%); }
+.dark .bg-white\/80    { background-color: hsl(224 20% 18% / 0.85); }
+.dark .bg-white\/90    { background-color: hsl(224 18% 24% / 0.92); }
+.dark .bg-gray-50      { background-color: hsl(224 16% 26%); }
+.dark .bg-gray-100     { background-color: hsl(224 14% 30%); }
 .dark .bg-gray-200,
-.dark .bg-gray-200\/70 { background-color: hsl(220 13% 31%); }
+.dark .bg-gray-200\/70 { background-color: hsl(224 13% 35%); }
 
 /* tinte chiare (card statistiche / modali) — più morbide */
 .dark .bg-emerald-50 { background-color: hsl(160 28% 18%); }
@@ -176,13 +177,19 @@
 
 /* gradiente di sfondo pagina (morbido, leggermente stratificato) */
 .dark .from-gray-100 {
-  --tw-gradient-from: hsl(220 18% 15%) var(--tw-gradient-from-position);
-  --tw-gradient-to: hsl(220 18% 15% / 0) var(--tw-gradient-to-position);
+  --tw-gradient-from: hsl(226 24% 19%) var(--tw-gradient-from-position);
+  --tw-gradient-to: hsl(226 24% 19% / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 .dark .to-gray-200 {
-  --tw-gradient-to: hsl(220 16% 19%) var(--tw-gradient-to-position);
+  --tw-gradient-to: hsl(223 20% 13%) var(--tw-gradient-to-position);
 }
 
 /* card morbida: ombra delicata su fondo scuro */
 .dark .app-card { box-shadow: 0 1px 2px rgba(0,0,0,0.35), 0 6px 18px rgba(0,0,0,0.3); }
+
+/* card "hero" (punti necessari): tocco di rosso per dare colore al dark */
+.dark .dark-card {
+  background: linear-gradient(135deg, hsl(350 48% 24%), hsl(224 22% 17%) 72%);
+  box-shadow: 0 6px 22px rgba(0,0,0,0.4), inset 0 0 0 1px hsl(350 40% 38% / 0.25);
+}

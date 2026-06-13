@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { I18nProvider } from '@/lib/i18n';
 import AppLayout from './components/layout/AppLayout';
+import Onboarding from './components/Onboarding';
 import Home from './pages/Home';
 import Calculator from './pages/Calculator';
 import Compare from './pages/Compare';
@@ -26,6 +27,7 @@ function App() {
           </Routes>
         </Router>
         <Toaster />
+        <Onboarding />
       </QueryClientProvider>
     </I18nProvider>
   );

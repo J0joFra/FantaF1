@@ -86,6 +86,10 @@ const DICT = {
     im_amber: "Ambra → Possibile in 51-70% delle gare", im_orange: "Arancione → Possibile in >70% delle gare",
     im_grey: "Grigio → Impossibile",
     im_clickHint: "💡 Tocca una cella colorata per vedere il dettaglio gara per gara!",
+    ob1_t: "Benvenuto in GridUP", ob1_d: "Tutto sul Mondiale di Formula 1: classifiche, scenari e confronti, sempre aggiornati.",
+    ob2_t: "Chi può ancora vincere?", ob2_d: "In «Scenari» scopri quanti punti servono per il titolo e cosa deve succedere, gara dopo gara.",
+    ob3_t: "Confronta piloti e scuderie", ob3_d: "Testa a testa su stagione e carriera, con statistiche e grafici. Puoi anche condividerli!",
+    ob_skip: "Salta", ob_next: "Avanti", ob_start: "Inizia",
   },
   en: {
     nav_overview: "Overview", nav_scenarios: "Scenarios", nav_compare: "Compare", nav_teams: "Teams",
@@ -151,6 +155,10 @@ const DICT = {
     im_amber: "Amber → Possible in 51-70% of races", im_orange: "Orange → Possible in >70% of races",
     im_grey: "Grey → Impossible",
     im_clickHint: "💡 Tap a coloured cell to see the race-by-race breakdown!",
+    ob1_t: "Welcome to GridUP", ob1_d: "Everything about the F1 World Championship: standings, scenarios and comparisons, always up to date.",
+    ob2_t: "Who can still win?", ob2_d: "In “Scenarios” find out how many points are needed for the title and what has to happen, race by race.",
+    ob3_t: "Compare drivers & teams", ob3_d: "Head-to-head on season and career, with stats and charts. You can even share them!",
+    ob_skip: "Skip", ob_next: "Next", ob_start: "Start",
   },
   fr: {
     nav_overview: "Aperçu", nav_scenarios: "Scénarios", nav_compare: "Comparer", nav_teams: "Écuries",
@@ -216,6 +224,10 @@ const DICT = {
     im_amber: "Ambre → Possible en 51-70% des courses", im_orange: "Orange → Possible en >70% des courses",
     im_grey: "Gris → Impossible",
     im_clickHint: "💡 Touchez une case colorée pour voir le détail course par course !",
+    ob1_t: "Bienvenue sur GridUP", ob1_d: "Tout sur le Championnat du Monde de F1 : classements, scénarios et comparaisons, toujours à jour.",
+    ob2_t: "Qui peut encore gagner ?", ob2_d: "Dans « Scénarios », découvrez combien de points il faut pour le titre et ce qui doit se passer, course après course.",
+    ob3_t: "Comparez pilotes et écuries", ob3_d: "Face à face sur la saison et la carrière, avec stats et graphiques. Vous pouvez aussi les partager !",
+    ob_skip: "Passer", ob_next: "Suivant", ob_start: "Commencer",
   },
   es: {
     nav_overview: "Resumen", nav_scenarios: "Escenarios", nav_compare: "Comparar", nav_teams: "Escuderías",
@@ -281,6 +293,10 @@ const DICT = {
     im_amber: "Ámbar → Posible en 51-70% de las carreras", im_orange: "Naranja → Posible en >70% de las carreras",
     im_grey: "Gris → Imposible",
     im_clickHint: "💡 ¡Toca una celda de color para ver el detalle carrera a carrera!",
+    ob1_t: "Bienvenido a GridUP", ob1_d: "Todo sobre el Campeonato del Mundo de F1: clasificaciones, escenarios y comparativas, siempre al día.",
+    ob2_t: "¿Quién puede ganar aún?", ob2_d: "En «Escenarios» descubre cuántos puntos hacen falta para el título y qué debe pasar, carrera a carrera.",
+    ob3_t: "Compara pilotos y escuderías", ob3_d: "Cara a cara en temporada y carrera, con estadísticas y gráficos. ¡También puedes compartirlos!",
+    ob_skip: "Saltar", ob_next: "Siguiente", ob_start: "Empezar",
   },
   de: {
     nav_overview: "Übersicht", nav_scenarios: "Szenarien", nav_compare: "Vergleich", nav_teams: "Teams",
@@ -346,6 +362,10 @@ const DICT = {
     im_amber: "Bernstein → Möglich in 51-70% der Rennen", im_orange: "Orange → Möglich in >70% der Rennen",
     im_grey: "Grau → Unmöglich",
     im_clickHint: "💡 Tippe eine farbige Zelle an, um die Details Rennen für Rennen zu sehen!",
+    ob1_t: "Willkommen bei GridUP", ob1_d: "Alles zur F1-Weltmeisterschaft: Wertungen, Szenarien und Vergleiche, immer aktuell.",
+    ob2_t: "Wer kann noch gewinnen?", ob2_d: "Unter „Szenarien“ siehst du, wie viele Punkte für den Titel nötig sind und was passieren muss – Rennen für Rennen.",
+    ob3_t: "Fahrer & Teams vergleichen", ob3_d: "Direktvergleich über Saison und Karriere, mit Statistiken und Diagrammen. Du kannst sie sogar teilen!",
+    ob_skip: "Überspringen", ob_next: "Weiter", ob_start: "Los geht's",
   },
 };
 
