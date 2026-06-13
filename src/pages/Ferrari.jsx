@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield, Trophy, TrendingUp, Loader2, Users, Flag, Crown,
-  Target, Timer, Star, ShieldAlert, Zap, Medal, Share2,
+  Target, Timer, Star, ShieldAlert, Zap, Medal, Share2, ChevronDown,
 } from "lucide-react";
 import { shareElementAsImage } from "@/lib/shareImage";
 import {
@@ -100,6 +100,7 @@ export default function Ferrari() {
   const [compareId, setCompareId] = useState(null);
   const [mode, setMode] = useState("season");
   const cmpRef = useRef(null);
+  const [showMore, setShowMore] = useState(false);
 
   const { data: teams = [], isLoading } = useQuery({
     queryKey: ["constructorStandings"], queryFn: getConstructorStandings, staleTime: 5 * 60 * 1000,
@@ -344,6 +345,17 @@ export default function Ferrari() {
           </div>
         </div>
 
+        {/* Toggle: confronto + storico nascosti di default per alleggerire la pagina */}
+        <button
+          onClick={() => setShowMore(s => !s)}
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors active:scale-[0.98] border border-rose-200"
+        >
+          {showMore ? tr("sc_simpleView") : tr("sc_advanced")}
+          <ChevronDown className={`w-4 h-4 transition-transform ${showMore ? "rotate-180" : ""}`} />
+        </button>
+
+        {showMore && (
+        <>
         {/* ── HEAD-TO-HEAD COMPARE ── */}
         <div ref={cmpRef} className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
           <div className="flex items-center gap-2 mb-3">
@@ -467,6 +479,8 @@ export default function Ferrari() {
             </p>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

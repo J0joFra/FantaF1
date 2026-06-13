@@ -99,7 +99,7 @@ function StatRow({ icon: Icon, label, val1, val2, color1, color2, lowerBetter = 
 function DriverPanel({ d, color, lead }) {
   const age = ageFrom(d.date_of_birth);
   return (
-    <div className="relative rounded-2xl overflow-hidden p-3 pt-4 text-white shadow-md"
+    <div className="relative rounded-2xl overflow-hidden p-3 pt-4 text-white shadow-md min-w-0"
          style={{ background: `linear-gradient(160deg, ${color}, ${color}cc 60%, ${color}99)` }}>
       {lead && (
         <div className="absolute top-2 right-2">
@@ -127,7 +127,7 @@ function DriverPanel({ d, color, lead }) {
 // ── selector card ─────────────────────────────────────────────────────────────
 function DriverSelect({ label, placeholder, value, onChange, options, color, d }) {
   return (
-    <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100 relative overflow-hidden">
+    <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100 relative overflow-hidden min-w-0">
       {d && <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: color }} />}
       <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mb-2">{label}</p>
       <Select value={value || ""} onValueChange={onChange}>

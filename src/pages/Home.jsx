@@ -213,26 +213,18 @@ export default function Home() {
       <PageHeader
         icon={Trophy}
         title={
-          <div className="font-heading font-black text-lg leading-none truncate text-white">
-            F1 CHAMP <span className="text-white/75">POINTS</span>
+          <div className="font-heading font-black text-xl leading-none truncate text-white tracking-wide">
+            GridUP
           </div>
         }
         right={
-          <>
-            <div className="flex items-center gap-1.5 bg-white/90 rounded-full px-2.5 py-1 border border-white/40 text-gray-800">
-              <span className="text-xs">🗓</span>
-              <span className="font-heading font-bold text-sm">
-                {config?.season ?? new Date().getFullYear()}
-              </span>
-            </div>
-            <a href="/privacy.html"
-              aria-label="Privacy Policy"
-              title="Privacy Policy"
-              className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center
-                         text-muted-foreground border border-gray-200 shrink-0">
-              <Info className="w-4 h-4" />
-            </a>
-          </>
+          <a href="/privacy.html"
+            aria-label="Privacy Policy"
+            title="Privacy Policy"
+            className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center
+                       text-white shrink-0">
+            <Info className="w-4 h-4" />
+          </a>
         }
       />
 
@@ -245,8 +237,13 @@ export default function Home() {
           </p>
           {config?.next_race_name && (
             <div className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-              <FlagImg iso={nextRaceIso} size="h80"
-                className="h-9 w-auto object-cover rounded-md shrink-0" />
+              {(() => {
+                const src = calRaces[0] ? raceFlagUrl(calRaces[0], "h80") : (nextRaceIso ? flagUrl(nextRaceIso, "h80") : null);
+                return src
+                  ? <img src={src} alt="" className="h-9 w-auto object-cover rounded-md shrink-0"
+                         onError={e => { e.target.style.display = "none"; }} />
+                  : <span className="text-xl shrink-0">🏁</span>;
+              })()}
               <GpCountdown targetDate={config.next_race_date} compact />
               {config.next_race_has_sprint && (
                 <span className="tag bg-amber-100 text-amber-700 shrink-0 ml-auto">Sprint</span>
@@ -289,8 +286,9 @@ export default function Home() {
         {config && (
           <div className="app-card px-4 py-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-heading font-black text-base uppercase tracking-wide">
+              <h2 className="font-heading font-black text-base uppercase tracking-wide flex items-center gap-1.5">
                 {t("home_scenario")}
+                <InfoTip>{t("home_scenarioHint")}</InfoTip>
               </h2>
               <Link to="/calculator"
                 className="flex items-center gap-1 border border-primary/30 rounded-full
