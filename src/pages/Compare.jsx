@@ -257,7 +257,7 @@ export default function Compare() {
 
       <div className="px-4 py-5 space-y-4">
         {/* ── SELECTORS + swap ── */}
-        <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-end">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 items-end">
           <DriverSelect label={t("cmp_pilot1")} placeholder={t("cmp_selectDriver")} value={id1} onChange={setId1} color={c1} d={d1}
             options={drivers.filter(x => x.id !== id2)} />
           <button onClick={swap} disabled={!id1 && !id2} title="Scambia"
@@ -272,7 +272,7 @@ export default function Compare() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             <div ref={shareRef} className="space-y-4">
             {/* ── VS HERO ── */}
-            <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 items-center">
               <DriverPanel d={d1} color={c1} lead={lead === 1} />
               <span className="font-heading font-black text-xs text-gray-400 bg-white border border-gray-200 rounded-full w-9 h-9 flex items-center justify-center shadow-sm">
                 VS
