@@ -1038,7 +1038,6 @@ export default function ScenariosPage() {
             </button>
 
             {/* Actions */}
-            /*
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={handleShare}
@@ -1052,7 +1051,7 @@ export default function ScenariosPage() {
               >
                 <Bookmark className="w-4 h-4" /> {t("save")}
               </button>
-            </div> /*
+            </div> 
 
             {/* Saved scenarios */}
             {savedScenarios.length > 0 && (
