@@ -337,16 +337,20 @@ export default function Compare() {
 
         {/* ── EMPTY STATE ── */}
         {(!d1 || !d2) && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-            <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100 flex flex-col items-center gap-3">
-              <Users className="w-10 h-10 text-gray-300" />
-              <p className="font-heading font-bold text-sm text-muted-foreground uppercase tracking-wide">
+          <div className="flex flex-col items-center justify-center py-20 gap-4 text-center px-6">
+            <GitCompare className="w-10 h-10 text-gray-200" />
+            <div>
+              <p className="font-heading font-black text-lg text-gray-900 leading-tight">
                 {t("cmp_selectTwo")}
               </p>
-              <button onClick={shuffle}
-                className="flex items-center gap-1.5 text-xs font-heading font-bold text-primary border border-primary/30 rounded-full px-3 py-1.5 active:scale-95 transition-transform">
-                <Shuffle className="w-3.5 h-3.5" /> {t("cmp_random")}
-              </button>
+              <p className="text-sm text-gray-400 mt-1 leading-snug">
+                {t("cmp_emptyHint")}
+              </p>
+            </div>
+            <button onClick={shuffle}
+              className="flex items-center gap-1.5 text-sm font-semibold text-primary border border-primary/30 rounded-full px-4 py-2 active:scale-95 transition-transform hover:bg-primary/5">
+              <Shuffle className="w-3.5 h-3.5" /> {t("cmp_random")}
+            </button>
             </div>
           </div>
         )}
