@@ -28,8 +28,11 @@ export default function AppLayout() {
             const active = pathname === path;
             return (
               <Link key={path} to={path}
-                className={`flex flex-col items-center justify-center gap-0.5 transition-colors
+                className={`relative flex flex-col items-center justify-center gap-0.5 transition-colors
                   ${active ? "text-primary" : "text-muted-foreground"}`}>
+                {active && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary" />
+                )}
                 <Icon style={{ width: 20, height: 20 }}
                       strokeWidth={active ? 2.2 : 1.8} />
                 <span className={`text-[10px] font-body font-semibold mt-0.5
