@@ -48,7 +48,7 @@
     --radius: 1.25rem;
   }
 
-   /* ─── DARK THEME — palette #0D1B2A / #1B263B / #415A77 / #778DA9 / #E0E1DD ── */
+  /* ─── DARK THEME — palette #0D1B2A / #1B263B / #415A77 / #778DA9 / #E0E1DD ── */
   .dark {
     --background:           211 53% 11%;   /* #0D1B2A */
     --foreground:           75 6% 87%;     /* #E0E1DD */
@@ -138,7 +138,7 @@
 }
 
 /* ─── DARK MODE — remap dei colori "literal" usati nelle pagine ──────────────── */
-/* Palette: #0D1B2A #1B263B #415A77 #778DA9 #E0E1DD     
+/* Palette: #0D1B2A #1B263B #415A77 #778DA9 #E0E1DD                              */
 
 /* superfici — stacchi di tono: bg(#0D1B2A) < card(#1B263B) < elevated(#415A77) */
 .dark .bg-white        { background-color: hsl(219 37% 17%); }   /* #1B263B */
