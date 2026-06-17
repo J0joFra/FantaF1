@@ -9,6 +9,7 @@ import {
 
 import { supabase } from "../lib/supabase";
 import { getDriverStandings, getDriverSeasonStats } from "../lib/supabaseData";
+import { getDriverColor } from "../lib/f1Utils";
 import PageHeader from "@/components/PageHeader";
 import { useI18n } from "@/lib/i18n";
 
@@ -700,6 +701,8 @@ export default function ScenariosPage() {
   const [selectedCell, setSelectedCell] = useState<{ yourPos: number; rivalPos: number } | null>(null);
   const [rivalsOpen, setRivalsOpen] = useState(false);
   const [advanced, setAdvanced] = useState(false);
+  const [driverPickerOpen, setDriverPickerOpen] = useState(false);
+  const driverPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -774,6 +777,17 @@ export default function ScenariosPage() {
     return generateMosaic(selectedDriver, mr, racesLeft, Math.min(sprintsLeft, racesLeft));
   }, [selectedDriver, analysis, racesLeft, sprintsLeft]);
 
+  // Chiudi il driver picker cliccando fuori
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (driverPickerRef.current && !driverPickerRef.current.contains(e.target as Node)) {
+        setDriverPickerOpen(false);
+      }
+    }
+    if (driverPickerOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [driverPickerOpen]);
+
   // Cambiando pilota azzera il rivale; in vista avanzata pre-seleziona il rivale principale
   useEffect(() => { setSelectedRival(null); }, [selectedDriverId]);
   useEffect(() => {
@@ -835,22 +849,87 @@ export default function ScenariosPage() {
           </div>
         )}
 
-        {/* Driver selector */}
-        <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
+        {/* Driver selector — custom dropdown con colori scuderia */}
+        <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100" ref={driverPickerRef}>
           <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
             {t("sc_selectDriver")}
           </label>
-          <select
-            value={selectedDriverId}
-            onChange={(e) => setSelectedDriverId(e.target.value)}
-            className="w-full h-12 bg-gray-50 border-0 rounded-xl px-4 text-gray-900 font-medium outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+
+          {/* Trigger */}
+          <button
+            onClick={() => setDriverPickerOpen(o => !o)}
+            className="w-full h-12 bg-gray-50 rounded-xl px-4 flex items-center gap-3 text-left focus:outline-none focus:ring-2 focus:ring-rose-500 transition-colors hover:bg-gray-100"
           >
-            {drivers.map(d => (
-              <option key={d.id} value={d.id}>
-                {d.position === 1 ? "👑 " : ""}{d.driver_name} — {d.points} pts
-              </option>
-            ))}
-          </select>
+            {selectedDriver && (
+              <span
+                className="w-3 h-3 rounded-full shrink-0"
+                style={{ backgroundColor: getDriverColor(selectedDriver.driver_code, selectedDriver.driver_name, selectedDriver.team) }}
+              />
+            )}
+            <span className="flex-1 font-medium text-gray-900 text-sm truncate">
+              {selectedDriver
+                ? `${selectedDriver.position === 1 ? "👑 " : ""}${selectedDriver.driver_name}`
+                : "—"}
+            </span>
+            {selectedDriver && (
+              <span className="text-xs text-gray-400 font-mono shrink-0">{selectedDriver.points} pt</span>
+            )}
+            <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${driverPickerOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {/* Lista dropdown */}
+          <AnimatePresence>
+            {driverPickerOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}
+                className="mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-30 relative"
+              >
+                <div className="max-h-72 overflow-y-auto">
+                  {drivers.map((d, idx) => {
+                    const color = getDriverColor(d.driver_code, d.driver_name, d.team);
+                    const isSelected = d.id === selectedDriverId;
+                    return (
+                      <button
+                        key={d.id}
+                        onClick={() => { setSelectedDriverId(d.id); setDriverPickerOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                          isSelected ? "bg-gray-50" : "hover:bg-gray-50"
+                        } ${idx > 0 ? "border-t border-gray-100" : ""}`}
+                      >
+                        {/* Barra colorata scuderia */}
+                        <span
+                          className="w-1 h-8 rounded-full shrink-0"
+                          style={{ backgroundColor: color }}
+                        />
+                        {/* Posizione */}
+                        <span className="text-xs font-mono text-gray-400 w-5 shrink-0 text-right">
+                          {d.position}
+                        </span>
+                        {/* Nome */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {d.position === 1 ? "👑 " : ""}{d.driver_name}
+                          </p>
+                          <p className="text-[11px] text-gray-400 truncate">{d.team}</p>
+                        </div>
+                        {/* Punti */}
+                        <span className="text-sm font-bold font-mono shrink-0" style={{ color }}>
+                          {d.points} <span className="text-xs font-normal text-gray-400">pt</span>
+                        </span>
+                        {isSelected && (
+                          <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {leader && (
             <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
