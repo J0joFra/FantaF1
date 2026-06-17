@@ -1037,22 +1037,6 @@ export default function ScenariosPage() {
               <ChevronDown className={`w-4 h-4 transition-transform ${advanced ? "rotate-180" : ""}`} />
             </button>
 
-            {/* Actions */}
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={handleShare}
-                className="flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors active:scale-95 shadow-sm"
-              >
-                <Share2 className="w-4 h-4" /> {t("share")}
-              </button>
-              <button
-                onClick={handleSave}
-                className="flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200 rounded-xl font-medium text-rose-600 hover:from-rose-100 hover:to-rose-200 transition-colors active:scale-95 shadow-sm"
-              >
-                <Bookmark className="w-4 h-4" /> {t("save")}
-              </button>
-            </div> 
-
             {/* Saved scenarios */}
             {savedScenarios.length > 0 && (
               <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
