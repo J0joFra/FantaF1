@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { shareElementAsImage } from "@/lib/shareImage";
 import {
-  Calculator, Info, X, Share2, Bookmark, ChevronDown, ChevronUp,
+  Calculator, Info, X, Share2, ChevronDown, ChevronUp,
   Trophy, AlertTriangle, Sparkles, Target, TrendingUp, Award, Eye, HelpCircle,
   ChevronRight, Grid3x3, Zap, Clock, TrendingDown
 } from "lucide-react";
@@ -696,7 +696,6 @@ export default function ScenariosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
-  const [savedScenarios, setSavedScenarios] = useState<any[]>([]);
   const [selectedRival, setSelectedRival] = useState<Driver | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ yourPos: number; rivalPos: number } | null>(null);
   const [rivalsOpen, setRivalsOpen] = useState(false);
@@ -796,38 +795,7 @@ export default function ScenariosPage() {
         ? Math.max(0, drivers.filter(d => d.id !== selectedDriver.id).reduce((m, d) => Math.max(m, d.points), 0)
             + maxPossiblePoints - selectedDriver.points + 1)
         : 0);
-
-  const handleShare = () => {
-    if (!analysis) return;
-    
-    const text = analysis.isAlreadyChampion
-      ? `🏆 ${analysis.driver.driver_name} è già Campione del Mondo F1 2026!`
-      : analysis.isMathematicallyOut
-      ? `❌ ${analysis.driver.driver_name} è matematicamente fuori dalla corsa al titolo F1 2026`
-      : `🎯 ${analysis.driver.driver_name} deve fare ${analysis.magicNumber} punti per vincere il titolo F1 2026`;
-    
-    if (navigator.share) {
-      navigator.share({ title: "Analisi Campionato F1 2026", text });
-    } else {
-      navigator.clipboard.writeText(text);
-      alert("📋 Copiato negli appunti!");
-    }
-  };
-
-  const handleSave = () => {
-    if (!analysis) return;
-    
-    setSavedScenarios(prev => [{
-      id: Date.now(),
-      date: new Date().toLocaleTimeString(),
-      driverName: analysis.driver.driver_name,
-      driverTeam: analysis.driver.team,
-      magicNumber: analysis.magicNumber,
-      isChampion: analysis.isAlreadyChampion,
-      isOut: analysis.isMathematicallyOut,
-    }, ...prev].slice(0, 5));
-  };
-
+  
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -1036,28 +1004,6 @@ export default function ScenariosPage() {
               {advanced ? t("sc_simpleView") : t("sc_advanced")}
               <ChevronDown className={`w-4 h-4 transition-transform ${advanced ? "rotate-180" : ""}`} />
             </button>
-
-            {/* Saved scenarios */}
-            {savedScenarios.length > 0 && (
-              <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  {t("sv_title")}
-                </p>
-                <div className="space-y-2">
-                  {savedScenarios.map(s => (
-                    <div key={s.id} className="flex justify-between items-center text-sm py-2 border-b border-gray-50 last:border-0">
-                      <div>
-                        <span className="font-medium text-gray-900">{s.driverName}</span>
-                        <p className="text-xs text-gray-400">{s.driverTeam}</p>
-                      </div>
-                      <span className={`font-mono text-sm font-bold ${s.isChampion ? 'text-emerald-600' : s.isOut ? 'text-gray-400' : 'text-rose-600'}`}>
-                        {s.isChampion ? t("sv_champion") : s.isOut ? t("sv_out") : `+${s.magicNumber} ${t("pts")}`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </motion.div>
         )}
 
