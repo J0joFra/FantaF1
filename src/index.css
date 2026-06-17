@@ -48,31 +48,31 @@
     --radius: 1.25rem;
   }
 
-  /* ─── DARK THEME — superfici stratificate e più vive (meno monotono) ───── */
+   /* ─── DARK THEME — palette #0D1B2A / #1B263B / #415A77 / #778DA9 / #E0E1DD ── */
   .dark {
-    --background:           224 22% 15%;
-    --foreground:           0 0% 96%;
+    --background:           211 53% 11%;   /* #0D1B2A */
+    --foreground:           75 6% 87%;     /* #E0E1DD */
 
-    --card:                 224 18% 22%;
-    --card-foreground:      0 0% 96%;
+    --card:                 219 37% 17%;   /* #1B263B */
+    --card-foreground:      75 6% 87%;
 
-    --popover:              224 18% 22%;
-    --popover-foreground:   0 0% 96%;
+    --popover:              219 37% 17%;
+    --popover-foreground:   75 6% 87%;
 
-    --secondary:            224 15% 30%;
-    --secondary-foreground: 0 0% 94%;
+    --secondary:            212 29% 36%;   /* #415A77 */
+    --secondary-foreground: 75 6% 87%;
 
-    --muted:                224 14% 28%;
-    --muted-foreground:     223 14% 72%;
+    --muted:                215 33% 25%;   /* tra card e secondary */
+    --muted-foreground:     214 23% 57%;   /* #778DA9 */
 
     --accent:               3 96% 56%;
     --accent-foreground:    0 0% 100%;
 
-    --border:               224 14% 31%;
-    --input:                224 14% 31%;
+    --border:               212 29% 28%;   /* #415A77 scurito */
+    --input:                212 29% 28%;
 
-    --dark-card:            224 20% 24%;
-    --dark-card-fg:         0 0% 98%;
+    --dark-card:            219 37% 17%;   /* #1B263B */
+    --dark-card-fg:         75 6% 87%;
   }
 }
 
@@ -138,58 +138,58 @@
 }
 
 /* ─── DARK MODE — remap dei colori "literal" usati nelle pagine ──────────────── */
-/* Regole non-layered: hanno priorità sulle utility Tailwind senza !important.   */
+/* Palette: #0D1B2A #1B263B #415A77 #778DA9 #E0E1DD     
 
-/* superfici — stacchi di tono: bg < card < chip < elevato */
-.dark .bg-white        { background-color: hsl(224 18% 22%); }
-.dark .bg-white\/80    { background-color: hsl(224 20% 18% / 0.85); }
-.dark .bg-white\/90    { background-color: hsl(224 18% 24% / 0.92); }
-.dark .bg-gray-50      { background-color: hsl(224 16% 26%); }
-.dark .bg-gray-100     { background-color: hsl(224 14% 30%); }
+/* superfici — stacchi di tono: bg(#0D1B2A) < card(#1B263B) < elevated(#415A77) */
+.dark .bg-white        { background-color: hsl(219 37% 17%); }   /* #1B263B */
+.dark .bg-white\/80    { background-color: hsl(219 37% 17% / 0.85); }
+.dark .bg-white\/90    { background-color: hsl(219 37% 19% / 0.92); }
+.dark .bg-gray-50      { background-color: hsl(215 33% 22%); }   /* tra card e elevated */
+.dark .bg-gray-100     { background-color: hsl(214 31% 27%); }   /* verso #415A77 */
 .dark .bg-gray-200,
-.dark .bg-gray-200\/70 { background-color: hsl(224 13% 35%); }
+.dark .bg-gray-200\/70 { background-color: hsl(212 29% 32%); }   /* #415A77 scurito */
 
-/* tinte chiare (card statistiche / modali) — più morbide */
-.dark .bg-emerald-50 { background-color: hsl(160 28% 18%); }
-.dark .bg-lime-50    { background-color: hsl(90 24% 18%); }
-.dark .bg-blue-50    { background-color: hsl(215 32% 20%); }
-.dark .bg-amber-50   { background-color: hsl(40 32% 19%); }
-.dark .bg-rose-50    { background-color: hsl(345 28% 20%); }
-.dark .bg-red-50     { background-color: hsl(0 32% 20%); }
+/* tinte chiare (card statistiche / modali) — mixate con la palette navy */
+.dark .bg-emerald-50 { background-color: hsl(160 25% 16%); }
+.dark .bg-lime-50    { background-color: hsl(90 20% 16%); }
+.dark .bg-blue-50    { background-color: hsl(212 35% 20%); }
+.dark .bg-amber-50   { background-color: hsl(40 28% 17%); }
+.dark .bg-rose-50    { background-color: hsl(345 28% 18%); }
+.dark .bg-red-50     { background-color: hsl(0 28% 18%); }
 
-/* testo */
-.dark .text-gray-900 { color: hsl(0 0% 96%); }
-.dark .text-gray-800 { color: hsl(0 0% 91%); }
-.dark .text-gray-700 { color: hsl(220 14% 85%); }
-.dark .text-gray-600 { color: hsl(220 13% 76%); }
-.dark .text-gray-500 { color: hsl(220 11% 66%); }
-.dark .text-gray-400 { color: hsl(220 11% 58%); }
-.dark .text-gray-300 { color: hsl(220 12% 48%); }
-.dark .text-gray-200 { color: hsl(220 12% 44%); }
+/* testo — scala dal foreground (#E0E1DD) al muted (#778DA9) */
+.dark .text-gray-900 { color: hsl(75 6% 87%); }    /* #E0E1DD */
+.dark .text-gray-800 { color: hsl(75 5% 82%); }
+.dark .text-gray-700 { color: hsl(214 14% 76%); }
+.dark .text-gray-600 { color: hsl(214 18% 68%); }
+.dark .text-gray-500 { color: hsl(214 23% 57%); }  /* #778DA9 */
+.dark .text-gray-400 { color: hsl(214 22% 48%); }
+.dark .text-gray-300 { color: hsl(212 25% 42%); }
+.dark .text-gray-200 { color: hsl(212 27% 38%); }
 
 /* bordi */
-.dark .border-gray-100 { border-color: hsl(220 14% 25%); }
-.dark .border-gray-200 { border-color: hsl(220 14% 30%); }
+.dark .border-gray-100 { border-color: hsl(212 29% 22%); }
+.dark .border-gray-200 { border-color: hsl(212 29% 27%); }
 
 /* hover su superfici chiare */
-.dark .hover\:bg-gray-50:hover  { background-color: hsl(220 15% 26%); }
-.dark .hover\:bg-gray-200:hover { background-color: hsl(220 13% 35%); }
+.dark .hover\:bg-gray-50:hover  { background-color: hsl(215 33% 22%); }
+.dark .hover\:bg-gray-200:hover { background-color: hsl(212 29% 32%); }
 
-/* gradiente di sfondo pagina (morbido, leggermente stratificato) */
+/* gradiente di sfondo pagina: da #1B263B a #0D1B2A */
 .dark .from-gray-100 {
-  --tw-gradient-from: hsl(226 24% 19%) var(--tw-gradient-from-position);
-  --tw-gradient-to: hsl(226 24% 19% / 0) var(--tw-gradient-to-position);
+  --tw-gradient-from: hsl(219 37% 17%) var(--tw-gradient-from-position);
+  --tw-gradient-to: hsl(219 37% 17% / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 .dark .to-gray-200 {
-  --tw-gradient-to: hsl(223 20% 13%) var(--tw-gradient-to-position);
+  --tw-gradient-to: hsl(211 53% 11%) var(--tw-gradient-to-position);
 }
 
-/* card morbida: ombra delicata su fondo scuro */
-.dark .app-card { box-shadow: 0 1px 2px rgba(0,0,0,0.35), 0 6px 18px rgba(0,0,0,0.3); }
+/* card morbida */
+.dark .app-card { box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 6px 18px rgba(0,0,0,0.35); }
 
-/* card "hero" (punti necessari): tocco di rosso per dare colore al dark */
+/* card "hero" (punti necessari): gradiente navy con tocco di rosso */
 .dark .dark-card {
-  background: linear-gradient(135deg, hsl(350 48% 24%), hsl(224 22% 17%) 72%);
-  box-shadow: 0 6px 22px rgba(0,0,0,0.4), inset 0 0 0 1px hsl(350 40% 38% / 0.25);
+  background: linear-gradient(135deg, hsl(350 45% 22%), hsl(219 37% 17%) 70%);
+  box-shadow: 0 6px 22px rgba(0,0,0,0.45), inset 0 0 0 1px hsl(212 29% 36% / 0.4);
 }
