@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Calculator, GitCompare, X, Globe } from "lucide-react";
+import { Trophy, Calculator, GitCompare, Globe } from "lucide-react";
 import { useI18n, LANGS } from "@/lib/i18n";
 
 const STORAGE_KEY = "gridup_onboarded_v1";
@@ -81,13 +81,6 @@ export default function Onboarding() {
           <div className="absolute top-3 left-3">
             <LangPicker />
           </div>
-          <button
-            onClick={close}
-            aria-label={t("ob_skip")}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/15 border border-white/25 text-white flex items-center justify-center active:scale-90 transition-transform"
-          >
-            <X className="w-4 h-4" />
-          </button>
           <AnimatePresence mode="wait">
             <motion.div
               key={step}
@@ -117,29 +110,32 @@ export default function Onboarding() {
             </motion.div>
           </AnimatePresence>
 
-          {/* Indicatori */}
+          {/* Indicatori tappabili */}
           <div className="flex items-center justify-center gap-1.5 mt-4">
             {SLIDES.map((_, i) => (
-              <span
+              <button
                 key={i}
+                onClick={() => setStep(i)}
+                aria-label={`Step ${i + 1}`}
                 className={`h-1.5 rounded-full transition-all duration-300 ${i === step ? "w-5 bg-primary" : "w-1.5 bg-muted"}`}
+                style={{ minWidth: i === step ? "1.25rem" : "0.375rem", padding: "6px 0", backgroundClip: "content-box" }}
               />
             ))}
           </div>
 
           {/* Azioni */}
-          <div className="flex items-center gap-3 mt-5">
-            <button
-              onClick={close}
-              className="flex-1 py-3 rounded-xl text-sm font-semibold text-muted-foreground hover:bg-muted/60 transition-colors"
-            >
-              {t("ob_skip")}
-            </button>
+          <div className="mt-5">
             <button
               onClick={() => (last ? close() : setStep(s => s + 1))}
-              className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-primary active:scale-95 transition-transform shadow-sm"
+              className="w-full py-3 rounded-xl text-sm font-bold text-white bg-primary active:scale-95 transition-transform shadow-sm"
             >
               {last ? t("ob_start") : t("ob_next")}
+            </button>
+            <button
+              onClick={close}
+              className="mt-3 w-full py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t("ob_skip")}
             </button>
           </div>
         </div>
