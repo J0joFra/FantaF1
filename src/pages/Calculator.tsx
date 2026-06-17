@@ -795,7 +795,7 @@ export default function ScenariosPage() {
         ? Math.max(0, drivers.filter(d => d.id !== selectedDriver.id).reduce((m, d) => Math.max(m, d.points), 0)
             + maxPossiblePoints - selectedDriver.points + 1)
         : 0);
-  
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -869,6 +869,22 @@ export default function ScenariosPage() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-5"
           >
+            {/* Tab selector Semplice / Mosaico */}
+            <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+              <button
+                onClick={() => setAdvanced(false)}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${!advanced ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+              >
+                {t("sc_tab_simple")}
+              </button>
+              <button
+                onClick={() => setAdvanced(true)}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${advanced ? 'bg-white shadow text-rose-600' : 'text-gray-500'}`}
+              >
+                {t("sc_tab_mosaic")}
+              </button>
+            </div>
+
             {/* ─── VISTA SEMPLICE ─── */}
             {!advanced && (
               <>
@@ -897,6 +913,7 @@ export default function ScenariosPage() {
                       <span className="font-heading font-black text-2xl text-primary/70">PTI</span>
                     </div>
                     <p className="text-white/60 text-sm mt-1">{t("sc_neededShort")}</p>
+                    <p className="text-white/40 text-xs mt-1">{racesLeft} {t("sc_inRaces")}{sprintsLeft > 0 ? ` · ${Math.min(sprintsLeft, racesLeft)} sprint` : ""}</p>
                   </div>
                 )}
 
@@ -940,9 +957,21 @@ export default function ScenariosPage() {
                   </div>
                 )}
 
-                <p className="text-center text-xs text-muted-foreground font-body">
-                  {racesLeft} GP{sprintsLeft > 0 ? ` · ${Math.min(sprintsLeft, racesLeft)} sprint` : ""}
-                </p>
+                {!analysis.isAlreadyChampion && !analysis.isMathematicallyOut && (
+                  <button
+                    onClick={() => setAdvanced(true)}
+                    className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-rose-50 to-orange-50 border border-rose-200 rounded-2xl active:scale-[0.98] transition-transform"
+                  >
+                    <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center shrink-0">
+                      <Grid3x3 className="w-5 h-5 text-rose-600" />
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="text-sm font-bold text-gray-900">{t("sc_teaser_title")}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{t("sc_teaser_sub")}</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-rose-400 shrink-0" />
+                  </button>
+                )}
               </>
             )}
 
@@ -996,14 +1025,6 @@ export default function ScenariosPage() {
             </>
             )}
 
-            {/* Toggle vista semplice / avanzata */}
-            <button
-              onClick={() => setAdvanced(a => !a)}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors active:scale-[0.98] border border-rose-200"
-            >
-              {advanced ? t("sc_simpleView") : t("sc_advanced")}
-              <ChevronDown className={`w-4 h-4 transition-transform ${advanced ? "rotate-180" : ""}`} />
-            </button>
           </motion.div>
         )}
 
