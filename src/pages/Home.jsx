@@ -88,17 +88,17 @@ function ArcGauge({ current, needed, possible }) {
             fontFamily="'DM Sans',sans-serif" letterSpacing="2">PUNTI</text>
       {/* Left label: current */}
       <text x="18" y={cy + 14} textAnchor="middle"
-            fill="rgba(255,255,255,0.5)" fontSize="11" fontWeight="700"
+            fill="rgba(255,255,255,0.65)" fontSize="11" fontWeight="700"
             fontFamily="'JetBrains Mono',monospace">{current}</text>
       <text x="18" y={cy + 24} textAnchor="middle"
-            fill="rgba(255,255,255,0.3)" fontSize="7"
+            fill="rgba(255,255,255,0.5)" fontSize="7"
             fontFamily="'DM Sans',sans-serif" letterSpacing="1.5">ATTUALI</text>
       {/* Right label: possible */}
       <text x={W - 18} y={cy + 14} textAnchor="middle"
-            fill="rgba(255,255,255,0.5)" fontSize="11" fontWeight="700"
+            fill="rgba(255,255,255,0.65)" fontSize="11" fontWeight="700"
             fontFamily="'JetBrains Mono',monospace">{possible}</text>
       <text x={W - 18} y={cy + 24} textAnchor="middle"
-            fill="rgba(255,255,255,0.3)" fontSize="7"
+            fill="rgba(255,255,255,0.5)" fontSize="7"
             fontFamily="'DM Sans',sans-serif" letterSpacing="1.5">POSSIBILI</text>
     </svg>
   );
