@@ -48,31 +48,31 @@
     --radius: 1.25rem;
   }
 
-  /* ─── DARK THEME — palette #0D1B2A / #1B263B / #415A77 / #778DA9 / #E0E1DD ── */
+  /* ─── DARK THEME — palette #01161E / #124559 / #598392 / #AEC3B0 / #EFF6E0 ── */
   .dark {
-    --background:           211 53% 11%;   /* #0D1B2A */
-    --foreground:           75 6% 87%;     /* #E0E1DD */
+    --background:           197 93% 6%;    /* #01161E */
+    --foreground:           83 55% 92%;    /* #EFF6E0 */
 
-    --card:                 219 37% 17%;   /* #1B263B */
-    --card-foreground:      75 6% 87%;
+    --card:                 197 66% 21%;   /* #124559 */
+    --card-foreground:      83 55% 92%;
 
-    --popover:              219 37% 17%;
-    --popover-foreground:   75 6% 87%;
+    --popover:              197 66% 21%;
+    --popover-foreground:   83 55% 92%;
 
-    --secondary:            212 29% 36%;   /* #415A77 */
-    --secondary-foreground: 75 6% 87%;
+    --secondary:            196 24% 46%;   /* #598392 */
+    --secondary-foreground: 83 55% 92%;
 
-    --muted:                215 33% 25%;   /* tra card e secondary */
-    --muted-foreground:     214 23% 57%;   /* #778DA9 */
+    --muted:                197 50% 14%;   /* tra background e card */
+    --muted-foreground:     126 15% 72%;   /* #AEC3B0 */
 
     --accent:               3 96% 56%;
     --accent-foreground:    0 0% 100%;
 
-    --border:               212 29% 28%;   /* #415A77 scurito */
-    --input:                212 29% 28%;
+    --border:               197 55% 16%;   /* #124559 scurito */
+    --input:                197 55% 16%;
 
-    --dark-card:            219 37% 17%;   /* #1B263B */
-    --dark-card-fg:         75 6% 87%;
+    --dark-card:            197 66% 21%;   /* #124559 */
+    --dark-card-fg:         83 55% 92%;
   }
 }
 
@@ -138,58 +138,58 @@
 }
 
 /* ─── DARK MODE — remap dei colori "literal" usati nelle pagine ──────────────── */
-/* Palette: #0D1B2A #1B263B #415A77 #778DA9 #E0E1DD                              */
+/* Palette: #01161E #124559 #598392 #AEC3B0 #EFF6E0                              */
 
-/* superfici — stacchi di tono: bg(#0D1B2A) < card(#1B263B) < elevated(#415A77) */
-.dark .bg-white        { background-color: hsl(219 37% 17%); }   /* #1B263B */
-.dark .bg-white\/80    { background-color: hsl(219 37% 17% / 0.85); }
-.dark .bg-white\/90    { background-color: hsl(219 37% 19% / 0.92); }
-.dark .bg-gray-50      { background-color: hsl(215 33% 22%); }   /* tra card e elevated */
-.dark .bg-gray-100     { background-color: hsl(214 31% 27%); }   /* verso #415A77 */
+/* superfici — bg(#01161E) < card(#124559) < elevated(#598392) */
+.dark .bg-white        { background-color: hsl(197 66% 21%); }   /* #124559 */
+.dark .bg-white\/80    { background-color: hsl(197 66% 21% / 0.85); }
+.dark .bg-white\/90    { background-color: hsl(197 66% 21% / 0.92); }
+.dark .bg-gray-50      { background-color: hsl(197 55% 14%); }   /* tra bg e card */
+.dark .bg-gray-100     { background-color: hsl(197 60% 17%); }   /* verso card */
 .dark .bg-gray-200,
-.dark .bg-gray-200\/70 { background-color: hsl(212 29% 32%); }   /* #415A77 scurito */
+.dark .bg-gray-200\/70 { background-color: hsl(196 35% 28%); }   /* mid-tone */
 
-/* tinte chiare (card statistiche / modali) — mixate con la palette navy */
-.dark .bg-emerald-50 { background-color: hsl(160 25% 16%); }
-.dark .bg-lime-50    { background-color: hsl(90 20% 16%); }
-.dark .bg-blue-50    { background-color: hsl(212 35% 20%); }
-.dark .bg-amber-50   { background-color: hsl(40 28% 17%); }
-.dark .bg-rose-50    { background-color: hsl(345 28% 18%); }
-.dark .bg-red-50     { background-color: hsl(0 28% 18%); }
+/* tinte chiare (card statistiche / modali) — mixate con la palette teal */
+.dark .bg-emerald-50 { background-color: hsl(160 30% 12%); }
+.dark .bg-lime-50    { background-color: hsl(83 30% 12%); }
+.dark .bg-blue-50    { background-color: hsl(197 50% 14%); }
+.dark .bg-amber-50   { background-color: hsl(40 28% 12%); }
+.dark .bg-rose-50    { background-color: hsl(345 28% 13%); }
+.dark .bg-red-50     { background-color: hsl(0 28% 13%); }
 
-/* testo — scala dal foreground (#E0E1DD) al muted (#778DA9) */
-.dark .text-gray-900 { color: hsl(75 6% 87%); }    /* #E0E1DD */
-.dark .text-gray-800 { color: hsl(75 5% 82%); }
-.dark .text-gray-700 { color: hsl(214 14% 76%); }
-.dark .text-gray-600 { color: hsl(214 18% 68%); }
-.dark .text-gray-500 { color: hsl(214 23% 57%); }  /* #778DA9 */
-.dark .text-gray-400 { color: hsl(214 22% 48%); }
-.dark .text-gray-300 { color: hsl(212 25% 42%); }
-.dark .text-gray-200 { color: hsl(212 27% 38%); }
+/* testo — scala dal foreground (#EFF6E0) al muted (#AEC3B0) */
+.dark .text-gray-900 { color: hsl(83 55% 92%); }   /* #EFF6E0 */
+.dark .text-gray-800 { color: hsl(83 35% 85%); }
+.dark .text-gray-700 { color: hsl(100 20% 78%); }
+.dark .text-gray-600 { color: hsl(126 18% 74%); }
+.dark .text-gray-500 { color: hsl(126 15% 72%); }  /* #AEC3B0 */
+.dark .text-gray-400 { color: hsl(196 22% 58%); }
+.dark .text-gray-300 { color: hsl(196 24% 46%); }  /* #598392 */
+.dark .text-gray-200 { color: hsl(197 40% 36%); }
 
 /* bordi */
-.dark .border-gray-100 { border-color: hsl(212 29% 22%); }
-.dark .border-gray-200 { border-color: hsl(212 29% 27%); }
+.dark .border-gray-100 { border-color: hsl(197 55% 14%); }
+.dark .border-gray-200 { border-color: hsl(197 55% 18%); }
 
 /* hover su superfici chiare */
-.dark .hover\:bg-gray-50:hover  { background-color: hsl(215 33% 22%); }
-.dark .hover\:bg-gray-200:hover { background-color: hsl(212 29% 32%); }
+.dark .hover\:bg-gray-50:hover  { background-color: hsl(197 55% 14%); }
+.dark .hover\:bg-gray-200:hover { background-color: hsl(196 35% 28%); }
 
-/* gradiente di sfondo pagina: da #1B263B a #0D1B2A */
+/* gradiente di sfondo pagina: da #124559 a #01161E */
 .dark .from-gray-100 {
-  --tw-gradient-from: hsl(219 37% 17%) var(--tw-gradient-from-position);
-  --tw-gradient-to: hsl(219 37% 17% / 0) var(--tw-gradient-to-position);
+  --tw-gradient-from: hsl(197 66% 21%) var(--tw-gradient-from-position);
+  --tw-gradient-to: hsl(197 66% 21% / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 .dark .to-gray-200 {
-  --tw-gradient-to: hsl(211 53% 11%) var(--tw-gradient-to-position);
+  --tw-gradient-to: hsl(197 93% 6%) var(--tw-gradient-to-position);
 }
 
 /* card morbida */
-.dark .app-card { box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 6px 18px rgba(0,0,0,0.35); }
+.dark .app-card { box-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 6px 18px rgba(0,0,0,0.4); }
 
-/* card "hero" (punti necessari): gradiente navy con tocco di rosso */
+/* card "hero" (punti necessari): gradiente teal con tocco di rosso */
 .dark .dark-card {
-  background: linear-gradient(135deg, hsl(350 45% 22%), hsl(219 37% 17%) 70%);
-  box-shadow: 0 6px 22px rgba(0,0,0,0.45), inset 0 0 0 1px hsl(212 29% 36% / 0.4);
+  background: linear-gradient(135deg, hsl(350 45% 20%), hsl(197 66% 21%) 70%);
+  box-shadow: 0 6px 22px rgba(0,0,0,0.5), inset 0 0 0 1px hsl(196 24% 46% / 0.3);
 }
