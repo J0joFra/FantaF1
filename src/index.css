@@ -185,6 +185,9 @@
   --tw-gradient-to: hsl(197 93% 6%) var(--tw-gradient-to-position);
 }
 
+/* bottom nav */
+.dark nav.fixed { background-color: hsl(197 66% 21%); border-color: hsl(197 55% 16%); }
+
 /* card morbida */
 .dark .app-card { box-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 6px 18px rgba(0,0,0,0.4); }
 
