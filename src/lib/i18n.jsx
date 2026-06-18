@@ -168,7 +168,7 @@ const DICT = {
     im_grey: "Grey → Impossible",
     im_clickHint: "💡 Tap a coloured cell to see the race-by-race breakdown!",
     ob1_t: “Welcome to GridUP”, ob1_d: “Everything about the F1 World Championship: standings, scenarios and comparisons, always up to date.”,
-    ob2_t: “Who can still win?”, ob2_d: “In “Scenarios” find out how many points are needed for the title and what has to happen, race by race.”,
+    ob2_t: “Who can still win?”, ob2_d: “In 'Scenarios' find out how many points are needed for the title and what has to happen, race by race.”,
     ob3_t: “Compare drivers & teams”, ob3_d: “Head-to-head on season and career, with stats and charts. You can even share them!”,
     ob_skip: “Skip”, ob_next: “Next”, ob_start: “Start”,
     home_dataAsOf: “Updated on”,
