@@ -99,6 +99,19 @@ export async function getDriverStandings() {
   });
 }
 
+// ─── LAST RACE DATE ──────────────────────────────────────────────────────────
+export async function getLastRaceDate() {
+  const { data, error } = await supabase
+    .from('race')
+    .select('date')
+    .lte('date', new Date().toISOString().slice(0, 10))
+    .order('date', { ascending: false })
+    .limit(1)
+    .single();
+  throwIfError(error, 'Last race date');
+  return data?.date ?? null;
+}
+
 // ─── DRIVER SEASON STATS (per-race aggregation) ──────────────────────────────
 // Aggregates the current season's race_data into per-driver stats keyed by driver_id.
 export async function getDriverSeasonStats(season = currentYear()) {
