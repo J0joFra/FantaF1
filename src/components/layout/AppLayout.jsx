@@ -1,5 +1,6 @@
 import { Outlet, useLocation, Link } from "react-router-dom";
 import { BarChart2, Calculator, GitCompare, Shield } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
 
 const tabs = [
@@ -16,7 +17,18 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-[430px] mx-auto overflow-x-hidden">
       <main className="flex-1 overflow-y-auto overflow-x-hidden pb-nav">
-        <Outlet />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -16 }}
+            transition={{ duration: 0.18, ease: "easeInOut" }}
+            className="min-h-full"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Bottom nav — iOS/Android style */}
