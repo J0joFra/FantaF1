@@ -4,6 +4,7 @@ import {
   getDriverStandings,
   getSeasonConfig,
   getUpcomingRaces,
+  getLastRaceDate,
 } from "@/lib/supabaseData";
 import {
   getTeamColor,
@@ -18,6 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import InfoTip from "@/components/InfoTip";
+import ErrorScreen from "@/components/ErrorScreen";
 import { useI18n } from "@/lib/i18n";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -163,7 +165,7 @@ export default function Home() {
   const { t } = useI18n();
   const [showAllDrivers, setShowAllDrivers] = useState(false);
 
-  const { data: drivers = [], isLoading: ld, error: err } = useQuery({
+  const { data: drivers = [], isLoading: ld, error: err, refetch } = useQuery({
     queryKey: ["driverStandings"], queryFn: getDriverStandings, staleTime: 5 * 60 * 1000,
   });
   const { data: config, isLoading: lc } = useQuery({
@@ -171,6 +173,9 @@ export default function Home() {
   });
   const { data: upcomingRaces = [] } = useQuery({
     queryKey: ["upcomingRaces"], queryFn: () => getUpcomingRaces(4), staleTime: 60 * 60 * 1000,
+  });
+  const { data: lastRaceDate } = useQuery({
+    queryKey: ["lastRaceDate"], queryFn: getLastRaceDate, staleTime: 60 * 60 * 1000,
   });
 
   if (ld || lc) return (
@@ -180,13 +185,7 @@ export default function Home() {
     </div>
   );
 
-  if (err) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-3 px-6 text-center bg-gradient-to-b from-gray-100 to-gray-200">
-      <AlertCircle className="w-10 h-10 text-destructive" />
-      <p className="font-heading font-black text-xl uppercase">Errore connessione</p>
-      <p className="text-sm text-muted-foreground font-body">{err.message}</p>
-    </div>
-  );
+  if (err) return <ErrorScreen onRetry={refetch} />;
 
   const leader         = drivers[0];
   const p2             = drivers[1];
@@ -255,9 +254,16 @@ export default function Home() {
         {/* ── CLASSIFICA PILOTI ── */}
         <div className="app-card overflow-hidden">
           <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100">
-            <h2 className="font-heading font-black text-base uppercase tracking-wide">
-              {t("home_standings")}
-            </h2>
+            <div>
+              <h2 className="font-heading font-black text-base uppercase tracking-wide">
+                {t("home_standings")}
+              </h2>
+              {lastRaceDate && (
+                <p className="text-[10px] text-muted-foreground font-body mt-0.5">
+                  {t("home_dataAsOf")} {new Date(lastRaceDate).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+                </p>
+              )}
+            </div>
             <span className="text-xs text-muted-foreground font-body">
               {config?.races_completed ?? 0}/{config?.total_races ?? 0} GP
             </span>
