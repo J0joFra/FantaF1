@@ -348,7 +348,7 @@ export default function Compare() {
               </p>
             </div>
             <button onClick={shuffle}
-              className="flex items-center gap-1.5 text-sm font-semibold text-primary border border-primary/30 rounded-full px-4 py-2 active:scale-95 transition-transform hover:bg-primary/5">
+              className="flex items-center gap-1.5 text-sm font-bold text-white bg-primary rounded-full px-5 py-2.5 active:scale-95 transition-transform shadow-sm">
               <Shuffle className="w-3.5 h-3.5" /> {t("cmp_random")}
             </button>
           </div>
