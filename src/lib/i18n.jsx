@@ -97,6 +97,7 @@ const DICT = {
     ob_skip: "Salta", ob_next: "Avanti", ob_start: "Inizia",
     home_dataAsOf: "Aggiornato al",
     err_title: "Manutenzione in corso", err_msg: "Ci scusiamo per il disagio. I dati F1 sono temporaneamente non disponibili. Riprova tra qualche minuto.",
+    map_title: "GP Stagione 2026", map_next: "Prossimo GP", map_upcoming: "In programma", map_past: "Disputato", map_tap: "Tocca per la mappa",
   },
   en: {
     nav_overview: "Overview", nav_scenarios: "Scenarios", nav_compare: "Compare", nav_teams: "Teams",
@@ -173,6 +174,7 @@ const DICT = {
     ob_skip: "Skip", ob_next: "Next", ob_start: "Start",
     home_dataAsOf: "Updated on",
     err_title: "Under maintenance", err_msg: "We apologise for the inconvenience. F1 data is temporarily unavailable. Please try again in a few minutes.",
+    map_title: "2026 Season GPs", map_next: "Next GP", map_upcoming: "Upcoming", map_past: "Completed", map_tap: "Tap for the map",
   },
   fr: {
     nav_overview: "Aperçu", nav_scenarios: "Scénarios", nav_compare: "Comparer", nav_teams: "Écuries",
@@ -249,6 +251,7 @@ const DICT = {
     ob_skip: "Passer", ob_next: "Suivant", ob_start: "Commencer",
     home_dataAsOf: "Mis à jour le",
     err_title: "Maintenance en cours", err_msg: "Nous nous excusons pour la gêne occasionnée. Les données F1 sont temporairement indisponibles. Veuillez réessayer dans quelques minutes.",
+    map_title: "GP Saison 2026", map_next: "Prochain GP", map_upcoming: "À venir", map_past: "Terminé", map_tap: "Toucher pour la carte",
   },
   es: {
     nav_overview: "Resumen", nav_scenarios: "Escenarios", nav_compare: "Comparar", nav_teams: "Escuderías",
@@ -321,6 +324,7 @@ const DICT = {
     im_clickHint: "💡 ¡Toca una celda de color para ver el detalle carrera a carrera!",
     home_dataAsOf: "Actualizado el",
     err_title: "En mantenimiento", err_msg: "Pedimos disculpas por las molestias. Los datos de F1 no están disponibles temporalmente. Por favor, inténtalo de nuevo en unos minutos.",
+    map_title: "GP Temporada 2026", map_next: "Proximo GP", map_upcoming: "Programado", map_past: "Disputado", map_tap: "Toca para el mapa",
     ob1_t: "Bienvenido a GridUP", ob1_d: "Todo sobre el Campeonato del Mundo de F1: clasificaciones, escenarios y comparativas, siempre al día.",
     ob2_t: "¿Quién puede ganar aún?", ob2_d: "En «Escenarios» descubre cuántos puntos hacen falta para el título y qué debe pasar, carrera a carrera.",
     ob3_t: "Compara pilotos y escuderías", ob3_d: "Cara a cara en temporada y carrera, con estadísticas y gráficos. ¡También puedes compartirlos!",
@@ -397,6 +401,7 @@ const DICT = {
     im_clickHint: "💡 Tippe eine farbige Zelle an, um die Details Rennen für Rennen zu sehen!",
     home_dataAsOf: "Aktualisiert am",
     err_title: "Wartungsarbeiten", err_msg: "Wir entschuldigen uns für die Unannehmlichkeiten. Die F1-Daten sind vorübergehend nicht verfügbar. Bitte versuche es in einigen Minuten erneut.",
+    map_title: "GP Saison 2026", map_next: "Nachstes GP", map_upcoming: "Geplant", map_past: "Abgeschlossen", map_tap: "Tippe fur die Karte",
     ob1_t: "Willkommen bei GridUP", ob1_d: "Alles zur F1-Weltmeisterschaft: Wertungen, Szenarien und Vergleiche, immer aktuell.",
     ob2_t: "Wer kann noch gewinnen?", ob2_d: "Unter \"Szenarien\" siehst du, wie viele Punkte für den Titel nötig sind und was passieren muss – Rennen für Rennen.",
     ob3_t: "Fahrer & Teams vergleichen", ob3_d: "Direktvergleich über Saison und Karriere, mit Statistiken und Diagrammen. Du kannst sie sogar teilen!",
