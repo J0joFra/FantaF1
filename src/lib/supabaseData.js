@@ -99,6 +99,30 @@ export async function getDriverStandings() {
   });
 }
 
+// ─── ALL SEASON RACES WITH CIRCUIT COORDS ───────────────────────────────────
+export async function getAllSeasonRaces(season = currentYear()) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('race')
+    .select(`id, round, date, official_name, grand_prix_id,
+             circuit:circuit_id(name, place_name, latitude, longitude),
+             grand_prix:grand_prix_id(name, country_id)`)
+    .eq('year', season)
+    .order('round', { ascending: true });
+  throwIfError(error, 'All season races');
+  return (data || []).map(r => ({
+    id:       r.id,
+    round:    r.round,
+    date:     r.date,
+    name:     r.grand_prix?.name || r.official_name || '',
+    circuit:  r.circuit?.name || '',
+    place:    r.circuit?.place_name || '',
+    lat:      parseFloat(r.circuit?.latitude) || null,
+    lng:      parseFloat(r.circuit?.longitude) || null,
+    isPast:   r.date <= today,
+  })).filter(r => r.lat && r.lng);
+}
+
 // ─── LAST RACE DATE ──────────────────────────────────────────────────────────
 export async function getLastRaceDate() {
   const { data, error } = await supabase
