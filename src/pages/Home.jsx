@@ -5,6 +5,7 @@ import {
   getSeasonConfig,
   getUpcomingRaces,
   getLastRaceDate,
+  getAllSeasonRaces,
 } from "@/lib/supabaseData";
 import {
   getTeamColor,
@@ -20,6 +21,7 @@ import { Link } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import InfoTip from "@/components/InfoTip";
 import ErrorScreen from "@/components/ErrorScreen";
+import SeasonMapModal from "@/components/SeasonMapModal";
 import { useI18n } from "@/lib/i18n";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -177,6 +179,10 @@ export default function Home() {
   const { data: lastRaceDate } = useQuery({
     queryKey: ["lastRaceDate"], queryFn: getLastRaceDate, staleTime: 60 * 60 * 1000,
   });
+  const { data: allRaces = [] } = useQuery({
+    queryKey: ["allSeasonRaces"], queryFn: getAllSeasonRaces, staleTime: 60 * 60 * 1000,
+  });
+  const [mapOpen, setMapOpen] = useState(false);
 
   if (ld || lc) return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-gradient-to-b from-gray-100 to-gray-200">
@@ -377,13 +383,16 @@ export default function Home() {
 
         {/* ── PROSSIMI GP — 4 boxes, centered grid ── */}
         {calRaces.length > 0 && (
-          <div className="app-card overflow-hidden">
+          <button
+            className="app-card overflow-hidden w-full text-left active:scale-[0.99] transition-transform"
+            onClick={() => setMapOpen(true)}
+          >
             <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100">
               <h2 className="font-heading font-black text-base uppercase tracking-wide">
                 {t("home_nextGps")}
               </h2>
-              <span className="text-xs text-muted-foreground font-body">
-                {config?.races_completed ?? 0}/{config?.total_races ?? 0}
+              <span className="text-xs text-primary font-body font-semibold flex items-center gap-1">
+                {t("map_tap")} →
               </span>
             </div>
 
@@ -427,10 +436,12 @@ export default function Home() {
                 );
               })}
             </div>
-          </div>
+          </button>
         )}
 
       </div>
+
+      <SeasonMapModal races={allRaces} open={mapOpen} onClose={() => setMapOpen(false)} />
     </div>
   );
 }
