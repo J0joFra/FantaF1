@@ -62,6 +62,7 @@ interface MosaicCell {
 interface ChampionshipAnalysis {
   driver: Driver;
   racesLeft: number;
+  sprintsLeft: number;
   isAlreadyChampion: boolean;
   isMathematicallyOut: boolean;
   mainRival: RivalAnalysis | null;
@@ -101,8 +102,9 @@ function calculateChampionshipAnalysis(
   
   const activeRivals = rivalsAnalysis.filter(r => !r.isMathematicallyEliminated && r.pointsNeeded > 0);
   const mainRival = activeRivals.length > 0 ? activeRivals[0] : null;
-  const isAlreadyChampion = activeRivals.length === 0 && driver.points > Math.max(...allDrivers.map(d => d.points));
-  const isMathematicallyOut = driverMaxPossible < Math.max(...allDrivers.map(d => d.points));
+  const maxPoints = allDrivers.length > 0 ? Math.max(...allDrivers.map(d => d.points)) : 0;
+  const isAlreadyChampion = activeRivals.length === 0 && driver.points > maxPoints;
+  const isMathematicallyOut = driverMaxPossible < maxPoints;
   const magicNumber = mainRival?.pointsNeeded ?? 0;
   
   return {
