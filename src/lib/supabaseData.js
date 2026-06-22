@@ -99,28 +99,26 @@ export async function getDriverStandings() {
   });
 }
 
-// ─── ALL SEASON RACES WITH CIRCUIT COORDS ───────────────────────────────────
+// ─── ALL SEASON RACES (calendar) ─────────────────────────────────────────────
 export async function getAllSeasonRaces(season = currentYear()) {
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from('race')
-    .select(`id, round, date, official_name, grand_prix_id,
-             circuit:circuit_id(name, place_name, latitude, longitude),
+    .select(`id, round, date, sprint_race_date, official_name, grand_prix_id,
+             circuit:circuit_id(country_id),
              grand_prix:grand_prix_id(name, country_id)`)
     .eq('year', season)
     .order('round', { ascending: true });
   throwIfError(error, 'All season races');
   return (data || []).map(r => ({
-    id:       r.id,
-    round:    r.round,
-    date:     r.date,
-    name:     r.grand_prix?.name || r.official_name || '',
-    circuit:  r.circuit?.name || '',
-    place:    r.circuit?.place_name || '',
-    lat:      parseFloat(r.circuit?.latitude) || null,
-    lng:      parseFloat(r.circuit?.longitude) || null,
-    isPast:   r.date <= today,
-  })).filter(r => r.lat && r.lng);
+    id:         r.id,
+    round:      r.round,
+    date:       r.date,
+    name:       r.grand_prix?.name || r.official_name || '',
+    countryIso: r.grand_prix?.country_id || r.circuit?.country_id || null,
+    hasSprint:  !!r.sprint_race_date,
+    isPast:     r.date <= today,
+  }));
 }
 
 // ─── LAST RACE DATE ──────────────────────────────────────────────────────────
