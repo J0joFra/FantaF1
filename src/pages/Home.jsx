@@ -180,7 +180,7 @@ export default function Home() {
     queryKey: ["lastRaceDate"], queryFn: getLastRaceDate, staleTime: 60 * 60 * 1000,
   });
   const { data: allRaces = [], error: allRacesErr } = useQuery({
-    queryKey: ["allSeasonRaces"], queryFn: getAllSeasonRaces, staleTime: 60 * 60 * 1000,
+    queryKey: ["allSeasonRaces"], queryFn: () => getAllSeasonRaces(), staleTime: 60 * 60 * 1000,
     retry: 2,
   });
   const [mapOpen, setMapOpen] = useState(false);
