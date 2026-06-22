@@ -104,7 +104,7 @@ export async function getAllSeasonRaces(season = currentYear()) {
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from('race')
-    .select('id, round, date, sprint_race_date, official_name, grand_prix_id, grand_prix:grand_prix_id(name, country_id)')
+    .select('id, round, date, sprint_race_date, official_name')
     .eq('year', season)
     .order('round', { ascending: true });
   throwIfError(error, 'All season races');
@@ -112,8 +112,7 @@ export async function getAllSeasonRaces(season = currentYear()) {
     id:        r.id,
     round:     r.round,
     date:      r.date,
-    name:      r.grand_prix?.name || r.official_name || '',
-    countryId: r.grand_prix?.country_id || null,
+    name:      r.official_name || '',
     hasSprint: !!r.sprint_race_date,
     isPast:    r.date <= today,
   }));
