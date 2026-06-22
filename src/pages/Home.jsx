@@ -179,8 +179,9 @@ export default function Home() {
   const { data: lastRaceDate } = useQuery({
     queryKey: ["lastRaceDate"], queryFn: getLastRaceDate, staleTime: 60 * 60 * 1000,
   });
-  const { data: allRaces = [] } = useQuery({
+  const { data: allRaces = [], error: allRacesErr } = useQuery({
     queryKey: ["allSeasonRaces"], queryFn: getAllSeasonRaces, staleTime: 60 * 60 * 1000,
+    retry: 2,
   });
   const [mapOpen, setMapOpen] = useState(false);
 
@@ -440,7 +441,7 @@ export default function Home() {
 
       </div>
 
-      <SeasonMapModal races={allRaces} open={mapOpen} onClose={() => setMapOpen(false)} />
+      <SeasonMapModal races={allRaces} error={allRacesErr} open={mapOpen} onClose={() => setMapOpen(false)} />
     </div>
   );
 }
