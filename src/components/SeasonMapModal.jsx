@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle2, Circle, ChevronRight } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { format } from "date-fns";
-import { flagUrl } from "@/lib/flagUtils";
+import { flagUrl, gpIso } from "@/lib/flagUtils";
 
-export default function SeasonMapModal({ races = [], open, onClose }) {
+export default function SeasonCalendarModal({ races = [], open, onClose }) {
   const { t } = useI18n();
   const nextRef = useRef(null);
 
@@ -16,10 +16,9 @@ export default function SeasonMapModal({ races = [], open, onClose }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // Scroll to next race when modal opens
   useEffect(() => {
     if (open && nextRef.current) {
-      setTimeout(() => nextRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+      setTimeout(() => nextRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 200);
     }
   }, [open]);
 
@@ -34,18 +33,18 @@ export default function SeasonMapModal({ races = [], open, onClose }) {
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 32, stiffness: 320 }}
-          className="fixed inset-0 z-[200] flex flex-col bg-background"
+          className="fixed inset-0 z-[200] flex flex-col bg-background max-w-[430px] mx-auto"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#E8002D] to-[#C20028] px-4 pt-safe-top shrink-0"
-               style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+          <div className="bg-gradient-to-r from-[#E8002D] to-[#C20028] px-4 shrink-0"
+               style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 12px)" }}>
             <div className="flex items-center justify-between py-3">
               <div>
                 <h2 className="font-heading font-black text-white text-lg uppercase tracking-wide leading-none">
                   {t("map_title")}
                 </h2>
                 <p className="text-white/70 text-[11px] font-body mt-0.5">
-                  {completed}/{races.length} {t("map_past").toLowerCase()}
+                  {completed} / {races.length} GP disputati
                 </p>
               </div>
               <button
@@ -55,53 +54,55 @@ export default function SeasonMapModal({ races = [], open, onClose }) {
                 <X className="w-4 h-4" />
               </button>
             </div>
-
             {/* Progress bar */}
             <div className="h-1 bg-white/20 rounded-full mb-3 overflow-hidden">
               <div
-                className="h-full bg-white rounded-full transition-all duration-500"
-                style={{ width: `${races.length ? (completed / races.length) * 100 : 0}%` }}
+                className="h-full bg-white rounded-full transition-all duration-700"
+                style={{ width: races.length ? `${(completed / races.length) * 100}%` : "0%" }}
               />
             </div>
           </div>
 
-          {/* Race list */}
+          {/* List */}
           <div className="flex-1 overflow-y-auto">
-            <div className="px-4 py-3 space-y-2">
-              {races.map((race) => {
+            <div className="px-4 py-3 space-y-2 pb-8">
+              {races.map((race, i) => {
                 const isNext = race.id === next?.id;
+                const iso = gpIso(race.name) || gpIso(race.countryId || "");
+                const flagSrc = iso ? flagUrl(iso, "h40") : null;
+
                 return (
                   <motion.div
                     key={race.id}
                     ref={isNext ? nextRef : null}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: race.round * 0.02 }}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-2xl border transition-colors
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.015 }}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-2xl border
                       ${isNext
                         ? "border-primary/30 bg-primary/5"
                         : race.isPast
-                          ? "border-gray-100 bg-gray-50 opacity-60"
+                          ? "border-gray-100 bg-gray-50 opacity-55"
                           : "border-gray-100 bg-card"
                       }`}
                   >
-                    {/* Round number */}
-                    <span className={`font-heading font-black text-xs w-5 text-center shrink-0
+                    {/* Round */}
+                    <span className={`font-mono text-[11px] font-bold w-5 text-center shrink-0
                       ${isNext ? "text-primary" : "text-muted-foreground"}`}>
                       {race.round}
                     </span>
 
                     {/* Flag */}
-                    {race.countryIso ? (
+                    {flagSrc ? (
                       <img
-                        src={flagUrl(race.countryIso.toLowerCase(), "h40")}
-                        alt={race.name}
+                        src={flagSrc}
+                        alt=""
                         className="h-5 w-auto object-cover rounded-[3px] shrink-0"
                         style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.12)" }}
                         onError={e => { e.target.style.display = "none"; }}
                       />
                     ) : (
-                      <span className="text-base shrink-0">🏁</span>
+                      <span className="text-base leading-none shrink-0">🏁</span>
                     )}
 
                     {/* Name + date */}
@@ -110,24 +111,21 @@ export default function SeasonMapModal({ races = [], open, onClose }) {
                         ${isNext ? "text-primary" : race.isPast ? "text-muted-foreground" : "text-foreground"}`}>
                         {race.name}
                       </p>
-                      <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      <p className="text-[11px] text-muted-foreground font-body mt-0.5">
                         {format(new Date(race.date), "d MMM yyyy")}
                       </p>
                     </div>
 
-                    {/* Tags / status */}
+                    {/* Tags + status icon */}
                     <div className="flex items-center gap-1.5 shrink-0">
                       {race.hasSprint && (
                         <span className="tag bg-amber-100 text-amber-700 text-[9px]">Sprint</span>
                       )}
-                      {isNext && (
-                        <span className="tag bg-primary/10 text-primary text-[9px]">{t("map_next")}</span>
-                      )}
-                      {race.isPast
-                        ? <CheckCircle2 className="w-4 h-4 text-muted-foreground/50" />
-                        : isNext
-                          ? <ChevronRight className="w-4 h-4 text-primary" />
-                          : <Circle className="w-4 h-4 text-muted-foreground/30" />
+                      {isNext
+                        ? <ChevronRight className="w-4 h-4 text-primary" />
+                        : race.isPast
+                          ? <CheckCircle2 className="w-4 h-4 text-muted-foreground/40" />
+                          : <Circle className="w-3.5 h-3.5 text-muted-foreground/25" />
                       }
                     </div>
                   </motion.div>
