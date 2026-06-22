@@ -5,6 +5,13 @@ import { useI18n } from "@/lib/i18n";
 import { format } from "date-fns";
 import { flagUrl, gpIso } from "@/lib/flagUtils";
 
+// "Formula 1 Qatar Airways Australian Grand Prix 2026" → "Australian Grand Prix"
+function shortName(official) {
+  const m = official.match(/([A-Z][a-záàäâãåæçéèëêíìïîóòöôõøúùüûýÿñ\s-]+Grand Prix(?:\s+de\s+\S+)?)/u);
+  if (m) return m[1].trim();
+  return official.replace(/^Formula 1\s+/i, "").replace(/\s+\d{4}$/, "").trim();
+}
+
 export default function SeasonCalendarModal({ races = [], open, onClose }) {
   const { t } = useI18n();
   const nextRef = useRef(null);
@@ -44,22 +51,18 @@ export default function SeasonCalendarModal({ races = [], open, onClose }) {
                   {t("map_title")}
                 </h2>
                 <p className="text-white/70 text-[11px] font-body mt-0.5">
-                  {completed} / {races.length} GP disputati
+                  {completed} / {races.length} GP
                 </p>
               </div>
-              <button
-                onClick={onClose}
-                className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white active:scale-95 transition-transform"
-              >
+              <button onClick={onClose}
+                className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white active:scale-95 transition-transform">
                 <X className="w-4 h-4" />
               </button>
             </div>
             {/* Progress bar */}
             <div className="h-1 bg-white/20 rounded-full mb-3 overflow-hidden">
-              <div
-                className="h-full bg-white rounded-full transition-all duration-700"
-                style={{ width: races.length ? `${(completed / races.length) * 100}%` : "0%" }}
-              />
+              <div className="h-full bg-white rounded-full transition-all duration-700"
+                   style={{ width: races.length ? `${(completed / races.length) * 100}%` : "0%" }} />
             </div>
           </div>
 
@@ -68,7 +71,8 @@ export default function SeasonCalendarModal({ races = [], open, onClose }) {
             <div className="px-4 py-3 space-y-2 pb-8">
               {races.map((race, i) => {
                 const isNext = race.id === next?.id;
-                const iso = gpIso(race.name) || gpIso(race.countryId || "");
+                const label = shortName(race.name);
+                const iso = gpIso(race.name);
                 const flagSrc = iso ? flagUrl(iso, "h40") : null;
 
                 return (
@@ -94,13 +98,9 @@ export default function SeasonCalendarModal({ races = [], open, onClose }) {
 
                     {/* Flag */}
                     {flagSrc ? (
-                      <img
-                        src={flagSrc}
-                        alt=""
-                        className="h-5 w-auto object-cover rounded-[3px] shrink-0"
-                        style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.12)" }}
-                        onError={e => { e.target.style.display = "none"; }}
-                      />
+                      <img src={flagSrc} alt="" className="h-5 w-auto object-cover rounded-[3px] shrink-0"
+                           style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.12)" }}
+                           onError={e => { e.target.style.display = "none"; }} />
                     ) : (
                       <span className="text-base leading-none shrink-0">🏁</span>
                     )}
@@ -109,14 +109,14 @@ export default function SeasonCalendarModal({ races = [], open, onClose }) {
                     <div className="flex-1 min-w-0">
                       <p className={`font-heading font-black text-sm leading-tight truncate
                         ${isNext ? "text-primary" : race.isPast ? "text-muted-foreground" : "text-foreground"}`}>
-                        {race.name}
+                        {label}
                       </p>
                       <p className="text-[11px] text-muted-foreground font-body mt-0.5">
                         {format(new Date(race.date), "d MMM yyyy")}
                       </p>
                     </div>
 
-                    {/* Tags + status icon */}
+                    {/* Tags + status */}
                     <div className="flex items-center gap-1.5 shrink-0">
                       {race.hasSprint && (
                         <span className="tag bg-amber-100 text-amber-700 text-[9px]">Sprint</span>
