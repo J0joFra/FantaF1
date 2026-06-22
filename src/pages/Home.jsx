@@ -15,7 +15,7 @@ import {
 } from "@/lib/f1Utils";
 import { raceFlagUrl, gpIso, flagUrl } from "@/lib/flagUtils";
 import GpCountdown from "@/components/GpCountdown";
-import { Loader2, AlertCircle, ChevronDown, ChevronUp, Info, Trophy } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, Info, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
@@ -399,7 +399,6 @@ export default function Home() {
             {/* 4-column grid, equal width, centered */}
             <div className="grid grid-cols-4 gap-2 px-3 py-3">
               {calRaces.map((r, i) => {
-                const iso = raceFlagUrl(r) ? null : null; // use raceFlagUrl directly
                 const flagSrc = raceFlagUrl(r, "h40");
                 return (
                   <div key={i}
