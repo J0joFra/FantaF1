@@ -1,8 +1,7 @@
 import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckCircle2, Circle, ChevronRight } from "lucide-react";
+import { X, CheckCircle2, Circle, ChevronRight, Loader2, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { format } from "date-fns";
 import { flagUrl, gpIso } from "@/lib/flagUtils";
 
 // "Formula 1 Qatar Airways Australian Grand Prix 2026" → "Australian Grand Prix"
@@ -12,7 +11,15 @@ function shortName(official) {
   return official.replace(/^Formula 1\s+/i, "").replace(/\s+\d{4}$/, "").trim();
 }
 
-export default function SeasonCalendarModal({ races = [], open, onClose }) {
+function formatRaceDate(dateStr) {
+  if (!dateStr) return "";
+  // Parse YYYY-MM-DD safely (avoid timezone shifts)
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const months = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
+  return `${d} ${months[m - 1]} ${y}`;
+}
+
+export default function SeasonCalendarModal({ races = [], error, open, onClose }) {
   const { t } = useI18n();
   const nextRef = useRef(null);
 
@@ -27,7 +34,7 @@ export default function SeasonCalendarModal({ races = [], open, onClose }) {
     if (open && nextRef.current) {
       setTimeout(() => nextRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 200);
     }
-  }, [open]);
+  }, [open, races]);
 
   const completed = races.filter(r => r.isPast).length;
   const next = races.find(r => !r.isPast);
@@ -51,7 +58,7 @@ export default function SeasonCalendarModal({ races = [], open, onClose }) {
                   {t("map_title")}
                 </h2>
                 <p className="text-white/70 text-[11px] font-body mt-0.5">
-                  {completed} / {races.length} GP
+                  {races.length > 0 ? `${completed} / ${races.length} GP` : "Caricamento…"}
                 </p>
               </div>
               <button onClick={onClose}
@@ -66,72 +73,92 @@ export default function SeasonCalendarModal({ races = [], open, onClose }) {
             </div>
           </div>
 
-          {/* List */}
+          {/* Body */}
           <div className="flex-1 overflow-y-auto">
-            <div className="px-4 py-3 space-y-2 pb-8">
-              {races.map((race, i) => {
-                const isNext = race.id === next?.id;
-                const label = shortName(race.name);
-                const iso = gpIso(race.name);
-                const flagSrc = iso ? flagUrl(iso, "h40") : null;
+            {/* Error state */}
+            {error && (
+              <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">
+                <AlertTriangle className="w-10 h-10 text-red-400" />
+                <p className="font-heading font-black text-base text-foreground">Errore caricamento</p>
+                <p className="text-xs text-muted-foreground font-body">{error.message}</p>
+              </div>
+            )}
 
-                return (
-                  <motion.div
-                    key={race.id}
-                    ref={isNext ? nextRef : null}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.015 }}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-2xl border
-                      ${isNext
-                        ? "border-primary/30 bg-primary/5"
-                        : race.isPast
-                          ? "border-gray-100 bg-gray-50 opacity-55"
-                          : "border-gray-100 bg-card"
-                      }`}
-                  >
-                    {/* Round */}
-                    <span className={`font-mono text-[11px] font-bold w-5 text-center shrink-0
-                      ${isNext ? "text-primary" : "text-muted-foreground"}`}>
-                      {race.round}
-                    </span>
+            {/* Empty + no error = loading */}
+            {!error && races.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground font-body">Caricamento calendario…</p>
+              </div>
+            )}
 
-                    {/* Flag */}
-                    {flagSrc ? (
-                      <img src={flagSrc} alt="" className="h-5 w-auto object-cover rounded-[3px] shrink-0"
-                           style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.12)" }}
-                           onError={e => { e.target.style.display = "none"; }} />
-                    ) : (
-                      <span className="text-base leading-none shrink-0">🏁</span>
-                    )}
+            {/* Race list */}
+            {races.length > 0 && (
+              <div className="px-4 py-3 space-y-2 pb-8">
+                {races.map((race, i) => {
+                  const isNext = race.id === next?.id;
+                  const label = shortName(race.name);
+                  const iso = gpIso(race.name);
+                  const flagSrc = iso ? flagUrl(iso, "h40") : null;
 
-                    {/* Name + date */}
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-heading font-black text-sm leading-tight truncate
-                        ${isNext ? "text-primary" : race.isPast ? "text-muted-foreground" : "text-foreground"}`}>
-                        {label}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground font-body mt-0.5">
-                        {format(new Date(race.date), "d MMM yyyy")}
-                      </p>
-                    </div>
+                  return (
+                    <motion.div
+                      key={race.id}
+                      ref={isNext ? nextRef : null}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.015 }}
+                      className={`flex items-center gap-3 px-3 py-3 rounded-2xl border
+                        ${isNext
+                          ? "border-primary/30 bg-primary/5"
+                          : race.isPast
+                            ? "border-gray-100 bg-gray-50 opacity-55"
+                            : "border-gray-100 bg-card"
+                        }`}
+                    >
+                      {/* Round */}
+                      <span className={`font-mono text-[11px] font-bold w-5 text-center shrink-0
+                        ${isNext ? "text-primary" : "text-muted-foreground"}`}>
+                        {race.round}
+                      </span>
 
-                    {/* Tags + status */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {race.hasSprint && (
-                        <span className="tag bg-amber-100 text-amber-700 text-[9px]">Sprint</span>
+                      {/* Flag */}
+                      {flagSrc ? (
+                        <img src={flagSrc} alt="" className="h-5 w-auto object-cover rounded-[3px] shrink-0"
+                             style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.12)" }}
+                             onError={e => { e.target.style.display = "none"; }} />
+                      ) : (
+                        <span className="text-base leading-none shrink-0">🏁</span>
                       )}
-                      {isNext
-                        ? <ChevronRight className="w-4 h-4 text-primary" />
-                        : race.isPast
-                          ? <CheckCircle2 className="w-4 h-4 text-muted-foreground/40" />
-                          : <Circle className="w-3.5 h-3.5 text-muted-foreground/25" />
-                      }
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
+
+                      {/* Name + date */}
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-heading font-black text-sm leading-tight truncate
+                          ${isNext ? "text-primary" : race.isPast ? "text-muted-foreground" : "text-foreground"}`}>
+                          {label}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground font-body mt-0.5">
+                          {formatRaceDate(race.date)}
+                        </p>
+                      </div>
+
+                      {/* Sprint tag + status icon */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {race.hasSprint && (
+                          <span className="tag bg-amber-100 text-amber-700 text-[9px]">Sprint</span>
+                        )}
+                        {isNext
+                          ? <ChevronRight className="w-4 h-4 text-primary" />
+                          : race.isPast
+                            ? <CheckCircle2 className="w-4 h-4 text-muted-foreground/40" />
+                            : <Circle className="w-3.5 h-3.5 text-muted-foreground/25" />
+                        }
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </motion.div>
       )}
