@@ -150,7 +150,7 @@ export default function SeasonCalendarModal({ races = [], error, open, onClose }
                         {isNext
                           ? <ChevronRight className="w-4 h-4 text-primary" />
                           : race.isPast
-                            ? <CheckCircle2 className="w-4 h-4 text-muted-foreground/40" />
+                            ? <CheckCircle2 className="w-4 h-4 text-green-500" />
                             : <Circle className="w-3.5 h-3.5 text-muted-foreground/25" />
                         }
                       </div>
