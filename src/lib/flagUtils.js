@@ -15,6 +15,7 @@ const NAME_TO_ISO = {
   saudi:            'sa', jeddah:         'sa',
   japan:            'jp', japanese:       'jp',
   china:            'cn', chinese:        'cn',
+  azerbaijan:       'az',
   miami:            'us', 'las vegas':    'us', 'united states': 'us', usa: 'us',
   imola:            'it', emilia:         'it', monza:           'it',
   italy:            'it', italian:        'it', italia:          'it',
@@ -32,6 +33,7 @@ const NAME_TO_ISO = {
   mexico:           'mx', mexican:        'mx', 'méxico':        'mx', ciudad: 'mx',
   brazil:           'br', brazilian:      'br', brasil:          'br',
   'são paulo':      'br', 'prêmio':       'br',
+  // qatar MUST come after azerbaijan — official names contain "Qatar Airways" as sponsor
   qatar:            'qa',
   'abu dhabi':      'ae', uae:            'ae', 'united arab emirates': 'ae',
 };
