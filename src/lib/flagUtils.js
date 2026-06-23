@@ -9,26 +9,31 @@ export function flagUrl(code, size = 'h40') {
 // ── GP name / country_id → ISO code ──────────────────────────────────────────
 // Maps either a Supabase country_id string OR a GP name keyword to an ISO code.
 const NAME_TO_ISO = {
-  // by GP / circuit name keyword
-  australia:      'au', bahrain:      'bh', saudi:        'sa',
-  jeddah:         'sa', japan:        'jp', china:        'cn',
-  miami:          'us', imola:        'it', 'emilia':     'it',
-  monaco:         'mc', canada:       'ca', spain:        'es',
-  austria:        'at', britain:      'gb', silverstone:  'gb',
-  hungary:        'hu', belgium:      'be', netherlands:  'nl',
-  zandvoort:      'nl', italy:        'it', monza:        'it',
-  singapore:      'sg', 'united states': 'us', usa:       'us',
-  mexico:         'mx', brazil:       'br', 'las vegas':  'us',
-  qatar:          'qa', 'abu dhabi':  'ae',
-  // by Supabase country_id (usually the country name in English, lowercase)
-  'australia':    'au', 'bahrain':    'bh', 'saudi arabia': 'sa',
-  'japan':        'jp', 'china':      'cn', 'united states': 'us',
-  'italy':        'it', 'monaco':     'mc', 'canada':     'ca',
-  'spain':        'es', 'austria':    'at', 'great britain': 'gb',
-  'united kingdom': 'gb', 'hungary':  'hu', 'belgium':    'be',
-  'netherlands':  'nl', 'singapore':  'sg', 'mexico':     'mx',
-  'brazil':       'br', 'qatar':      'qa', 'uae':        'ae',
-  'united arab emirates': 'ae',
+  // English nouns + adjectives
+  australia:        'au', australian:     'au',
+  bahrain:          'bh',
+  saudi:            'sa', jeddah:         'sa',
+  japan:            'jp', japanese:       'jp',
+  china:            'cn', chinese:        'cn',
+  miami:            'us', 'las vegas':    'us', 'united states': 'us', usa: 'us',
+  imola:            'it', emilia:         'it', monza:           'it',
+  italy:            'it', italian:        'it', italia:          'it',
+  monaco:           'mc',
+  canada:           'ca', canadian:       'ca',
+  spain:            'es', spanish:        'es', barcelona:       'es',
+  catalunya:        'es', 'españa':       'es',
+  austria:          'at', austrian:       'at',
+  britain:          'gb', british:        'gb', silverstone:     'gb',
+  'great britain':  'gb', 'united kingdom': 'gb',
+  hungary:          'hu', hungarian:      'hu',
+  belgium:          'be', belgian:        'be',
+  netherlands:      'nl', dutch:          'nl', zandvoort:       'nl',
+  singapore:        'sg',
+  mexico:           'mx', mexican:        'mx', 'méxico':        'mx', ciudad: 'mx',
+  brazil:           'br', brazilian:      'br', brasil:          'br',
+  'são paulo':      'br', 'prêmio':       'br',
+  qatar:            'qa',
+  'abu dhabi':      'ae', uae:            'ae', 'united arab emirates': 'ae',
 };
 
 export function gpIso(nameOrId = '') {
