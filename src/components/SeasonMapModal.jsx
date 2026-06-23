@@ -124,11 +124,11 @@ export default function SeasonCalendarModal({ races = [], error, open, onClose }
 
                       {/* Flag */}
                       {flagSrc ? (
-                        <img src={flagSrc} alt="" className="h-5 w-auto object-cover rounded-[3px] shrink-0"
+                        <img src={flagSrc} alt="" className="w-7 h-5 object-cover rounded-[3px] shrink-0"
                              style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.12)" }}
                              onError={e => { e.target.style.display = "none"; }} />
                       ) : (
-                        <span className="text-base leading-none shrink-0">🏁</span>
+                        <span className="w-7 h-5 flex items-center justify-center text-sm shrink-0">🏁</span>
                       )}
 
                       {/* Name + date */}
