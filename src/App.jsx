@@ -6,15 +6,20 @@ import PageNotFound from './lib/PageNotFound';
 import { I18nProvider } from '@/lib/i18n';
 import AppLayout from './components/layout/AppLayout';
 import Onboarding from './components/Onboarding';
+import SplashScreen from './components/SplashScreen';
 import Home from './pages/Home';
 import Calculator from './pages/Calculator';
 import Compare from './pages/Compare';
 import Ferrari from './pages/Ferrari';
+import { useState } from 'react';
 
 function App() {
+  const [splashDone, setSplashDone] = useState(false);
+
   return (
     <I18nProvider>
       <QueryClientProvider client={queryClientInstance}>
+        {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
         <Router>
           <Routes>
             <Route element={<AppLayout />}>
