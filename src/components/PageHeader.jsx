@@ -3,7 +3,8 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function PageHeader({ icon: Icon, title, color = "#E8002D", right }) {
   return (
-    <div className="bg-gradient-to-r from-[#E8002D] to-[#C20028] sticky top-0 z-30 shadow-md text-white">
+    <div className="bg-gradient-to-r from-[#E8002D] to-[#C20028] sticky top-0 z-30 shadow-md text-white"
+         style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
       <div className="px-4 py-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="shrink-0">
