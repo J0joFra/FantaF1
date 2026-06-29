@@ -1,5 +1,5 @@
 import { Outlet, useLocation, Link } from "react-router-dom";
-import { BarChart2, Calculator, GitCompare, Shield } from "lucide-react";
+import { BarChart2, Calculator, GitCompare, Shield, Newspaper } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
 
@@ -8,6 +8,7 @@ const tabs = [
   { path: "/calculator", key: "nav_scenarios", icon: Calculator },
   { path: "/compare",    key: "nav_compare",   icon: GitCompare },
   { path: "/ferrari",    key: "nav_teams",     icon: Shield     },
+  { path: "/news",       key: "nav_news",      icon: Newspaper  },
 ];
 
 export default function AppLayout() {
@@ -35,7 +36,7 @@ export default function AppLayout() {
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50
                       bg-white border-t border-border safe-bottom"
            style={{ boxShadow: "0 -1px 0 rgba(0,0,0,0.06), 0 -4px 16px rgba(0,0,0,0.06)" }}>
-        <div className="grid grid-cols-4 h-16">
+        <div className="grid grid-cols-5 h-16">
           {tabs.map(({ path, key, icon: Icon }) => {
             const active = pathname === path;
             return (
