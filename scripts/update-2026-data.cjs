@@ -17,7 +17,7 @@ const { createClient } = require("@supabase/supabase-js");
 
 // ── Config ──────────────────────────────────────────────────────────────────
 const DUMP = process.env.F1DB_DUMP
-  || "C:/Users/FrancalanciJoaquim/Downloads/f1db-sql-postgresql (1)/f1db-sql-postgresql.sql";
+  || "c:\\Users\\FrancalanciJoaquim\\Downloads\\f1db-sql-postgresql (5)\\f1db-sql-postgresql.sql";
 const YEAR = 2026;
 const RACE_ID_RANGE = [1150, 1171]; // intervallo id gara del 2026 nel dump f1db
 const APPLY = process.argv.includes("--apply");
