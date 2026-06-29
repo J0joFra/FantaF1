@@ -11,6 +11,7 @@ import Home from './pages/Home';
 import Calculator from './pages/Calculator';
 import Compare from './pages/Compare';
 import Ferrari from './pages/Ferrari';
+import News from './pages/News';
 import { useState } from 'react';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
               <Route path="/calculator" element={<Calculator />} />
               <Route path="/compare" element={<Compare />} />
               <Route path="/ferrari" element={<Ferrari />} />
+              <Route path="/news" element={<News />} />
             </Route>
             <Route path="*" element={<PageNotFound />} />
           </Routes>
