@@ -5,24 +5,73 @@ import { Newspaper } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 const RSS_URL = "https://it.motorsport.com/rss/f1/news/";
-const API_URL = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}&count=30`;
 
 function stripHtml(html = "") {
-  return html.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").trim();
+  return html.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/&#\d+;/g, "").trim();
+}
+
+function getText(el, tag) {
+  const node = el.getElementsByTagName(tag)[0];
+  return node ? (node.textContent || node.innerHTML || "").trim() : "";
+}
+
+function parseRssXml(xmlText) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, "text/xml");
+  const items = Array.from(doc.getElementsByTagName("item"));
+  return items.slice(0, 30).map(item => {
+    const title = getText(item, "title");
+    const link = getText(item, "link") || item.querySelector("link")?.textContent?.trim() || "";
+    const pubDate = getText(item, "pubDate");
+    const description = getText(item, "description");
+    const mediaContent = item.getElementsByTagNameNS("http://search.yahoo.com/mrss/", "content")[0];
+    const enclosure = item.getElementsByTagName("enclosure")[0];
+    const image =
+      mediaContent?.getAttribute("url") ||
+      enclosure?.getAttribute("url") ||
+      null;
+    return {
+      title,
+      excerpt: stripHtml(description).slice(0, 160),
+      image,
+      url: link,
+      date: pubDate ? new Date(pubDate) : null,
+    };
+  });
+}
+
+async function fetchViaRss2Json() {
+  const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}&count=30`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`rss2json ${res.status}`);
+  const json = await res.json();
+  if (json.status !== "ok") throw new Error("rss2json: " + (json.message || "errore"));
+  return json.items.map(item => ({
+    title: item.title,
+    excerpt: stripHtml(item.description || "").slice(0, 160),
+    image: item.thumbnail || item.enclosure?.link || null,
+    url: item.link,
+    date: item.pubDate ? new Date(item.pubDate) : null,
+  }));
+}
+
+async function fetchViaAllOrigins() {
+  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) throw new Error(`allorigins ${res.status}`);
+  const json = await res.json();
+  if (!json.contents) throw new Error("allorigins: nessun contenuto");
+  return parseRssXml(json.contents);
 }
 
 async function fetchNews() {
-  const res = await fetch(API_URL);
-  if (!res.ok) throw new Error("Errore caricamento notizie");
-  const json = await res.json();
-  if (json.status !== "ok") throw new Error("Feed non disponibile");
-  return json.items.map(item => ({
-    title:     item.title,
-    excerpt:   stripHtml(item.description).slice(0, 160),
-    image:     item.thumbnail || item.enclosure?.link || null,
-    url:       item.link,
-    date:      item.pubDate ? new Date(item.pubDate) : null,
-  }));
+  try {
+    const items = await fetchViaRss2Json();
+    if (items.length > 0) return items;
+    throw new Error("nessun articolo");
+  } catch {
+    return fetchViaAllOrigins();
+  }
 }
 
 function NewsCard({ item }) {
@@ -35,7 +84,6 @@ function NewsCard({ item }) {
       onClick={handleClick}
       className="w-full text-left app-card overflow-hidden active:scale-[0.98] transition-transform"
     >
-      {/* Cover image */}
       {item.image && (
         <div className="w-full aspect-[16/9] overflow-hidden bg-gray-100">
           <img
@@ -48,26 +96,22 @@ function NewsCard({ item }) {
       )}
 
       <div className="p-3">
-        {/* Date */}
         {item.date && (
           <p className="text-[10px] text-muted-foreground font-body mb-1">
             {item.date.toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" })}
           </p>
         )}
 
-        {/* Title */}
         <p className="font-heading font-black text-sm text-foreground leading-snug line-clamp-2">
           {item.title}
         </p>
 
-        {/* Excerpt */}
         {item.excerpt && (
           <p className="text-[12px] text-muted-foreground font-body mt-1 line-clamp-2 leading-relaxed">
             {item.excerpt}
           </p>
         )}
 
-        {/* Read more */}
         <div className="flex items-center gap-1 mt-2 text-primary">
           <span className="text-[11px] font-semibold font-body">Leggi su Motorsport.com</span>
           <ExternalLink className="w-3 h-3" />
@@ -83,7 +127,7 @@ export default function News() {
     queryKey: ["f1news"],
     queryFn: fetchNews,
     staleTime: 10 * 60 * 1000,
-    retry: 2,
+    retry: 1,
   });
 
   return (
