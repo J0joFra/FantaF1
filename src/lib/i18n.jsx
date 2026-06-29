@@ -12,7 +12,7 @@ export const LANGS = [
 const DICT = {
   it: {
     // nav
-    nav_overview: "Panoramica", nav_scenarios: "Scenari", nav_compare: "Confronta", nav_teams: "Scuderie",
+    nav_overview: "Panoramica", nav_scenarios: "Scenari", nav_compare: "Confronta", nav_teams: "Scuderie", nav_news: "News",
     // comune
     share: "Condividi", save: "Salva", loading: "Caricamento…", retry: "Riprova",
     season: "Stagione", career: "Carriera", vs: "vs", leader: "Leader",
@@ -100,7 +100,7 @@ const DICT = {
     map_title: "GP Stagione 2026", map_next: "Prossimo GP", map_upcoming: "In programma", map_past: "Disputato", map_tap: "Tocca per la mappa",
   },
   en: {
-    nav_overview: "Overview", nav_scenarios: "Scenarios", nav_compare: "Compare", nav_teams: "Teams",
+    nav_overview: "Overview", nav_scenarios: "Scenarios", nav_compare: "Compare", nav_teams: "Teams", nav_news: "News",
     share: "Share", save: "Save", loading: "Loading…", retry: "Retry",
     season: "Season", career: "Career", vs: "vs", leader: "Leader",
     showAll: "Show all", showLess: "Show less", pts: "pts",
@@ -177,7 +177,7 @@ const DICT = {
     map_title: "2026 Season GPs", map_next: "Next GP", map_upcoming: "Upcoming", map_past: "Completed", map_tap: "Tap for the map",
   },
   fr: {
-    nav_overview: "Aperçu", nav_scenarios: "Scénarios", nav_compare: "Comparer", nav_teams: "Écuries",
+    nav_overview: "Aperçu", nav_scenarios: "Scénarios", nav_compare: "Comparer", nav_teams: "Écuries", nav_news: "News",
     share: "Partager", save: "Enregistrer", loading: "Chargement…", retry: "Réessayer",
     season: "Saison", career: "Carrière", vs: "vs", leader: "Leader",
     showAll: "Voir tout", showLess: "Voir moins", pts: "pts",
@@ -254,7 +254,7 @@ const DICT = {
     map_title: "GP Saison 2026", map_next: "Prochain GP", map_upcoming: "À venir", map_past: "Terminé", map_tap: "Toucher pour la carte",
   },
   es: {
-    nav_overview: "Resumen", nav_scenarios: "Escenarios", nav_compare: "Comparar", nav_teams: "Escuderías",
+    nav_overview: "Resumen", nav_scenarios: "Escenarios", nav_compare: "Comparar", nav_teams: "Escuderías", nav_news: "News",
     share: "Compartir", save: "Guardar", loading: "Cargando…", retry: "Reintentar",
     season: "Temporada", career: "Carrera", vs: "vs", leader: "Líder",
     showAll: "Ver todos", showLess: "Ver menos", pts: "pts",
@@ -331,7 +331,7 @@ const DICT = {
     ob_skip: "Saltar", ob_next: "Siguiente", ob_start: "Empezar",
   },
   de: {
-    nav_overview: "Übersicht", nav_scenarios: "Szenarien", nav_compare: "Vergleich", nav_teams: "Teams",
+    nav_overview: "Übersicht", nav_scenarios: "Szenarien", nav_compare: "Vergleich", nav_teams: "Teams", nav_news: "News",
     share: "Teilen", save: "Speichern", loading: "Laden…", retry: "Erneut versuchen",
     season: "Saison", career: "Karriere", vs: "vs", leader: "Führender",
     showAll: "Alle anzeigen", showLess: "Weniger anzeigen", pts: "Pkt",
