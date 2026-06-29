@@ -1,121 +1,100 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
 
-// Simple inline F1 car SVG pointing right
-function F1Car({ className }) {
+// F1 car pointing UPWARD
+function F1Car({ color = "#E8002D", className }) {
   return (
-    <svg className={className} viewBox="0 0 80 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Body */}
-      <rect x="10" y="8" width="52" height="12" rx="4" fill="#E8002D"/>
-      {/* Nose cone */}
-      <path d="M62 10 L76 14 L62 18 Z" fill="#C20028"/>
-      {/* Cockpit */}
-      <rect x="28" y="4" width="18" height="10" rx="3" fill="#1a1a1a"/>
-      <rect x="30" y="5" width="14" height="7" rx="2" fill="#4aa8ff" opacity="0.6"/>
+    <svg className={className} viewBox="0 0 28 72" fill="none">
+      {/* Nose */}
+      <path d="M14 0 L18 12 L10 12 Z" fill={color === "#E8002D" ? "#C20028" : "#555"} />
       {/* Front wing */}
-      <rect x="64" y="16" width="12" height="3" rx="1" fill="#E8002D"/>
-      <rect x="64" y="9" width="12" height="3" rx="1" fill="#E8002D"/>
+      <rect x="4" y="10" width="20" height="4" rx="1.5" fill={color} />
+      {/* Body */}
+      <rect x="8" y="14" width="12" height="36" rx="4" fill={color} />
+      {/* Cockpit */}
+      <rect x="10" y="18" width="8" height="16" rx="3" fill="#111" />
+      <rect x="11" y="19" width="6" height="12" rx="2" fill="#4aa8ff" opacity="0.5" />
       {/* Rear wing */}
-      <rect x="4" y="5" width="10" height="3" rx="1" fill="#E8002D"/>
-      <rect x="4" y="20" width="10" height="3" rx="1" fill="#E8002D"/>
-      <rect x="6" y="8" width="2" height="12" rx="1" fill="#C20028"/>
+      <rect x="3" y="50" width="22" height="5" rx="2" fill={color} />
+      <rect x="11" y="48" width="6" height="8" rx="1" fill={color === "#E8002D" ? "#C20028" : "#444"} />
       {/* Wheels */}
-      <circle cx="20" cy="21" r="5" fill="#111"/>
-      <circle cx="20" cy="21" r="2.5" fill="#333"/>
-      <circle cx="56" cy="21" r="5" fill="#111"/>
-      <circle cx="56" cy="21" r="2.5" fill="#333"/>
-      <circle cx="20" cy="7" r="4" fill="#111"/>
-      <circle cx="20" cy="7" r="2" fill="#333"/>
-      <circle cx="56" cy="7" r="4" fill="#111"/>
-      <circle cx="56" cy="7" r="2" fill="#333"/>
+      <ellipse cx="6"  cy="22" rx="5" ry="4" fill="#111" />
+      <ellipse cx="22" cy="22" rx="5" ry="4" fill="#111" />
+      <ellipse cx="6"  cy="22" rx="2.5" ry="2" fill="#333" />
+      <ellipse cx="22" cy="22" rx="2.5" ry="2" fill="#333" />
+      <ellipse cx="6"  cy="46" rx="5" ry="4" fill="#111" />
+      <ellipse cx="22" cy="46" rx="5" ry="4" fill="#111" />
+      <ellipse cx="6"  cy="46" rx="2.5" ry="2" fill="#333" />
+      <ellipse cx="22" cy="46" rx="2.5" ry="2" fill="#333" />
     </svg>
   );
 }
 
-function Cone({ className }) {
+// Scrolling road dash
+function RoadDash({ delay }) {
   return (
-    <svg className={className} viewBox="0 0 24 32" fill="none">
-      <polygon points="12,0 22,28 2,28" fill="#FF6B00"/>
-      <rect x="2" y="28" width="20" height="4" rx="1" fill="#fff"/>
-      <rect x="5" y="10" width="14" height="2.5" rx="1" fill="white" opacity="0.7"/>
-      <rect x="6" y="18" width="12" height="2" rx="1" fill="white" opacity="0.7"/>
-    </svg>
+    <motion.div
+      className="absolute left-1/2 -translate-x-1/2 w-1 rounded-full bg-white/20"
+      style={{ height: 28, top: -30 }}
+      animate={{ y: ["0vh", "110vh"] }}
+      transition={{ duration: 1.2, delay, repeat: Infinity, ease: "linear" }}
+    />
   );
 }
 
-function CheckeredFlag() {
-  const cols = 4;
-  const rows = 6;
-  const cells = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      cells.push(
-        <rect
-          key={`${r}-${c}`}
-          x={c * 8}
-          y={r * 8}
-          width="8"
-          height="8"
-          fill={(r + c) % 2 === 0 ? "white" : "black"}
-        />
-      );
-    }
-  }
+// Opponent car that scrolls down past the player
+function Opponent({ color, laneX, startDelay, duration = 3.5 }) {
   return (
-    <svg viewBox={`0 0 ${cols * 8} ${rows * 8}`} className="w-8 h-12">
-      {cells}
-    </svg>
+    <motion.div
+      className="absolute"
+      style={{ x: laneX, top: 0 }}
+      initial={{ y: "-10%" }}
+      animate={{ y: "110%" }}
+      transition={{ delay: startDelay, duration, ease: "linear" }}
+    >
+      <F1Car color={color} className="w-7 h-16" />
+    </motion.div>
   );
 }
 
-// Confetti particles for victory
-const CONFETTI_COLORS = ["#E8002D", "#FFD700", "#fff", "#00C6FF", "#FF6B00"];
-const CONFETTI_COUNT = 18;
+const CONFETTI_COLORS = ["#E8002D", "#FFD700", "#ffffff", "#00C6FF", "#FF6B00"];
 
 function Confetti() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {Array.from({ length: CONFETTI_COUNT }).map((_, i) => {
-        const left = (i / CONFETTI_COUNT) * 100;
-        const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
-        const delay = (i * 0.12) % 1.2;
-        const dur = 1.0 + (i % 4) * 0.2;
-        return (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 rounded-sm"
-            style={{ left: `${left}%`, top: "-8px", backgroundColor: color }}
-            animate={{ y: ["0px", "320px"], rotate: [0, 360 * (i % 2 === 0 ? 1 : -1)], opacity: [1, 0] }}
-            transition={{ duration: dur, delay, ease: "easeIn", repeat: Infinity, repeatDelay: 0.3 }}
-          />
-        );
-      })}
+      {Array.from({ length: 20 }).map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-2 h-2 rounded-sm"
+          style={{
+            left: `${(i / 20) * 100}%`,
+            top: -8,
+            backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+          }}
+          animate={{ y: ["0px", "100vh"], rotate: [0, i % 2 === 0 ? 360 : -360], opacity: [1, 0] }}
+          transition={{ duration: 1.2 + (i % 4) * 0.15, delay: (i * 0.08) % 0.8, ease: "easeIn" }}
+        />
+      ))}
     </div>
   );
 }
 
-// Race animation: 5s race + 1.5s victory + 0.5s fade = 7s
-const RACE_DURATION = 5; // seconds
-
 export default function SplashScreen({ onDone }) {
-  const [phase, setPhase] = useState("race"); // race | victory | done
+  const [phase, setPhase] = useState("race"); // race | victory
   const [visible, setVisible] = useState(true);
 
+  // Player car x offset: swerves left/right to overtake
+  // Opponent 1 is in right lane → player swerves right then back
+  // Opponent 2 is in left lane → player swerves left then back
+  const playerX = [0, 0, 28, 28, 0, 0, -28, -28, 0, 0];
+  const playerTimes = [0, 0.18, 0.26, 0.38, 0.45, 0.52, 0.60, 0.72, 0.79, 1.0];
+
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase("victory"), 5000);
+    const t1 = setTimeout(() => setPhase("victory"), 5200);
     const t2 = setTimeout(() => setVisible(false), 6500);
     const t3 = setTimeout(onDone, 7000);
     return () => [t1, t2, t3].forEach(clearTimeout);
   }, [onDone]);
-
-  // Car x: goes from off-screen-left to off-screen-right over 5s
-  // Car y: swerves at two points to dodge cones
-  // Cone 1 is at ~33% track width → car is near it around t=1.5s (30%)
-  // Cone 2 is at ~62% track width → car is near it around t=2.9s (58%)
-  // Car arrives at finish (~85%) around t=4.5s (90%) and exits right
-  const carX = ["-90px", "25%", "28%", "33%", "55%", "59%", "65%", "110%"];
-  const carY = [0,        0,    -22,   0,     0,     18,    0,     0    ];
-  const carTimes = [0,   0.25, 0.31, 0.38, 0.54,  0.60,  0.68,  1.0  ];
 
   return (
     <AnimatePresence>
@@ -124,137 +103,138 @@ export default function SplashScreen({ onDone }) {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
-          style={{ background: "linear-gradient(160deg, #0d0d1a 0%, #1a0005 60%, #0d0d1a 100%)" }}
+          className="fixed inset-0 z-[9999] flex flex-col items-center overflow-hidden"
+          style={{ background: "linear-gradient(180deg, #0d0d1a 0%, #1a0008 100%)" }}
         >
-          {/* Title */}
+          {/* Top label */}
           <motion.p
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="text-white/80 font-body font-semibold tracking-widest text-sm mb-6"
-            style={{ letterSpacing: "0.18em" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.6 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+            className="text-white font-body text-xs tracking-[0.22em] mt-14 z-10"
           >
             www.formula-rossa.it
           </motion.p>
 
-          {/* Track */}
-          <div className="relative w-full" style={{ height: 110 }}>
+          {/* ── TRACK ── */}
+          <div className="relative flex-1 w-full flex justify-center overflow-hidden">
 
-            {/* Asphalt road */}
-            <div className="absolute left-0 right-0"
-                 style={{ top: 30, height: 60, background: "#1c1c24", borderTop: "2px solid #333", borderBottom: "2px solid #333" }}>
-              {/* White dashes on center line */}
-              <div className="absolute left-0 right-0" style={{ top: 28, borderTop: "2px dashed rgba(255,255,255,0.15)" }} />
-              {/* Red & white kerb strips left edge */}
-              <div className="absolute left-0 top-0 right-0 h-2" style={{ background: "repeating-linear-gradient(90deg,#E8002D 0 16px,white 16px 32px)" }} />
-              <div className="absolute left-0 bottom-0 right-0 h-2" style={{ background: "repeating-linear-gradient(90deg,white 0 16px,#E8002D 16px 32px)" }} />
+            {/* Asphalt strip */}
+            <div
+              className="absolute top-0 bottom-0 bg-[#1a1a24]"
+              style={{ width: 130, left: "50%", transform: "translateX(-50%)" }}
+            />
+
+            {/* Left kerb */}
+            <div
+              className="absolute top-0 bottom-0 w-3"
+              style={{
+                left: "calc(50% - 65px - 12px)",
+                background: "repeating-linear-gradient(180deg, #E8002D 0 12px, white 12px 24px)",
+              }}
+            />
+            {/* Right kerb */}
+            <div
+              className="absolute top-0 bottom-0 w-3"
+              style={{
+                left: "calc(50% + 65px)",
+                background: "repeating-linear-gradient(180deg, white 0 12px, #E8002D 12px 24px)",
+              }}
+            />
+
+            {/* Center lane dashes (scrolling) */}
+            {[0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4, 2.8].map((d, i) => (
+              <RoadDash key={i} delay={d} />
+            ))}
+
+            {/* Finish line — scrolls in near the end */}
+            <motion.div
+              className="absolute left-1/2 -translate-x-1/2 z-10"
+              style={{ width: 130, height: 16, top: 0 }}
+              initial={{ y: "-5%" }}
+              animate={{ y: "70vh" }}
+              transition={{ delay: 3.8, duration: 1.4, ease: "linear" }}
+            >
+              {/* Checkered */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(8,1fr)", height: "100%" }}>
+                {Array.from({ length: 32 }).map((_, i) => (
+                  <div key={i} style={{ background: (Math.floor(i / 8) + (i % 8)) % 2 === 0 ? "white" : "black" }} />
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Opponents */}
+            {/* Opponent 1: right lane, appears early */}
+            <div className="absolute inset-0 flex justify-center">
+              <Opponent color="#4444cc" laneX={28} startDelay={0.6} duration={2.8} />
+            </div>
+            {/* Opponent 2: left lane */}
+            <div className="absolute inset-0 flex justify-center">
+              <Opponent color="#229922" laneX={-28} startDelay={2.2} duration={2.6} />
+            </div>
+            {/* Opponent 3: center, slower */}
+            <div className="absolute inset-0 flex justify-center">
+              <Opponent color="#888888" laneX={0} startDelay={0.0} duration={4.0} />
             </div>
 
-            {/* Finish line */}
-            <motion.div
-              className="absolute top-[30px] flex items-stretch"
-              style={{ right: "12%", height: 60 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: phase === "race" ? 1 : 0 }}
-              transition={{ delay: 2.5, duration: 0.4 }}
-            >
-              <CheckeredFlag />
-            </motion.div>
-
-            {/* Cone 1 — at ~33% */}
-            <motion.div
-              className="absolute"
-              style={{ left: "33%", top: 36 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: phase === "race" ? 1 : 0 }}
-              transition={{ delay: 0.6, duration: 0.3 }}
-            >
-              <Cone className="w-5 h-7" />
-            </motion.div>
-
-            {/* Cone 2 — at ~62% */}
-            <motion.div
-              className="absolute"
-              style={{ left: "62%", top: 42 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: phase === "race" ? 1 : 0 }}
-              transition={{ delay: 1.2, duration: 0.3 }}
-            >
-              <Cone className="w-5 h-7" />
-            </motion.div>
-
-            {/* F1 Car */}
+            {/* Player car — fixed at 70% height, swerves x */}
             {phase === "race" && (
               <motion.div
-                className="absolute"
-                style={{ top: 44 }}
-                initial={{ x: "-90px", y: 0 }}
-                animate={{ x: carX, y: carY }}
-                transition={{
-                  duration: RACE_DURATION,
-                  times: carTimes,
-                  ease: "linear",
-                }}
+                className="absolute z-20"
+                style={{ top: "68%", left: "50%", x: "-50%", marginLeft: -14 }}
+                animate={{ x: playerX.map(v => `calc(-50% + ${v}px)`) }}
+                transition={{ duration: 5.2, times: playerTimes, ease: "easeInOut" }}
               >
-                {/* Speed lines behind car */}
+                {/* Exhaust glow */}
                 <motion.div
-                  className="absolute right-full top-1/2 -translate-y-1/2 flex flex-col gap-1 pr-1"
-                  animate={{ opacity: [0.6, 0.2, 0.6] }}
-                  transition={{ duration: 0.3, repeat: Infinity }}
-                >
-                  {[14, 8, 12, 6].map((w, i) => (
-                    <div key={i} className="h-px bg-white/30 rounded" style={{ width: w }} />
-                  ))}
-                </motion.div>
-                <F1Car className="w-20 h-7" />
+                  className="absolute left-1/2 -translate-x-1/2 rounded-full blur-sm"
+                  style={{ bottom: -6, width: 14, height: 10, background: "#ff6600" }}
+                  animate={{ opacity: [0.8, 0.3, 0.8], scaleY: [1, 1.4, 1] }}
+                  transition={{ duration: 0.2, repeat: Infinity }}
+                />
+                <F1Car color="#E8002D" className="w-7 h-16" />
               </motion.div>
             )}
           </div>
 
-          {/* Victory section */}
+          {/* ── VICTORY ── */}
           <AnimatePresence>
             {phase === "victory" && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 18 }}
-                className="mt-8 flex flex-col items-center gap-2 relative"
+                className="absolute inset-0 flex flex-col items-center justify-center z-30"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+                style={{ background: "linear-gradient(180deg, #0d0d1a 0%, #1a0008 100%)" }}
               >
                 <Confetti />
-                <motion.p
-                  className="text-5xl"
-                  animate={{ rotate: [-8, 8, -8] }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
+                <motion.div
+                  initial={{ scale: 0.4, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 260, damping: 16 }}
+                  className="flex flex-col items-center gap-3"
                 >
-                  🏆
-                </motion.p>
-                <motion.p
-                  className="font-heading font-black text-white text-2xl tracking-widest"
-                  animate={{ scale: [1, 1.06, 1] }}
-                  transition={{ duration: 0.6, repeat: Infinity }}
-                >
-                  VITTORIA!
-                </motion.p>
-                <p className="text-white/50 font-body text-xs tracking-wider mt-1">formula-rossa.it</p>
+                  <motion.p
+                    className="text-6xl"
+                    animate={{ rotate: [-6, 6, -6] }}
+                    transition={{ duration: 0.5, repeat: Infinity }}
+                  >
+                    🏆
+                  </motion.p>
+                  <motion.p
+                    className="font-heading font-black text-white text-3xl tracking-widest"
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 0.7, repeat: Infinity }}
+                  >
+                    VITTORIA!
+                  </motion.p>
+                  <p className="text-white/40 font-body text-xs tracking-[0.2em] mt-1">
+                    www.formula-rossa.it
+                  </p>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
-
-          {/* Loading dots during race */}
-          {phase === "race" && (
-            <div className="flex gap-1.5 mt-8">
-              {[0, 1, 2].map(i => (
-                <motion.div
-                  key={i}
-                  className="w-1.5 h-1.5 rounded-full bg-white/30"
-                  animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.2 }}
-                />
-              ))}
-            </div>
-          )}
         </motion.div>
       )}
     </AnimatePresence>
