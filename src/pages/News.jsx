@@ -4,7 +4,13 @@ import { motion } from "framer-motion";
 import PageHeader from "@/components/PageHeader";
 import { useI18n } from "@/lib/i18n";
 
-const RSS_URL = "https://it.motorsport.com/rss/f1/news/";
+const RSS_BY_LOCALE = {
+  it: "https://it.motorsport.com/rss/f1/news/",
+  en: "https://www.motorsport.com/rss/f1/news/",
+  fr: "https://fr.motorsport.com/rss/f1/news/",
+  es: "https://es.motorsport.com/rss/f1/news/",
+  de: "https://de.motorsport.com/rss/f1/news/",
+};
 
 const CATEGORY_STYLES = {
   SCUDERIA:  { bg: "bg-red-500/15",    border: "border-red-500/30",    text: "text-red-400"    },
@@ -19,12 +25,15 @@ function getCategory(title = "") {
   return "F1 NEWS";
 }
 
-async function fetchNews() {
+async function fetchNews(locale = "it") {
+  const rssUrl = RSS_BY_LOCALE[locale] ?? RSS_BY_LOCALE.it;
+  const dateLocale = locale === "it" ? "it-IT" : locale === "fr" ? "fr-FR" : locale === "es" ? "es-ES" : locale === "de" ? "de-DE" : "en-GB";
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 6000);
   try {
     const res = await fetch(
-      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}&count=5`,
+      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=5`,
       { signal: controller.signal }
     );
     clearTimeout(timeout);
@@ -32,7 +41,6 @@ async function fetchNews() {
     if (data.status !== "ok") throw new Error("Feed non disponibile");
 
     return data.items.slice(0, 5).map((item, i) => {
-      // Replica esatta logica thumbnail di formula-rossa
       let thumbnail = item.enclosure?.link || null;
       if (!thumbnail && item.content) {
         const match = item.content.match(/<img[^>]+src="([^">]+)"/);
@@ -45,15 +53,14 @@ async function fetchNews() {
         title:       item.title,
         description: item.description.replace(/<[^>]*>?/gm, "").slice(0, 130) + "…",
         category:    getCategory(item.title),
-        date:        new Date(item.pubDate).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }),
+        date:        new Date(item.pubDate).toLocaleDateString(dateLocale, { day: "2-digit", month: "short" }),
         url:         item.link,
         thumbnail,
       };
     });
   } catch (err) {
     clearTimeout(timeout);
-    // Fallback: allorigins proxy
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`;
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
     const res2 = await fetch(proxy);
     const json2 = await res2.json();
     if (!json2.contents) throw new Error("Notizie non disponibili");
@@ -71,7 +78,7 @@ async function fetchNews() {
         title,
         description: get("description").replace(/<[^>]*>?/gm, "").slice(0, 130) + "…",
         category:    getCategory(title),
-        date:        get("pubDate") ? new Date(get("pubDate")).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }) : "",
+        date:        get("pubDate") ? new Date(get("pubDate")).toLocaleDateString(dateLocale, { day: "2-digit", month: "short" }) : "",
         url:         get("link"),
         thumbnail,
       };
@@ -152,10 +159,11 @@ function SkeletonCard() {
 }
 
 export default function News() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const locale = lang ?? "it";
   const { data: items = [], isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: ["f1news"],
-    queryFn: fetchNews,
+    queryKey: ["f1news", locale],
+    queryFn: () => fetchNews(locale),
     staleTime: 30 * 60 * 1000,
     retry: 1,
   });
