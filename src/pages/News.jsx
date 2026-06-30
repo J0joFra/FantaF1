@@ -25,65 +25,60 @@ function getCategory(title = "") {
   return "F1 NEWS";
 }
 
+function parseItems(items, dateLocale) {
+  return items.slice(0, 5).map((item, i) => {
+    let thumbnail = item.enclosure?.link || null;
+    if (!thumbnail && item.content) {
+      const match = item.content.match(/<img[^>]+src="([^">]+)"/);
+      if (match) thumbnail = match[1];
+    }
+    if (!thumbnail && item.thumbnail) thumbnail = item.thumbnail;
+    return {
+      id:          i,
+      title:       item.title,
+      description: item.description.replace(/<[^>]*>?/gm, "").slice(0, 130) + "…",
+      category:    getCategory(item.title),
+      date:        new Date(item.pubDate).toLocaleDateString(dateLocale, { day: "2-digit", month: "short" }),
+      url:         item.link,
+      thumbnail,
+    };
+  });
+}
+
 async function fetchNews(locale = "it") {
-  const rssUrl = RSS_BY_LOCALE[locale] ?? RSS_BY_LOCALE.it;
-  const dateLocale = locale === "it" ? "it-IT" : locale === "fr" ? "fr-FR" : locale === "es" ? "es-ES" : locale === "de" ? "de-DE" : "en-GB";
+  const rssUrl    = RSS_BY_LOCALE[locale] ?? RSS_BY_LOCALE.it;
+  const dateLocale = { it:"it-IT", fr:"fr-FR", es:"es-ES", de:"de-DE" }[locale] ?? "en-GB";
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 6000);
-  try {
-    const res = await fetch(
-      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=5`,
-      { signal: controller.signal }
-    );
-    clearTimeout(timeout);
-    const data = await res.json();
-    if (data.status !== "ok") throw new Error("Feed non disponibile");
+  // Race both sources in parallel — first valid response wins
+  const rss2jsonPromise = fetch(
+    `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=5`,
+    { signal: AbortSignal.timeout(5000) }
+  ).then(r => r.json()).then(d => {
+    if (d.status !== "ok" || !d.items?.length) throw new Error("empty");
+    return parseItems(d.items, dateLocale);
+  });
 
-    return data.items.slice(0, 5).map((item, i) => {
-      let thumbnail = item.enclosure?.link || null;
-      if (!thumbnail && item.content) {
-        const match = item.content.match(/<img[^>]+src="([^">]+)"/);
-        if (match) thumbnail = match[1];
-      }
-      if (!thumbnail && item.thumbnail) thumbnail = item.thumbnail;
-
-      return {
-        id:          i,
-        title:       item.title,
-        description: item.description.replace(/<[^>]*>?/gm, "").slice(0, 130) + "…",
-        category:    getCategory(item.title),
-        date:        new Date(item.pubDate).toLocaleDateString(dateLocale, { day: "2-digit", month: "short" }),
-        url:         item.link,
-        thumbnail,
-      };
-    });
-  } catch (err) {
-    clearTimeout(timeout);
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
-    const res2 = await fetch(proxy);
-    const json2 = await res2.json();
-    if (!json2.contents) throw new Error("Notizie non disponibili");
-
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(json2.contents, "text/xml");
-    return Array.from(doc.getElementsByTagName("item")).slice(0, 5).map((item, i) => {
-      const get = (tag) => item.getElementsByTagName(tag)[0]?.textContent?.trim() || "";
+  const alloriginsPromise = fetch(
+    `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`,
+    { signal: AbortSignal.timeout(5000) }
+  ).then(r => r.json()).then(j => {
+    if (!j.contents) throw new Error("empty");
+    const doc = new DOMParser().parseFromString(j.contents, "text/xml");
+    const xmlItems = Array.from(doc.getElementsByTagName("item")).slice(0, 5).map((item, i) => {
+      const get = t => item.getElementsByTagName(t)[0]?.textContent?.trim() || "";
       const media = item.getElementsByTagNameNS("http://search.yahoo.com/mrss/", "content")[0];
       const enc   = item.getElementsByTagName("enclosure")[0];
-      const thumbnail = media?.getAttribute("url") || enc?.getAttribute("url") || null;
-      const title = get("title");
       return {
-        id:          i,
-        title,
-        description: get("description").replace(/<[^>]*>?/gm, "").slice(0, 130) + "…",
-        category:    getCategory(title),
-        date:        get("pubDate") ? new Date(get("pubDate")).toLocaleDateString(dateLocale, { day: "2-digit", month: "short" }) : "",
-        url:         get("link"),
-        thumbnail,
+        title: get("title"), description: get("description"),
+        content: "", thumbnail: media?.getAttribute("url") || enc?.getAttribute("url") || null,
+        enclosure: null, link: get("link"), pubDate: get("pubDate"),
       };
     });
-  }
+    return parseItems(xmlItems, dateLocale);
+  });
+
+  // any() — resolves with the first to succeed
+  return Promise.any([rss2jsonPromise, alloriginsPromise]);
 }
 
 const CAT_BADGE = {
