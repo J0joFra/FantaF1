@@ -1,138 +1,147 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { ExternalLink, RefreshCw, Newspaper } from "lucide-react";
+import { motion } from "framer-motion";
 import PageHeader from "@/components/PageHeader";
-import { Newspaper } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 const RSS_URL = "https://it.motorsport.com/rss/f1/news/";
 
-function stripHtml(html = "") {
-  return html.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/&#\d+;/g, "").trim();
-}
+const CATEGORY_STYLES = {
+  SCUDERIA:  { bg: "bg-red-500/15",    border: "border-red-500/30",    text: "text-red-400"    },
+  PILOTI:    { bg: "bg-yellow-400/10", border: "border-yellow-400/30", text: "text-yellow-400" },
+  "F1 NEWS": { bg: "bg-zinc-700/50",   border: "border-zinc-500/30",   text: "text-zinc-300"   },
+};
 
-function getText(el, tag) {
-  const node = el.getElementsByTagName(tag)[0];
-  return node ? (node.textContent || node.innerHTML || "").trim() : "";
-}
-
-function parseRssXml(xmlText) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, "text/xml");
-  const items = Array.from(doc.getElementsByTagName("item"));
-  return items.slice(0, 5).map(item => {
-    const title = getText(item, "title");
-    const link = getText(item, "link") || item.querySelector("link")?.textContent?.trim() || "";
-    const pubDate = getText(item, "pubDate");
-    const description = getText(item, "description");
-    const mediaContent = item.getElementsByTagNameNS("http://search.yahoo.com/mrss/", "content")[0];
-    const enclosure = item.getElementsByTagName("enclosure")[0];
-    const image =
-      mediaContent?.getAttribute("url") ||
-      enclosure?.getAttribute("url") ||
-      null;
-    return {
-      title,
-      excerpt: stripHtml(description).slice(0, 120),
-      image,
-      url: link,
-      date: pubDate ? new Date(pubDate) : null,
-    };
-  });
-}
-
-async function fetchViaRss2Json() {
-  const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}&count=5`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`rss2json ${res.status}`);
-  const json = await res.json();
-  if (json.status !== "ok") throw new Error("rss2json: " + (json.message || "errore"));
-  return json.items.map(item => ({
-    title: item.title,
-    excerpt: stripHtml(item.description || "").slice(0, 120),
-    image: item.thumbnail || item.enclosure?.link || null,
-    url: item.link,
-    date: item.pubDate ? new Date(item.pubDate) : null,
-  }));
-}
-
-async function fetchViaAllOrigins() {
-  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`;
-  const res = await fetch(proxyUrl);
-  if (!res.ok) throw new Error(`allorigins ${res.status}`);
-  const json = await res.json();
-  if (!json.contents) throw new Error("allorigins: nessun contenuto");
-  return parseRssXml(json.contents);
+function getCategory(title = "") {
+  const t = title.toLowerCase();
+  if (t.includes("ferrari")) return "SCUDERIA";
+  if (t.includes("leclerc") || t.includes("hamilton") || t.includes("verstappen")) return "PILOTI";
+  return "F1 NEWS";
 }
 
 async function fetchNews() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6000);
   try {
-    const items = await fetchViaRss2Json();
-    if (items.length > 0) return items;
-    throw new Error("nessun articolo");
-  } catch {
-    return fetchViaAllOrigins();
+    const res = await fetch(
+      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}&count=5`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeout);
+    const data = await res.json();
+    if (data.status !== "ok") throw new Error("Feed non disponibile");
+
+    return data.items.slice(0, 5).map((item, i) => {
+      // Replica esatta logica thumbnail di formula-rossa
+      let thumbnail = item.enclosure?.link || null;
+      if (!thumbnail && item.content) {
+        const match = item.content.match(/<img[^>]+src="([^">]+)"/);
+        if (match) thumbnail = match[1];
+      }
+      if (!thumbnail && item.thumbnail) thumbnail = item.thumbnail;
+
+      return {
+        id:          i,
+        title:       item.title,
+        description: item.description.replace(/<[^>]*>?/gm, "").slice(0, 130) + "…",
+        category:    getCategory(item.title),
+        date:        new Date(item.pubDate).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }),
+        url:         item.link,
+        thumbnail,
+      };
+    });
+  } catch (err) {
+    clearTimeout(timeout);
+    // Fallback: allorigins proxy
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`;
+    const res2 = await fetch(proxy);
+    const json2 = await res2.json();
+    if (!json2.contents) throw new Error("Notizie non disponibili");
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(json2.contents, "text/xml");
+    return Array.from(doc.getElementsByTagName("item")).slice(0, 5).map((item, i) => {
+      const get = (tag) => item.getElementsByTagName(tag)[0]?.textContent?.trim() || "";
+      const media = item.getElementsByTagNameNS("http://search.yahoo.com/mrss/", "content")[0];
+      const enc   = item.getElementsByTagName("enclosure")[0];
+      const thumbnail = media?.getAttribute("url") || enc?.getAttribute("url") || null;
+      const title = get("title");
+      return {
+        id:          i,
+        title,
+        description: get("description").replace(/<[^>]*>?/gm, "").slice(0, 130) + "…",
+        category:    getCategory(title),
+        date:        get("pubDate") ? new Date(get("pubDate")).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }) : "",
+        url:         get("link"),
+        thumbnail,
+      };
+    });
   }
 }
 
-function formatDate(date) {
-  if (!date) return "";
-  return date.toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" });
-}
+function NewsCard({ item, index }) {
+  const catStyle = CATEGORY_STYLES[item.category] ?? CATEGORY_STYLES["F1 NEWS"];
 
-function NewsCard({ item }) {
   return (
-    <button
+    <motion.article
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.07, duration: 0.3 }}
+      className="rounded-2xl border border-white/8 bg-white/[0.03] overflow-hidden active:scale-[0.98] transition-transform"
       onClick={() => window.open(item.url, "_blank", "noopener,noreferrer")}
-      className="w-full text-left app-card overflow-hidden active:scale-[0.98] transition-transform flex gap-3 p-3"
     >
-      {/* Square thumbnail */}
-      <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
-        {item.image ? (
+      {/* Thumbnail */}
+      <div className="relative w-full h-40 overflow-hidden bg-zinc-900 shrink-0">
+        {item.thumbnail ? (
           <img
-            src={item.image}
+            src={item.thumbnail}
             alt=""
             className="w-full h-full object-cover"
-            onError={e => { e.target.parentElement.style.display = "none"; }}
+            loading="lazy"
+            onError={e => { e.currentTarget.style.display = "none"; }}
           />
         ) : (
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-            <Newspaper className="w-6 h-6 text-gray-400" />
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900">
+            <Newspaper className="w-10 h-10 text-zinc-600" />
           </div>
         )}
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/80 via-transparent to-transparent" />
+        {/* Category badge */}
+        <span className={`absolute top-3 left-3 text-[9px] font-black uppercase tracking-[0.2em] px-2.5 py-1 rounded-full border backdrop-blur-sm ${catStyle.bg} ${catStyle.border} ${catStyle.text}`}>
+          {item.category}
+        </span>
       </div>
 
-      {/* Text */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-        <div>
-          <p className="font-heading font-black text-sm text-foreground leading-snug line-clamp-2">
-            {item.title}
-          </p>
-          {item.excerpt && (
-            <p className="text-[11px] text-muted-foreground font-body mt-1 line-clamp-2 leading-relaxed">
-              {item.excerpt}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center justify-between mt-1.5">
-          <p className="text-[10px] text-muted-foreground font-body">{formatDate(item.date)}</p>
-          <div className="flex items-center gap-0.5 text-primary">
-            <span className="text-[10px] font-semibold font-body">Leggi</span>
-            <ExternalLink className="w-2.5 h-2.5" />
-          </div>
+      {/* Content */}
+      <div className="p-4 flex flex-col gap-2">
+        <h3 className="text-sm font-bold text-white leading-snug line-clamp-2">
+          {item.title}
+        </h3>
+        <p className="text-xs text-white/45 leading-relaxed line-clamp-2">
+          {item.description}
+        </p>
+        <div className="flex justify-between items-center pt-2 border-t border-white/6 mt-1">
+          <time className="text-[10px] font-bold uppercase text-white/30 tracking-wider">
+            {item.date}
+          </time>
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-red-400">
+            Leggi <ExternalLink className="w-3 h-3" />
+          </span>
         </div>
       </div>
-    </button>
+    </motion.article>
   );
 }
 
 function SkeletonCard() {
   return (
-    <div className="app-card overflow-hidden animate-pulse flex gap-3 p-3">
-      <div className="flex-shrink-0 w-20 h-20 rounded-xl bg-gray-200" />
-      <div className="flex-1 space-y-2 py-1">
-        <div className="h-3.5 bg-gray-200 rounded w-full" />
-        <div className="h-3.5 bg-gray-200 rounded w-4/5" />
-        <div className="h-3 bg-gray-200 rounded w-1/3 mt-auto" />
+    <div className="rounded-2xl border border-white/8 bg-white/[0.03] overflow-hidden animate-pulse">
+      <div className="w-full h-40 bg-zinc-800" />
+      <div className="p-4 space-y-2.5">
+        <div className="h-3.5 bg-zinc-700 rounded w-full" />
+        <div className="h-3.5 bg-zinc-700 rounded w-4/5" />
+        <div className="h-3 bg-zinc-800 rounded w-1/4 mt-3" />
       </div>
     </div>
   );
@@ -143,36 +152,44 @@ export default function News() {
   const { data: items = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["f1news"],
     queryFn: fetchNews,
-    staleTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
     retry: 1,
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
+    <div className="min-h-screen pb-4" style={{ background: "linear-gradient(180deg, #111 0%, #1a1a1a 100%)" }}>
       <PageHeader
         icon={Newspaper}
-        title="News F1"
+        title="Flash News"
         right={
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white active:scale-95 transition-transform"
+            className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white active:scale-95 transition-transform"
           >
             <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           </button>
         }
       />
 
-      <div className="px-4 py-4 space-y-2.5">
-        {isLoading && [...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
+      {/* Live badge */}
+      <div className="px-4 pt-1 pb-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-red-400">Live Updates · Motorsport.com</span>
+        </div>
+      </div>
+
+      <div className="px-4 space-y-3">
+        {isLoading && [...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
 
         {error && (
-          <div className="app-card p-6 flex flex-col items-center gap-3 text-center">
-            <p className="font-heading font-black text-base">Notizie non disponibili</p>
-            <p className="text-sm text-muted-foreground font-body">{error.message}</p>
+          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-6 flex flex-col items-center gap-3 text-center">
+            <p className="font-heading font-black text-base text-white">Notizie non disponibili</p>
+            <p className="text-sm text-white/40 font-body">{error.message}</p>
             <button
               onClick={() => refetch()}
-              className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold font-body"
+              className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-semibold font-body"
             >
               Riprova
             </button>
@@ -180,18 +197,13 @@ export default function News() {
         )}
 
         {!isLoading && !error && items.map((item, i) => (
-          <NewsCard key={i} item={item} />
+          <NewsCard key={i} item={item} index={i} />
         ))}
 
         {!isLoading && !error && items.length > 0 && (
-          <a
-            href="https://it.motorsport.com/f1/news/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-center text-[12px] text-primary font-semibold font-body py-2"
-          >
-            Tutte le notizie su Motorsport.com →
-          </a>
+          <p className="text-center text-white/20 text-[11px] font-body py-2 tracking-wider">
+            Aggiornato ogni 30 minuti · fonte: Motorsport.com
+          </p>
         )}
       </div>
     </div>
