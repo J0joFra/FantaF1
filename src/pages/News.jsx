@@ -78,7 +78,24 @@ async function fetchNews(locale = "it") {
   });
 
   // any() — resolves with the first to succeed
-  return Promise.any([rss2jsonPromise, alloriginsPromise]);
+  const result = await Promise.any([rss2jsonPromise, alloriginsPromise]);
+  // Persist to localStorage for instant load next time
+  try {
+    localStorage.setItem(`f1news_${locale}`, JSON.stringify({ ts: Date.now(), items: result }));
+  } catch { /* ignore quota errors */ }
+  return result;
+}
+
+// Read cached news synchronously so the page paints instantly
+function readCache(locale) {
+  try {
+    const raw = localStorage.getItem(`f1news_${locale}`);
+    if (!raw) return undefined;
+    const { items } = JSON.parse(raw);
+    return Array.isArray(items) && items.length ? items : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 const CAT_BADGE = {
@@ -156,11 +173,15 @@ function SkeletonCard() {
 export default function News() {
   const { t, lang } = useI18n();
   const locale = lang ?? "it";
+  const cached = readCache(locale);
   const { data: items = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["f1news", locale],
     queryFn: () => fetchNews(locale),
-    staleTime: 30 * 60 * 1000,
-    retry: 1,
+    staleTime: 5 * 60 * 1000,
+    retry: 0,
+    initialData: cached,               // paints instantly from localStorage
+    initialDataUpdatedAt: 0,           // treat cache as stale → refresh in background
+    placeholderData: (prev) => prev,   // keep old items while switching language
   });
 
   return (
