@@ -108,7 +108,7 @@ export default function SplashScreen({ onDone }) {
         initial={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.5 }}
-        className="fixed inset-0 z-[9999] overflow-hidden bg-gradient-to-b from-gray-50 to-gray-100"
+        className="fixed inset-0 z-[9999] mx-auto w-full max-w-[430px] overflow-hidden bg-gradient-to-b from-gray-50 to-gray-100"
       >
         {/* ── FULL-SCREEN S-TRACK ── */}
         <svg
