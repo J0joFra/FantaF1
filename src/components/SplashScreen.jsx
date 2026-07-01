@@ -51,41 +51,18 @@ function PathCar({ color, dur, keyPoints, lateral = 0, delay = 0 }) {
   );
 }
 
-// ── Final logo — F1 app icon ──────────────────────────────────────────────────
-function F1Icon({ size = 104 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 512 512" fill="none">
-      <defs>
-        <linearGradient id="f1grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#E8002D" />
-          <stop offset="1" stopColor="#b0001e" />
-        </linearGradient>
-        <clipPath id="f1round">
-          <rect x="0" y="0" width="512" height="512" rx="112" />
-        </clipPath>
-      </defs>
-      <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#f1grad)" />
-      {/* white grid lines */}
-      <g clipPath="url(#f1round)" stroke="white" strokeWidth="10" opacity="0.9">
-        <line x1="171" y1="70" x2="171" y2="442" />
-        <line x1="341" y1="70" x2="341" y2="442" />
-        <line x1="70" y1="171" x2="442" y2="171" />
-        <line x1="70" y1="341" x2="442" y2="341" />
-      </g>
-      {/* "F1" */}
-      <text x="256" y="258" textAnchor="middle" dominantBaseline="central"
-            fontFamily="'Arial Black', Arial, sans-serif" fontWeight="900"
-            fontSize="210" fill="white" letterSpacing="-6">F1</text>
-    </svg>
-  );
-}
-
+// ── Final logo — real F1 app icon from /public ────────────────────────────────
 function FinalLogo() {
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="rounded-[26px] shadow-2xl overflow-hidden">
-        <F1Icon size={104} />
-      </div>
+      <img
+        src="/icons/icon-512.png"
+        alt="GridUP"
+        width={104}
+        height={104}
+        className="w-26 h-26 rounded-[26px] shadow-2xl"
+        style={{ width: 104, height: 104 }}
+      />
       <p className="font-heading font-black text-foreground text-2xl tracking-widest">GridUP</p>
       <p className="text-muted-foreground font-body text-xs tracking-[0.2em]">www.formula-rossa.it</p>
     </div>
@@ -149,9 +126,8 @@ export default function SplashScreen({ onDone }) {
           </g>
 
           {/* Opponents — slower, offset to the sides */}
-          <PathCar color="#5577bb" dur={5}   keyPoints="0.40;0.80" lateral={9} />
-          <PathCar color="#448844" dur={5}   keyPoints="0.55;0.94" lateral={-9} />
-          <PathCar color="#9aa0aa" dur={5}   keyPoints="0.66;1.00" lateral={9} />
+          <PathCar color="#5577bb" dur={5}   keyPoints="0.42;0.86" lateral={9} />
+          <PathCar color="#448844" dur={5}   keyPoints="0.58;1.00" lateral={-9} />
 
           {/* Player — fast, full path bottom → top */}
           {phase === "race" && (
