@@ -49,8 +49,17 @@ FEEDS = {
 
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 
-SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/")
-SERVICE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
+if not SUPABASE_URL or not SERVICE_KEY:
+    print(
+        "ERRORE: secret mancanti.\n"
+        "  Vai su GitHub → Settings → Secrets and variables → Actions e aggiungi:\n"
+        "    SUPABASE_URL               = https://noleeodnpfautgbhpmdv.supabase.co\n"
+        "    SUPABASE_SERVICE_ROLE_KEY  = (service_role key da Supabase → Settings → API Keys)\n"
+    )
+    sys.exit(1)
 
 
 def strip_html(text):
