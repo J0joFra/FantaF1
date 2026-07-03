@@ -67,38 +67,60 @@ function parseItems(items, dateLocale) {
   });
 }
 
+// fetch with a timeout — uses AbortController + setTimeout (works on every
+// browser / Android WebView, unlike AbortSignal.timeout which is newer).
+function fetchTimeout(url, ms = 6000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 // Fetch one feed via rss2json
-function viaRss2Json(rssUrl, dateLocale) {
-  return fetch(
-    `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=5`,
-    { signal: AbortSignal.timeout(6000) }
-  ).then(r => r.json()).then(d => {
-    if (d.status !== "ok" || !d.items?.length) throw new Error("empty");
-    return parseItems(d.items, dateLocale);
-  });
+async function viaRss2Json(rssUrl, dateLocale) {
+  const res = await fetchTimeout(
+    `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=5`
+  );
+  const d = await res.json();
+  if (d.status !== "ok" || !d.items || !d.items.length) throw new Error("empty");
+  return parseItems(d.items, dateLocale);
 }
 
 // Fetch one feed via allorigins proxy + XML parse
-function viaAllOrigins(rssUrl, dateLocale) {
-  return fetch(
-    `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`,
-    { signal: AbortSignal.timeout(6000) }
-  ).then(r => r.json()).then(j => {
-    if (!j.contents) throw new Error("empty");
-    const doc = new DOMParser().parseFromString(j.contents, "text/xml");
-    const nodes = Array.from(doc.getElementsByTagName("item"));
-    if (!nodes.length) throw new Error("empty");
-    const xmlItems = nodes.slice(0, 5).map(item => {
-      const get = t => item.getElementsByTagName(t)[0]?.textContent?.trim() || "";
-      const media = item.getElementsByTagNameNS("http://search.yahoo.com/mrss/", "content")[0];
-      const enc   = item.getElementsByTagName("enclosure")[0];
-      return {
-        title: get("title"), description: get("description"),
-        content: "", thumbnail: media?.getAttribute("url") || enc?.getAttribute("url") || null,
-        enclosure: null, link: get("link"), pubDate: get("pubDate"),
-      };
+async function viaAllOrigins(rssUrl, dateLocale) {
+  const res = await fetchTimeout(
+    `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`
+  );
+  const j = await res.json();
+  if (!j.contents) throw new Error("empty");
+  const doc = new DOMParser().parseFromString(j.contents, "text/xml");
+  const nodes = Array.from(doc.getElementsByTagName("item"));
+  if (!nodes.length) throw new Error("empty");
+  const xmlItems = nodes.slice(0, 5).map(item => {
+    const get = t => item.getElementsByTagName(t)[0]?.textContent?.trim() || "";
+    const media = item.getElementsByTagNameNS("http://search.yahoo.com/mrss/", "content")[0];
+    const enc   = item.getElementsByTagName("enclosure")[0];
+    return {
+      title: get("title"), description: get("description"),
+      content: "", thumbnail: media?.getAttribute("url") || enc?.getAttribute("url") || null,
+      enclosure: null, link: get("link"), pubDate: get("pubDate"),
+    };
+  });
+  return parseItems(xmlItems, dateLocale);
+}
+
+// Resolve with the first promise that fulfills; reject only if ALL reject.
+// Manual replacement for Promise.any (not available in older WebViews).
+function firstSuccess(promises) {
+  return new Promise((resolve, reject) => {
+    let remaining = promises.length;
+    if (!remaining) { reject(new Error("empty")); return; }
+    let settled = false;
+    promises.forEach(p => {
+      Promise.resolve(p).then(
+        val => { if (!settled) { settled = true; resolve(val); } },
+        () => { remaining -= 1; if (remaining === 0 && !settled) reject(new Error("all failed")); }
+      );
     });
-    return parseItems(xmlItems, dateLocale);
   });
 }
 
@@ -106,21 +128,20 @@ async function fetchNews(locale = "it") {
   const urls = FEEDS_BY_LOCALE[locale] ?? FEEDS_BY_LOCALE.it;
   const dateLocale = DATE_LOCALE[locale] ?? "en-GB";
 
-  // Race every feed × every proxy in parallel — first to return
-  // real articles wins, whichever source/language feed responds first.
-  const attempts = urls.flatMap(url => [
-    viaRss2Json(url, dateLocale),
-    viaAllOrigins(url, dateLocale),
-  ]);
+  // Race every feed × every proxy in parallel — first with real articles wins.
+  const attempts = [];
+  urls.forEach(url => {
+    attempts.push(viaRss2Json(url, dateLocale));
+    attempts.push(viaAllOrigins(url, dateLocale));
+  });
 
   let result;
   try {
-    result = await Promise.any(attempts);
+    result = await firstSuccess(attempts);
   } catch {
     throw new Error("Notizie non disponibili");
   }
 
-  // Persist to localStorage for instant load next time
   try {
     localStorage.setItem(`f1news_${locale}`, JSON.stringify({ ts: Date.now(), items: result }));
   } catch { /* ignore quota errors */ }
