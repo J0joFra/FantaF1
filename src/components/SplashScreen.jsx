@@ -54,7 +54,7 @@ function FinalLogo() {
         style={{ width: 104, height: 104 }}
       />
       <p className="font-heading font-black text-white text-2xl tracking-widest">GridUP</p>
-      <p className="text-white/45 font-body text-xs tracking-[0.28em]">www.formula-rossa.it</p>
+      <p className="text-white/75 font-body text-xs tracking-[0.28em]">www.formula-rossa.it</p>
     </div>
   );
 }
@@ -105,10 +105,15 @@ export default function SplashScreen({ onDone }) {
             >
               <StartGantry litCount={litCount} lightsOut={lightsOut} />
               <motion.p
-                className="font-body text-[11px] tracking-[0.3em] uppercase"
-                style={{ color: lightsOut ? "#ff2a48" : "rgba(255,255,255,0.35)" }}
-                animate={{ opacity: [0.4, 1, 0.4] }}
-                transition={{ duration: 1.4, repeat: Infinity }}
+                className="font-body font-semibold text-[12px] tracking-[0.3em] uppercase"
+                style={{
+                  color: lightsOut ? "#ff4d63" : "rgba(255,255,255,0.85)",
+                  textShadow: lightsOut
+                    ? "0 0 14px rgba(255,42,72,0.8)"
+                    : "0 1px 8px rgba(0,0,0,0.6)",
+                }}
+                animate={{ opacity: lightsOut ? [0.7, 1, 0.7] : [0.75, 1, 0.75] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
               >
                 {lightsOut ? "Lights out" : "www.formula-rossa.it"}
               </motion.p>
