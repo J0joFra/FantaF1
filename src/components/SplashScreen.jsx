@@ -1,57 +1,47 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// ── Road S-path (shared) ──────────────────────────────────────────────────────
-const ROAD_D =
-  "M65,278 C65,232 24,222 24,182 C24,140 106,132 106,90 C106,50 65,44 65,6";
+const COLUMNS = 5;
 
-// F1 car drawn horizontally, nose pointing +x (rotate="auto" turns it along the path)
-function RaceCar({ color = "#E8002D" }) {
+// One column of the F1 start gantry: two stacked red lights
+function LightColumn({ lit }) {
+  const glow = lit
+    ? "0 0 14px 3px rgba(232,0,45,0.75), inset 0 0 6px rgba(255,120,120,0.6)"
+    : "inset 0 2px 4px rgba(0,0,0,0.6)";
+  const bg = lit ? "#ff1a3c" : "#2a0a0f";
   return (
-    <g>
-      {/* rear wing */}
-      <rect x="-15" y="-7" width="3.5" height="14" rx="1.5" fill={color} opacity="0.85" />
-      {/* body */}
-      <rect x="-12" y="-4.5" width="22" height="9" rx="3.5" fill={color} />
-      {/* nose */}
-      <path d="M10,-3 L17,0 L10,3 Z" fill={color} opacity="0.9" />
-      {/* cockpit */}
-      <rect x="-3" y="-3" width="7" height="6" rx="2.5" fill="#1a1a2e" opacity="0.85" />
-      {/* front wing */}
-      <rect x="12" y="-6" width="4" height="12" rx="1.5" fill={color} opacity="0.7" />
-      {/* wheels */}
-      <rect x="-9" y="-8.5" width="6" height="3.5" rx="1.5" fill="#222" />
-      <rect x="-9" y="5"    width="6" height="3.5" rx="1.5" fill="#222" />
-      <rect x="4"  y="-8.5" width="6" height="3.5" rx="1.5" fill="#222" />
-      <rect x="4"  y="5"    width="6" height="3.5" rx="1.5" fill="#222" />
-    </g>
+    <div className="flex flex-col gap-2.5">
+      {[0, 1].map(i => (
+        <motion.div
+          key={i}
+          className="rounded-full"
+          style={{ width: 26, height: 26, background: bg, boxShadow: glow }}
+          initial={false}
+          animate={{ background: bg, boxShadow: glow }}
+          transition={{ duration: 0.12 }}
+        />
+      ))}
+    </div>
   );
 }
 
-// A car following the S-path via SMIL animateMotion
-function PathCar({ color, dur, keyPoints, lateral = 0, delay = 0 }) {
+function StartGantry({ litCount, lightsOut }) {
   return (
-    <g opacity="0">
-      <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin={`${delay}s`} fill="freeze" />
-      <animateMotion
-        dur={`${dur}s`}
-        begin={`${delay}s`}
-        fill="freeze"
-        rotate="auto"
-        calcMode="linear"
-        keyPoints={keyPoints}
-        keyTimes="0;1"
-      >
-        <mpath href="#roadPath" xlinkHref="#roadPath" />
-      </animateMotion>
-      <g transform={`translate(0, ${lateral})`}>
-        <RaceCar color={color} />
-      </g>
-    </g>
+    <div
+      className="flex items-center gap-3.5 px-5 py-4 rounded-2xl"
+      style={{
+        background: "linear-gradient(180deg,#1a1a22,#0e0e14)",
+        boxShadow: "0 12px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      {Array.from({ length: COLUMNS }).map((_, i) => (
+        <LightColumn key={i} lit={!lightsOut && i < litCount} />
+      ))}
+    </div>
   );
 }
 
-// ── Final logo — real F1 app icon from /public ────────────────────────────────
 function FinalLogo() {
   return (
     <div className="flex flex-col items-center gap-3">
@@ -60,22 +50,33 @@ function FinalLogo() {
         alt="GridUP"
         width={104}
         height={104}
-        className="w-26 h-26 rounded-[26px] shadow-2xl"
+        className="rounded-[26px] shadow-2xl"
         style={{ width: 104, height: 104 }}
       />
-      <p className="font-heading font-black text-foreground text-2xl tracking-widest">GridUP</p>
-      <p className="text-muted-foreground font-body text-xs tracking-[0.2em]">www.formula-rossa.it</p>
+      <p className="font-heading font-black text-white text-2xl tracking-widest">GridUP</p>
+      <p className="text-white/45 font-body text-xs tracking-[0.28em]">www.formula-rossa.it</p>
     </div>
   );
 }
 
 export default function SplashScreen({ onDone }) {
-  const [phase, setPhase] = useState("race"); // race | logo
+  const [litCount, setLitCount] = useState(0);
+  const [lightsOut, setLightsOut] = useState(false);
+  const [phase, setPhase] = useState("lights"); // lights | logo
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase("logo"), 5200);
-    const t2 = setTimeout(onDone, 7000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const timers = [];
+    // Light up the 5 columns one by one
+    [420, 760, 1100, 1440, 1780].forEach((ms, i) => {
+      timers.push(setTimeout(() => setLitCount(i + 1), ms));
+    });
+    // Dramatic "lights out" beat
+    timers.push(setTimeout(() => setLightsOut(true), 2500));
+    // Reveal logo
+    timers.push(setTimeout(() => setPhase("logo"), 2750));
+    // Finish
+    timers.push(setTimeout(onDone, 4400));
+    return () => timers.forEach(clearTimeout);
   }, [onDone]);
 
   return (
@@ -85,72 +86,41 @@ export default function SplashScreen({ onDone }) {
         initial={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.5 }}
-        className="fixed inset-0 z-[9999] mx-auto w-full max-w-[430px] overflow-hidden bg-gradient-to-b from-gray-50 to-gray-100"
+        className="fixed inset-0 z-[9999] mx-auto w-full max-w-[430px] overflow-hidden flex items-center justify-center"
+        style={{ background: "radial-gradient(120% 90% at 50% 30%, #16161f 0%, #0b0b11 60%, #07070b 100%)" }}
       >
-        {/* ── FULL-SCREEN S-TRACK ── */}
-        <svg
-          className="absolute inset-0 w-full h-full"
-          viewBox="0 0 130 284"
-          preserveAspectRatio="xMidYMid slice"
-        >
-          <defs>
-            <path id="roadPath" d={ROAD_D} />
-          </defs>
+        {/* subtle track-line accents in the background */}
+        <div className="absolute inset-0 pointer-events-none opacity-[0.05]"
+             style={{ backgroundImage: "repeating-linear-gradient(180deg, #fff 0 1px, transparent 1px 46px)" }} />
 
-          {/* Guardrail posts (peek out as ticks on both edges) */}
-          <use href="#roadPath" xlinkHref="#roadPath"
-               fill="none" stroke="#6f7887" strokeWidth="54"
-               strokeDasharray="2.5 11" strokeLinecap="butt" opacity="0.65" />
-          {/* Guardrail rail band */}
-          <use href="#roadPath" xlinkHref="#roadPath"
-               fill="none" stroke="#aab2c0" strokeWidth="48" strokeLinecap="round" />
-          {/* Road surface */}
-          <use href="#roadPath" xlinkHref="#roadPath"
-               fill="none" stroke="#eaeaf0" strokeWidth="40" strokeLinecap="round" />
-          {/* Scrolling centre line */}
-          <path d={ROAD_D} fill="none" stroke="#ffffff" strokeWidth="2.6"
-                strokeDasharray="12 16" strokeLinecap="round" opacity="0.9">
-            <animate attributeName="stroke-dashoffset" from="28" to="0"
-                     dur="0.5s" repeatCount="indefinite" />
-          </path>
-
-          {/* Finish line — fixed near top */}
-          <g transform="translate(45,12)">
-            {Array.from({ length: 20 }).map((_, i) => {
-              const col = i % 10, row = Math.floor(i / 10);
-              return (
-                <rect key={i} x={col * 4} y={row * 6} width="4" height="6"
-                      fill={(col + row) % 2 === 0 ? "#111" : "#fff"} />
-              );
-            })}
-          </g>
-
-          {/* Opponents — slower, offset to the sides */}
-          <PathCar color="#5577bb" dur={5}   keyPoints="0.42;0.86" lateral={9} />
-          <PathCar color="#448844" dur={5}   keyPoints="0.58;1.00" lateral={-9} />
-
-          {/* Player — fast, full path bottom → top */}
-          {phase === "race" && (
-            <PathCar color="#E8002D" dur={5.2} keyPoints="0;1" lateral={0} />
-          )}
-        </svg>
-
-        {/* ── FINAL LOGO ── */}
-        <AnimatePresence>
-          {phase === "logo" && (
+        <AnimatePresence mode="wait">
+          {phase === "lights" ? (
             <motion.div
-              className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.45 }}
+              key="lights"
+              className="flex flex-col items-center gap-6"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.4 }}
             >
-              <motion.div
-                initial={{ scale: 0.6, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.1, type: "spring", stiffness: 220, damping: 18 }}
+              <StartGantry litCount={litCount} lightsOut={lightsOut} />
+              <motion.p
+                className="font-body text-[11px] tracking-[0.3em] uppercase"
+                style={{ color: lightsOut ? "#ff2a48" : "rgba(255,255,255,0.35)" }}
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 1.4, repeat: Infinity }}
               >
-                <FinalLogo />
-              </motion.div>
+                {lightsOut ? "Lights out" : "www.formula-rossa.it"}
+              </motion.p>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="logo"
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 220, damping: 18 }}
+            >
+              <FinalLogo />
             </motion.div>
           )}
         </AnimatePresence>
