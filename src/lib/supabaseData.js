@@ -414,7 +414,7 @@ export async function getFerrariSeasonSummary() {
     podiums:               row.podiums           ?? 0,
     poles:                 row.poles             ?? row.pole_positions   ?? 0,
     drivers_champion:      row.drivers_champion      ?? false,
-    constructors_champion: row.constructors_champion ?? (row.position_number === 1) ?? false,
+    constructors_champion: row.constructors_champion ?? (row.position_number === 1),
   }));
 }
 
