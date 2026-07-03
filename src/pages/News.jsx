@@ -2,150 +2,43 @@ import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, RefreshCw, Newspaper } from "lucide-react";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/PageHeader";
+import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n";
-
-// Each language has several candidate feeds — the first that returns
-// articles wins. Order = preference. Native-language sources first.
-const FEEDS_BY_LOCALE = {
-  it: [
-    "https://it.motorsport.com/rss/f1/news/",
-    "https://www.formulapassion.it/feed",
-  ],
-  en: [
-    "https://www.planetf1.com/news/feed/",
-    "https://www.motorsport.com/rss/f1/news/",
-    "https://www.autosport.com/rss/f1/news/",
-  ],
-  fr: [
-    "https://fr.motorsport.com/rss/f1/news/",
-    "https://motorsport.nextgen-auto.com/fr/rss.php",
-    "https://www.auto-moto.com/sport/formule-1/feed",
-  ],
-  es: [
-    "https://es.motorsport.com/rss/f1/news/",
-    "https://www.motorpasion.com/formula1/feed",
-    "https://www.motor.es/formula-1/rss/",
-  ],
-  de: [
-    "https://de.motorsport.com/rss/f1/news/",
-    "https://www.motorsport-total.com/rss.xml",
-  ],
-};
 
 const DATE_LOCALE = { it: "it-IT", fr: "fr-FR", es: "es-ES", de: "de-DE", en: "en-GB" };
 
-const CATEGORY_STYLES = {
-  SCUDERIA:  { bg: "bg-red-500/15",    border: "border-red-500/30",    text: "text-red-400"    },
-  PILOTI:    { bg: "bg-yellow-400/10", border: "border-yellow-400/30", text: "text-yellow-400" },
-  "F1 NEWS": { bg: "bg-zinc-700/50",   border: "border-zinc-500/30",   text: "text-zinc-300"   },
-};
-
-function getCategory(title = "") {
-  const t = title.toLowerCase();
-  if (t.includes("ferrari")) return "SCUDERIA";
-  if (t.includes("leclerc") || t.includes("hamilton") || t.includes("verstappen")) return "PILOTI";
-  return "F1 NEWS";
-}
-
-function parseItems(items, dateLocale) {
-  return items.slice(0, 5).map((item, i) => {
-    let thumbnail = item.enclosure?.link || null;
-    if (!thumbnail && item.content) {
-      const match = item.content.match(/<img[^>]+src="([^">]+)"/);
-      if (match) thumbnail = match[1];
-    }
-    if (!thumbnail && item.thumbnail) thumbnail = item.thumbnail;
-    return {
-      id:          i,
-      title:       item.title || "",
-      description: (item.description || "").replace(/<[^>]*>?/gm, "").slice(0, 130) + "…",
-      category:    getCategory(item.title || ""),
-      date:        new Date(item.pubDate).toLocaleDateString(dateLocale, { day: "2-digit", month: "short" }),
-      url:         item.link,
-      thumbnail,
-    };
-  });
-}
-
-// fetch with a timeout — uses AbortController + setTimeout (works on every
-// browser / Android WebView, unlike AbortSignal.timeout which is newer).
-function fetchTimeout(url, ms = 6000) {
-  const ctrl = new AbortController();
-  const id = setTimeout(() => ctrl.abort(), ms);
-  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
-}
-
-// Fetch one feed via rss2json
-async function viaRss2Json(rssUrl, dateLocale) {
-  const res = await fetchTimeout(
-    `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=5`
-  );
-  const d = await res.json();
-  if (d.status !== "ok" || !d.items || !d.items.length) throw new Error("empty");
-  return parseItems(d.items, dateLocale);
-}
-
-// Fetch one feed via allorigins proxy + XML parse
-async function viaAllOrigins(rssUrl, dateLocale) {
-  const res = await fetchTimeout(
-    `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`
-  );
-  const j = await res.json();
-  if (!j.contents) throw new Error("empty");
-  const doc = new DOMParser().parseFromString(j.contents, "text/xml");
-  const nodes = Array.from(doc.getElementsByTagName("item"));
-  if (!nodes.length) throw new Error("empty");
-  const xmlItems = nodes.slice(0, 5).map(item => {
-    const get = t => item.getElementsByTagName(t)[0]?.textContent?.trim() || "";
-    const media = item.getElementsByTagNameNS("http://search.yahoo.com/mrss/", "content")[0];
-    const enc   = item.getElementsByTagName("enclosure")[0];
-    return {
-      title: get("title"), description: get("description"),
-      content: "", thumbnail: media?.getAttribute("url") || enc?.getAttribute("url") || null,
-      enclosure: null, link: get("link"), pubDate: get("pubDate"),
-    };
-  });
-  return parseItems(xmlItems, dateLocale);
-}
-
-// Resolve with the first promise that fulfills; reject only if ALL reject.
-// Manual replacement for Promise.any (not available in older WebViews).
-function firstSuccess(promises) {
-  return new Promise((resolve, reject) => {
-    let remaining = promises.length;
-    if (!remaining) { reject(new Error("empty")); return; }
-    let settled = false;
-    promises.forEach(p => {
-      Promise.resolve(p).then(
-        val => { if (!settled) { settled = true; resolve(val); } },
-        () => { remaining -= 1; if (remaining === 0 && !settled) reject(new Error("all failed")); }
-      );
-    });
-  });
-}
-
+// News are pre-fetched server-side (GitHub Action, every 3h) and stored in
+// Supabase. The app just reads them — no CORS / proxy / RSS on the client.
 async function fetchNews(locale = "it") {
-  const urls = FEEDS_BY_LOCALE[locale] ?? FEEDS_BY_LOCALE.it;
   const dateLocale = DATE_LOCALE[locale] ?? "en-GB";
 
-  // Race every feed × every proxy in parallel — first with real articles wins.
-  const attempts = [];
-  urls.forEach(url => {
-    attempts.push(viaRss2Json(url, dateLocale));
-    attempts.push(viaAllOrigins(url, dateLocale));
-  });
+  const { data, error } = await supabase
+    .from("flash_news")
+    .select("title, url, image, excerpt, category, pub_date, source")
+    .eq("locale", locale)
+    .order("rank", { ascending: true });
 
-  let result;
-  try {
-    result = await firstSuccess(attempts);
-  } catch {
-    throw new Error("Notizie non disponibili");
+  if (error) throw new Error(error.message);
+
+  const items = (data ?? []).map((row, i) => ({
+    id:          i,
+    title:       row.title || "",
+    description: (row.excerpt || "").slice(0, 140),
+    category:    row.category || "F1 NEWS",
+    date:        row.pub_date
+      ? new Date(row.pub_date).toLocaleDateString(dateLocale, { day: "2-digit", month: "short" })
+      : "",
+    url:         row.url,
+    thumbnail:   row.image || null,
+    source:      row.source || "",
+  }));
+
+  if (items.length) {
+    try {
+      localStorage.setItem(`f1news_${locale}`, JSON.stringify({ ts: Date.now(), items }));
+    } catch { /* ignore quota */ }
   }
-
-  try {
-    localStorage.setItem(`f1news_${locale}`, JSON.stringify({ ts: Date.now(), items: result }));
-  } catch { /* ignore quota errors */ }
-  return result;
+  return items;
 }
 
 // Read cached news synchronously so the page paints instantly
@@ -240,7 +133,8 @@ export default function News() {
     queryKey: ["f1news", locale],
     queryFn: () => fetchNews(locale),
     staleTime: 5 * 60 * 1000,
-    retry: 0,
+    retry: 1,
+    refetchOnMount: "always",          // always revalidate so newly-added langs appear
     initialData: cached,               // paints instantly from localStorage
     initialDataUpdatedAt: 0,           // treat cache as stale → refresh in background
     placeholderData: (prev) => prev,   // keep old items while switching language
@@ -266,7 +160,7 @@ export default function News() {
       <div className="px-4 pt-1 pb-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-primary">Live · Motorsport.com</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-primary">Live · F1 News</span>
         </div>
       </div>
 
@@ -290,9 +184,24 @@ export default function News() {
           <NewsCard key={i} item={item} index={i} />
         ))}
 
+        {/* Empty state — data still being generated for this language */}
+        {!isLoading && !error && items.length === 0 && (
+          <div className="app-card p-6 flex flex-col items-center gap-3 text-center">
+            <Newspaper className="w-8 h-8 text-gray-300" />
+            <p className="font-heading font-black text-base text-foreground">Nessuna notizia</p>
+            <p className="text-sm text-muted-foreground font-body">Le notizie per questa lingua saranno disponibili a breve.</p>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold font-body"
+            >
+              Aggiorna
+            </button>
+          </div>
+        )}
+
         {!isLoading && !error && items.length > 0 && (
           <p className="text-center text-muted-foreground/50 text-[11px] font-body py-2 tracking-wider">
-            Aggiornato ogni 30 minuti · fonte: Motorsport.com
+            Aggiornato ogni 3 ore
           </p>
         )}
       </div>
