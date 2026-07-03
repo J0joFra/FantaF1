@@ -181,7 +181,7 @@ export default function News() {
         )}
 
         {!isLoading && !error && items.map((item, i) => (
-          <NewsCard key={i} item={item} index={i} />
+          <NewsCard key={item.url ?? i} item={item} index={i} />
         ))}
 
         {/* Empty state — data still being generated for this language */}
