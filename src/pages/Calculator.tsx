@@ -102,9 +102,11 @@ function calculateChampionshipAnalysis(
   
   const activeRivals = rivalsAnalysis.filter(r => !r.isMathematicallyEliminated && r.pointsNeeded > 0);
   const mainRival = activeRivals.length > 0 ? activeRivals[0] : null;
-  const maxPoints = allDrivers.length > 0 ? Math.max(...allDrivers.map(d => d.points)) : 0;
-  const isAlreadyChampion = activeRivals.length === 0 && driver.points > maxPoints;
-  const isMathematicallyOut = driverMaxPossible < maxPoints;
+  const others = allDrivers.filter(d => d.id !== driver.id);
+  const maxOtherPoints = others.length > 0 ? Math.max(...others.map(d => d.points)) : 0;
+  // Clinched: driver's current points already beat every rival's best-case total.
+  const isAlreadyChampion = driver.points > maxOtherPoints + maxRemainingPoints;
+  const isMathematicallyOut = driverMaxPossible < maxOtherPoints;
   const magicNumber = mainRival?.pointsNeeded ?? 0;
   
   return {
