@@ -4,13 +4,35 @@ import { motion } from "framer-motion";
 import PageHeader from "@/components/PageHeader";
 import { useI18n } from "@/lib/i18n";
 
-const RSS_BY_LOCALE = {
-  it: "https://it.motorsport.com/rss/f1/news/",
-  en: "https://www.motorsport.com/rss/f1/news/",
-  fr: "https://fr.motorsport.com/rss/f1/news/",
-  es: "https://es.motorsport.com/rss/f1/news/",
-  de: "https://de.motorsport.com/rss/f1/news/",
+// Each language has several candidate feeds — the first that returns
+// articles wins. Order = preference. Native-language sources first.
+const FEEDS_BY_LOCALE = {
+  it: [
+    "https://it.motorsport.com/rss/f1/news/",
+    "https://www.formulapassion.it/feed",
+  ],
+  en: [
+    "https://www.planetf1.com/news/feed/",
+    "https://www.motorsport.com/rss/f1/news/",
+    "https://www.autosport.com/rss/f1/news/",
+  ],
+  fr: [
+    "https://fr.motorsport.com/rss/f1/news/",
+    "https://motorsport.nextgen-auto.com/fr/rss.php",
+    "https://www.auto-moto.com/sport/formule-1/feed",
+  ],
+  es: [
+    "https://es.motorsport.com/rss/f1/news/",
+    "https://www.motorpasion.com/formula1/feed",
+    "https://www.motor.es/formula-1/rss/",
+  ],
+  de: [
+    "https://de.motorsport.com/rss/f1/news/",
+    "https://www.motorsport-total.com/rss.xml",
+  ],
 };
+
+const DATE_LOCALE = { it: "it-IT", fr: "fr-FR", es: "es-ES", de: "de-DE", en: "en-GB" };
 
 const CATEGORY_STYLES = {
   SCUDERIA:  { bg: "bg-red-500/15",    border: "border-red-500/30",    text: "text-red-400"    },
@@ -35,9 +57,9 @@ function parseItems(items, dateLocale) {
     if (!thumbnail && item.thumbnail) thumbnail = item.thumbnail;
     return {
       id:          i,
-      title:       item.title,
-      description: item.description.replace(/<[^>]*>?/gm, "").slice(0, 130) + "…",
-      category:    getCategory(item.title),
+      title:       item.title || "",
+      description: (item.description || "").replace(/<[^>]*>?/gm, "").slice(0, 130) + "…",
+      category:    getCategory(item.title || ""),
       date:        new Date(item.pubDate).toLocaleDateString(dateLocale, { day: "2-digit", month: "short" }),
       url:         item.link,
       thumbnail,
@@ -45,26 +67,28 @@ function parseItems(items, dateLocale) {
   });
 }
 
-async function fetchNews(locale = "it") {
-  const rssUrl    = RSS_BY_LOCALE[locale] ?? RSS_BY_LOCALE.it;
-  const dateLocale = { it:"it-IT", fr:"fr-FR", es:"es-ES", de:"de-DE" }[locale] ?? "en-GB";
-
-  // Race both sources in parallel — first valid response wins
-  const rss2jsonPromise = fetch(
+// Fetch one feed via rss2json
+function viaRss2Json(rssUrl, dateLocale) {
+  return fetch(
     `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=5`,
-    { signal: AbortSignal.timeout(5000) }
+    { signal: AbortSignal.timeout(6000) }
   ).then(r => r.json()).then(d => {
     if (d.status !== "ok" || !d.items?.length) throw new Error("empty");
     return parseItems(d.items, dateLocale);
   });
+}
 
-  const alloriginsPromise = fetch(
+// Fetch one feed via allorigins proxy + XML parse
+function viaAllOrigins(rssUrl, dateLocale) {
+  return fetch(
     `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`,
-    { signal: AbortSignal.timeout(5000) }
+    { signal: AbortSignal.timeout(6000) }
   ).then(r => r.json()).then(j => {
     if (!j.contents) throw new Error("empty");
     const doc = new DOMParser().parseFromString(j.contents, "text/xml");
-    const xmlItems = Array.from(doc.getElementsByTagName("item")).slice(0, 5).map((item, i) => {
+    const nodes = Array.from(doc.getElementsByTagName("item"));
+    if (!nodes.length) throw new Error("empty");
+    const xmlItems = nodes.slice(0, 5).map(item => {
       const get = t => item.getElementsByTagName(t)[0]?.textContent?.trim() || "";
       const media = item.getElementsByTagNameNS("http://search.yahoo.com/mrss/", "content")[0];
       const enc   = item.getElementsByTagName("enclosure")[0];
@@ -76,9 +100,26 @@ async function fetchNews(locale = "it") {
     });
     return parseItems(xmlItems, dateLocale);
   });
+}
 
-  // any() — resolves with the first to succeed
-  const result = await Promise.any([rss2jsonPromise, alloriginsPromise]);
+async function fetchNews(locale = "it") {
+  const urls = FEEDS_BY_LOCALE[locale] ?? FEEDS_BY_LOCALE.it;
+  const dateLocale = DATE_LOCALE[locale] ?? "en-GB";
+
+  // Race every feed × every proxy in parallel — first to return
+  // real articles wins, whichever source/language feed responds first.
+  const attempts = urls.flatMap(url => [
+    viaRss2Json(url, dateLocale),
+    viaAllOrigins(url, dateLocale),
+  ]);
+
+  let result;
+  try {
+    result = await Promise.any(attempts);
+  } catch {
+    throw new Error("Notizie non disponibili");
+  }
+
   // Persist to localStorage for instant load next time
   try {
     localStorage.setItem(`f1news_${locale}`, JSON.stringify({ ts: Date.now(), items: result }));
