@@ -1,0 +1,41 @@
+name: F1 DB Updater
+
+# Scarica l'ultima release di f1db (f1db-sql-postgresql.zip) e aggiorna il DB
+# Supabase con classifiche piloti/costruttori e risultati della stagione.
+# Gira ogni lunedì mattina (dopo i GP della domenica) + trigger manuale.
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # ogni lunedì alle 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update-db:
+    name: Update Supabase from f1db
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download latest f1db PostgreSQL dump
+        run: |
+          echo "Scarico l'ultima release f1db…"
+          curl -sSL -o f1db.zip \
+            "https://github.com/f1db/f1db/releases/latest/download/f1db-sql-postgresql.zip"
+          mkdir -p f1db_sql
+          unzip -o -q f1db.zip -d f1db_sql
+          echo "File estratti:"
+          find f1db_sql -name '*.sql' -printf '  %p (%s bytes)\n'
+          # Unisce tutti gli .sql in un unico file (lo script legge solo gli INSERT)
+          find f1db_sql -name '*.sql' -exec cat {} + > combined.sql
+          echo "combined.sql: $(wc -l < combined.sql) righe"
+
+      - name: Update DB → Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/update_db.py combined.sql --apply
