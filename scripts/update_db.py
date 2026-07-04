@@ -51,27 +51,30 @@ if not os.path.isfile(DUMP):
     print(f"ERRORE: file non trovato: {DUMP}")
     sys.exit(1)
 
-# ── .env ─────────────────────────────────────────────────────────────────────
+# ── Config (.env in locale, oppure variabili d'ambiente su CI) ────────────────
 def read_env(path=".env"):
     env = {}
-    with open(path, encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if "=" in line and not line.startswith("#"):
-                k, v = line.split("=", 1)
-                env[k.strip()] = v.strip().strip('"').strip("'")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if "=" in line and not line.startswith("#"):
+                    k, v = line.split("=", 1)
+                    env[k.strip()] = v.strip().strip('"').strip("'")
+    except FileNotFoundError:
+        pass  # su GitHub Actions non c'è .env: si usano le env vars
     return env
 
-try:
-    env = read_env()
-except FileNotFoundError:
-    print("ERRORE: .env non trovato. Esegui lo script dalla ROOT del progetto.")
-    sys.exit(1)
+# Le variabili d'ambiente (secret GitHub) hanno priorità sul .env locale.
+env = {**read_env(), **{k: v for k, v in os.environ.items() if v}}
 
-URL = env.get("VITE_SUPABASE_URL") or env.get("NEXT_PUBLIC_SUPABASE_URL")
+URL = (env.get("VITE_SUPABASE_URL") or env.get("NEXT_PUBLIC_SUPABASE_URL")
+       or env.get("SUPABASE_URL"))
 KEY = env.get("SUPABASE_SERVICE_ROLE_KEY")
 if not URL or not KEY:
-    print("ERRORE: VITE_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY mancanti in .env")
+    print("ERRORE: SUPABASE_URL (o VITE_SUPABASE_URL) e SUPABASE_SERVICE_ROLE_KEY mancanti.\n"
+          "  In locale: mettili nel file .env.\n"
+          "  Su GitHub Actions: aggiungili come secret del repository.")
     sys.exit(1)
 
 # ── Parser dei VALUES SQL ─────────────────────────────────────────────────────
