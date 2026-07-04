@@ -1,17 +1,24 @@
 name: F1 DB Updater
 
-# Scarica l'ultima release di f1db (f1db-sql-postgresql.zip) e aggiorna il DB
-# Supabase con classifiche piloti/costruttori e risultati della stagione.
-# Gira ogni lunedì mattina (dopo i GP della domenica) + trigger manuale.
+# Ogni 6 ore controlla se f1db ha una release/tag nuovo.
+# Solo se il tag è cambiato: scarica il dump e aggiorna il DB Supabase.
 on:
   schedule:
-    - cron: "0 6 * * 1"   # ogni lunedì alle 06:00 UTC
+    - cron: "0 0,6,12,18 * * *"   # 00:00, 06:00, 12:00, 18:00 UTC
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Forza l'aggiornamento anche se il tag non è cambiato"
+        type: boolean
+        default: false
 
 jobs:
   update-db:
     name: Update Supabase from f1db
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,21 +28,51 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Download latest f1db PostgreSQL dump
+      - name: Controlla se c'è un tag f1db nuovo
+        id: check
         run: |
-          echo "Scarico l'ultima release f1db…"
+          LATEST=$(curl -s https://api.github.com/repos/f1db/f1db/releases/latest | jq -r .tag_name)
+          echo "Tag f1db più recente: $LATEST"
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "Impossibile leggere il tag più recente." >&2
+            exit 1
+          fi
+          STORED=$(curl -s \
+            "$SUPABASE_URL/rest/v1/sync_meta?key=eq.f1db_tag&select=value" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            | jq -r '.[0].value // ""')
+          echo "Ultimo tag processato: ${STORED:-(nessuno)}"
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          if [ "$LATEST" = "$STORED" ] && [ "${{ github.event.inputs.force }}" != "true" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "✔ Nessun tag nuovo — niente da fare."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "→ Tag nuovo (o forzato): aggiorno il DB."
+          fi
+
+      - name: Scarica il dump f1db
+        if: steps.check.outputs.changed == 'true'
+        run: |
           curl -sSL -o f1db.zip \
             "https://github.com/f1db/f1db/releases/latest/download/f1db-sql-postgresql.zip"
           mkdir -p f1db_sql
           unzip -o -q f1db.zip -d f1db_sql
-          echo "File estratti:"
-          find f1db_sql -name '*.sql' -printf '  %p (%s bytes)\n'
-          # Unisce tutti gli .sql in un unico file (lo script legge solo gli INSERT)
           find f1db_sql -name '*.sql' -exec cat {} + > combined.sql
           echo "combined.sql: $(wc -l < combined.sql) righe"
 
-      - name: Update DB → Supabase
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      - name: Aggiorna il DB → Supabase
+        if: steps.check.outputs.changed == 'true'
         run: python scripts/update_db.py combined.sql --apply
+
+      - name: Salva il tag processato
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          curl -sS -X POST "$SUPABASE_URL/rest/v1/sync_meta?on_conflict=key" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates" \
+            -d "{\"key\":\"f1db_tag\",\"value\":\"${{ steps.check.outputs.latest }}\",\"updated_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+          echo "Tag ${{ steps.check.outputs.latest }} salvato."
