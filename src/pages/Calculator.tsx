@@ -788,7 +788,9 @@ export default function ScenariosPage() {
         setSprintsLeft(seasonRemaining.filter((r: any) => r.sprint_race_date != null).length);
         
         if (processedDrivers.length > 0) {
-          setSelectedDriverId(processedDrivers[0].id);
+          // Default: il 2° in classifica (l'inseguitore) — così lo scenario è
+          // subito attivo, col leader come rivale da superare.
+          setSelectedDriverId(processedDrivers[1]?.id ?? processedDrivers[0].id);
         }
         
       } catch (err: any) {
