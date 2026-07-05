@@ -462,6 +462,58 @@ export async function getFerrariArchiveStats() {
 }
 
 // ─── NEXT N RACES ─────────────────────────────────────────────────────────────
+// Sessions (FP/Qualifying/Sprint/Race) of the next race, with UTC datetimes.
+// Times in the DB are UTC "HH:MM" strings — we build ISO-UTC so the client can
+// render them in the user's own timezone.
+export async function getNextRaceSessions(season = new Date().getFullYear()) {
+  const today = new Date().toISOString().split('T')[0];
+  const cols = [
+    'round', 'date', 'time', 'official_name', 'grand_prix_id',
+    'free_practice_1_date', 'free_practice_1_time',
+    'free_practice_2_date', 'free_practice_2_time',
+    'free_practice_3_date', 'free_practice_3_time',
+    'sprint_qualifying_date', 'sprint_qualifying_time',
+    'sprint_race_date', 'sprint_race_time',
+    'qualifying_date', 'qualifying_time',
+  ].join(', ');
+
+  const { data, error } = await supabase
+    .from('race')
+    .select(cols)
+    .eq('year', season)
+    .gte('date', today)
+    .order('date', { ascending: true })
+    .limit(1);
+
+  if (error || !data || !data.length) return null;
+  const r = data[0];
+
+  let name = r.official_name || '';
+  if (r.grand_prix_id) {
+    const { data: gps } = await supabase
+      .from('grand_prix').select('name').eq('id', r.grand_prix_id).limit(1);
+    if (gps && gps[0]?.name) name = gps[0].name;
+  }
+
+  const toUtc = (d, t) => `${d}T${(t || '00:00').slice(0, 5)}:00Z`;
+  const defs = [
+    ['fp1',    r.free_practice_1_date,   r.free_practice_1_time],
+    ['fp2',    r.free_practice_2_date,   r.free_practice_2_time],
+    ['fp3',    r.free_practice_3_date,   r.free_practice_3_time],
+    ['sq',     r.sprint_qualifying_date, r.sprint_qualifying_time],
+    ['sprint', r.sprint_race_date,       r.sprint_race_time],
+    ['quali',  r.qualifying_date,        r.qualifying_time],
+    ['race',   r.date,                   r.time],
+  ];
+
+  const sessions = defs
+    .filter(([, d]) => d)
+    .map(([key, d, t]) => ({ key, iso: toUtc(d, t), hasTime: !!t }))
+    .sort((a, b) => (a.iso < b.iso ? -1 : 1));
+
+  return { name, round: r.round, sessions };
+}
+
 export async function getUpcomingRaces(limit = 5, season = new Date().getFullYear()) {
   const today = new Date().toISOString().split('T')[0];
   const { data, error } = await supabase
