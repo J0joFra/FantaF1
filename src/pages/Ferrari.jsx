@@ -246,10 +246,10 @@ export default function Ferrari() {
 
           <div className="grid grid-cols-4 gap-px bg-white/15 mx-4 mb-3 rounded-xl overflow-hidden">
             {[
-              { v: selected.points,      l: "PUNTI" },
-              { v: sStats.wins ?? 0,     l: "VITT." },
-              { v: sStats.podiums ?? 0,  l: "PODI" },
-              { v: sStats.poles ?? 0,    l: "POLE" },
+              { v: selected.points,      l: tr("lbl_points") },
+              { v: sStats.wins ?? 0,     l: tr("lbl_wins") },
+              { v: sStats.podiums ?? 0,  l: tr("lbl_podiums") },
+              { v: sStats.poles ?? 0,    l: tr("lbl_poles") },
             ].map(({ v, l }) => (
               <div key={l} className="py-2.5 text-center" style={{ background: `${color}` }}>
                 <span className="font-heading font-black text-xl">{v}</span>
@@ -283,21 +283,21 @@ export default function Ferrari() {
             <div className="flex items-center gap-2 mb-3">
               <Trophy className="w-4 h-4" style={{ color }} />
               <h3 className="font-heading font-black text-sm uppercase tracking-wide">{tr("tm_title")}</h3>
-              <InfoTip>Punti che servono alla scuderia per essere sicura di vincere (o quanto manca al leader). Calcolo sul massimo ottenibile per weekend: 43 in gara (1°+2°) + 15 nella sprint.</InfoTip>
+              <InfoTip>{tr("tm_titleTip")}</InfoTip>
               <span className="ml-auto text-[11px] font-body text-muted-foreground">{titleRace.racesLeft} {tr("tm_gpLeft")}</span>
             </div>
 
             {titleRace.isLeader ? (
               titleRace.alreadyChampion ? (
-                <p className="font-heading font-bold text-emerald-600 text-center py-2">🏆 Campione matematico!</p>
+                <p className="font-heading font-bold text-emerald-600 text-center py-2">🏆 {tr("tm_mathChampion")}</p>
               ) : (
                 <div className="text-center">
                   <p className="font-heading font-black text-5xl leading-none" style={{ color }}>{titleRace.magic}</p>
-                  <p className="font-body text-xs text-muted-foreground mt-1">punti per blindare il titolo (in testa)</p>
+                  <p className="font-body text-xs text-muted-foreground mt-1">{tr("tm_toClinchLeader")}</p>
                 </div>
               )
             ) : titleRace.out ? (
-              <p className="font-heading font-bold text-gray-500 text-center py-2">❌ Fuori dalla lotta per il titolo</p>
+              <p className="font-heading font-bold text-gray-500 text-center py-2">❌ {tr("tm_outOfTitle")}</p>
             ) : (
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="bg-gray-50 rounded-xl py-3">
@@ -437,12 +437,12 @@ export default function Ferrari() {
           </div>
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
-              { v: selected.career?.titles ?? 0, l: "TITOLI" },
-              { v: selected.career?.wins ?? 0, l: "VITTORIE" },
-              { v: selected.career?.podiums ?? 0, l: "PODI" },
-              { v: selected.career?.poles ?? 0, l: "POLE" },
-              { v: fmtNum(selected.career?.points ?? 0), l: "PUNTI" },
-              { v: selected.career?.entries ?? 0, l: "GP" },
+              { v: selected.career?.titles ?? 0, l: tr("lbl_titles") },
+              { v: selected.career?.wins ?? 0, l: tr("lbl_winsFull") },
+              { v: selected.career?.podiums ?? 0, l: tr("lbl_podiums") },
+              { v: selected.career?.poles ?? 0, l: tr("lbl_poles") },
+              { v: fmtNum(selected.career?.points ?? 0), l: tr("lbl_points") },
+              { v: selected.career?.entries ?? 0, l: tr("lbl_gp") },
             ].map(({ v, l }) => (
               <div key={l} className="bg-gray-50 rounded-xl p-2.5 text-center">
                 <span className="font-heading font-black text-xl block leading-none">{v}</span>
@@ -454,7 +454,7 @@ export default function Ferrari() {
           {chartData.length > 1 ? (
             <>
               <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mb-2">
-                Punti per stagione (ultime {chartData.length})
+                {tr("tm_pointsPerSeason", { n: chartData.length })}
               </p>
               <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
@@ -475,7 +475,7 @@ export default function Ferrari() {
             </>
           ) : (
             <p className="text-center text-xs text-muted-foreground font-body py-3">
-              Storico punti non disponibile per questa scuderia.
+              {tr("tm_noHistory")}
             </p>
           )}
         </div>
