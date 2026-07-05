@@ -317,11 +317,16 @@ function MosaicDiagram({
 }) {
   const { t } = useI18n();
   const mosaicRef = useRef<HTMLDivElement>(null);
+  const [showAllPos, setShowAllPos] = useState(false);
   const matrix: (MosaicCell | null)[][] = Array(10).fill(null).map(() => Array(10).fill(null));
 
   cells.forEach(cell => {
     matrix[cell.yourPos - 1][cell.rivalPos - 1] = cell;
   });
+
+  // Di default mostra solo le posizioni che contano per il titolo (P1-P6);
+  // le posizioni basse aggiungono solo rumore. Toggle per vederle tutte.
+  const positions = showAllPos ? SCORING_POSITIONS : SCORING_POSITIONS.slice(0, 6);
   
   // Colore piatto in base alla difficoltà (% delle gare necessarie)
   const getCellStyle = (cell: MosaicCell | null) => {
@@ -398,29 +403,30 @@ function MosaicDiagram({
       </div>
 
       {/* Matrice mosaico - adatta alla larghezza dello schermo */}
-      <div className="grid grid-cols-[1.4rem_repeat(10,minmax(0,1fr))] gap-[3px]">
+      <div className="grid gap-[3px]"
+           style={{ gridTemplateColumns: `1.6rem repeat(${positions.length}, minmax(0,1fr))` }}>
         {/* angolo: legenda assi (codici piloti) */}
         <div className="flex flex-col items-center justify-center text-[7px] font-bold leading-none text-gray-400">
           <span>{yourDriver.driver_code}↓</span>
           <span>{rival.driver_code}→</span>
         </div>
-        {SCORING_POSITIONS.map(pos => (
+        {positions.map(pos => (
           <div
             key={`col-${pos.position}`}
-            className="flex items-center justify-center aspect-square rounded bg-gray-100 text-[9px] font-bold text-gray-500"
+            className="flex items-center justify-center aspect-square rounded bg-gray-100 text-[10px] font-bold text-gray-500"
           >
             {pos.position}
           </div>
         ))}
 
         {/* righe della matrice */}
-        {SCORING_POSITIONS.map(yourPos => (
+        {positions.map(yourPos => (
           <Fragment key={`row-${yourPos.position}`}>
             {/* intestazione riga (tu) */}
-            <div className="flex items-center justify-center aspect-square rounded bg-gray-100 text-[9px] font-bold text-gray-500">
+            <div className="flex items-center justify-center aspect-square rounded bg-gray-100 text-[10px] font-bold text-gray-500">
               {yourPos.position}
             </div>
-            {SCORING_POSITIONS.map(rivalPos => {
+            {positions.map(rivalPos => {
               const cell = matrix[yourPos.position - 1][rivalPos.position - 1];
               const isBest = cell && bestCombination &&
                 cell.yourPos === bestCombination.yourPos &&
@@ -461,6 +467,16 @@ function MosaicDiagram({
           </Fragment>
         ))}
       </div>
+
+      {/* Toggle: mostra tutte le posizioni (P1-P10) */}
+      <button
+        data-html2canvas-ignore
+        onClick={() => setShowAllPos(s => !s)}
+        className="mt-2 w-full flex items-center justify-center gap-1 py-1.5 text-[11px] font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+      >
+        {showAllPos ? t("showLess") : t("showAll")}
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllPos ? "rotate-180" : ""}`} />
+      </button>
 
       {/* Combinazione ottimale (tappabile) */}
       {bestCombination && (
