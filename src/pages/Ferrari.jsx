@@ -170,12 +170,12 @@ export default function Ferrari() {
 
   const seasonRows = [
     { icon: Zap,         label: tr("st_points"),         get: (t) => t.points },
-    { icon: Trophy,      label: tr("st_wins"),           get: (t, s) => s.wins ?? 0, tip: "Gare vinte dalla scuderia (somma delle vittorie dei due piloti)." },
-    { icon: Medal,       label: tr("st_podiums"),        get: (t, s) => s.podiums ?? 0, tip: "Arrivi nei primi 3 dei piloti del team." },
-    { icon: Target,      label: tr("st_poles"),          get: (t, s) => s.poles ?? 0, tip: "Partenze dalla 1ª posizione conquistate in qualifica." },
-    { icon: Timer,       label: tr("st_fastestLaps"),    get: (t, s) => s.fastest_laps ?? 0, tip: "Giri più veloci segnati in gara." },
-    { icon: Star,        label: tr("st_pointsFinishes"), get: (t, s) => s.points_finishes ?? 0, tip: "Piazzamenti nei primi 10 (zona punti)." },
-    { icon: ShieldAlert, label: tr("st_dnf"),            get: (t, s) => s.dnf ?? 0, lowerBetter: true, tip: "DNF = Did Not Finish: gare non concluse dai piloti del team." },
+    { icon: Trophy,      label: tr("st_wins"),           get: (t, s) => s.wins ?? 0, tip: tr("tip_wins") },
+    { icon: Medal,       label: tr("st_podiums"),        get: (t, s) => s.podiums ?? 0, tip: tr("tip_podiums") },
+    { icon: Target,      label: tr("st_poles"),          get: (t, s) => s.poles ?? 0, tip: tr("tip_poles") },
+    { icon: Timer,       label: tr("st_fastestLaps"),    get: (t, s) => s.fastest_laps ?? 0, tip: tr("tip_fastest") },
+    { icon: Star,        label: tr("st_pointsFinishes"), get: (t, s) => s.points_finishes ?? 0, tip: tr("tip_pointsFin") },
+    { icon: ShieldAlert, label: tr("st_dnf"),            get: (t, s) => s.dnf ?? 0, lowerBetter: true, tip: tr("tip_dnf") },
   ];
   const careerRows = [
     { icon: Crown,  label: tr("st_constructorTitles"), get: (t) => t.career?.titles ?? 0 },
