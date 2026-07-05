@@ -5,6 +5,7 @@ import {
   getSeasonConfig,
   getUpcomingRaces,
   getNextRaceSessions,
+  getLastRaceResults,
   getLastRaceDate,
   getAllSeasonRaces,
 } from "@/lib/supabaseData";
@@ -43,6 +44,38 @@ function FlagImg({ iso, size = "h40", className = "w-8 h-5 object-cover rounded-
 }
 
 const LOCALE_TAG = { it: "it-IT", en: "en-GB", fr: "fr-FR", es: "es-ES", de: "de-DE" };
+const PODIUM_MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
+
+// ── Last completed race — podium recap ────────────────────────────────────────
+function LastRaceRecap({ data, t, localeTag }) {
+  if (!data || !data.podium?.length) return null;
+  return (
+    <div className="app-card overflow-hidden">
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <h2 className="font-heading font-black text-base uppercase tracking-wide">{t("recap_title")}</h2>
+        <span className="text-[10px] text-muted-foreground font-body">
+          {new Date(data.date).toLocaleDateString(localeTag, { day: "numeric", month: "short" })}
+        </span>
+      </div>
+      <p className="px-4 text-[11px] text-muted-foreground font-body -mt-1 mb-2 truncate">{data.name}</p>
+      <div className="px-2 pb-3 space-y-1">
+        {data.podium.map(p => {
+          const color = getTeamColor(p.team);
+          return (
+            <div key={p.pos} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50">
+              <span className="text-lg w-6 text-center shrink-0">{PODIUM_MEDAL[p.pos] ?? p.pos}</span>
+              <span className="w-1 h-6 rounded-full shrink-0" style={{ backgroundColor: color }} />
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                {p.code && <span className="font-heading font-black text-xs text-muted-foreground">{p.code}</span>}
+                <span className="font-heading font-bold text-sm text-foreground truncate">{p.driver}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ── Weekend session schedule (times converted to the user's timezone) ─────────
 function SessionSchedule({ data, t, localeTag }) {
@@ -87,7 +120,7 @@ function SessionSchedule({ data, t, localeTag }) {
 }
 
 // ── Arc gauge — fixed layout, properly centered ───────────────────────────────
-function ArcGauge({ current, needed, possible, labels }) {
+function ArcGauge({ current, possible, labels }) {
   const W = 200, H = 120;
   const cx = W / 2, cy = 106;
   const R = 80;
@@ -105,52 +138,36 @@ function ArcGauge({ current, needed, possible, labels }) {
     return `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2}`;
   };
 
-  const currPct   = possible > 0 ? Math.min(current / possible, 1) : 0;
-  // "needed" here means the target the leader must reach — shown as where the arc ends
-  const targetPct = possible > 0 ? Math.min((current + needed) / possible, 1) : 1;
+  const currPct = possible > 0 ? Math.min(current / possible, 1) : 0;
 
   // Dot position at current
-  const dotA = toRad(startA + (endA - startA) * Math.min(currPct, 0.9999));
+  const dotA = toRad(startA + (endA - startA) * Math.min(Math.max(currPct, 0.001), 0.9999));
   const dotX = cx + R * Math.cos(dotA);
   const dotY = cy + R * Math.sin(dotA);
 
+  // Single clean fill arc: current points out of the max still achievable.
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
-      {/* Full track (grey) */}
+      {/* Track (grey) */}
       <path d={arc(1)} fill="none" stroke="rgba(255,255,255,0.12)"
             strokeWidth="10" strokeLinecap="round" />
-      {/* Target arc (dim white — shows what's still needed) */}
-      <path d={arc(targetPct)} fill="none" stroke="rgba(255,255,255,0.22)"
-            strokeWidth="10" strokeLinecap="round" />
-      {/* Current points (red) */}
+      {/* Current progress (red) */}
       <path d={arc(currPct)} fill="none" stroke="#E8002D"
             strokeWidth="10" strokeLinecap="round" />
-      {/* White dot at current */}
-      {currPct > 0.02 && (
-        <circle cx={dotX} cy={dotY} r="6" fill="white"
-                style={{ filter: "drop-shadow(0 0 3px rgba(0,0,0,0.4))" }} />
-      )}
-      {/* Center label: needed points */}
-      <text x={cx} y={cy - 22} textAnchor="middle" fill="white"
-            fontSize="26" fontWeight="800"
-            fontFamily="'JetBrains Mono',monospace">{needed}</text>
-      <text x={cx} y={cy - 8} textAnchor="middle"
-            fill="rgba(255,255,255,0.4)" fontSize="9"
-            fontFamily="'DM Sans',sans-serif" letterSpacing="2">{labels.points}</text>
-      {/* Left label: current */}
-      <text x="18" y={cy + 14} textAnchor="middle"
-            fill="rgba(255,255,255,0.65)" fontSize="11" fontWeight="700"
+      {/* Dot at current */}
+      <circle cx={dotX} cy={dotY} r="6" fill="white"
+              style={{ filter: "drop-shadow(0 0 3px rgba(0,0,0,0.4))" }} />
+      {/* Center: current points */}
+      <text x={cx} y={cy - 20} textAnchor="middle" fill="white"
+            fontSize="30" fontWeight="800"
             fontFamily="'JetBrains Mono',monospace">{current}</text>
-      <text x="18" y={cy + 24} textAnchor="middle"
-            fill="rgba(255,255,255,0.5)" fontSize="7"
-            fontFamily="'DM Sans',sans-serif" letterSpacing="1.5">{labels.current}</text>
-      {/* Right label: possible */}
-      <text x={W - 18} y={cy + 14} textAnchor="middle"
-            fill="rgba(255,255,255,0.65)" fontSize="11" fontWeight="700"
-            fontFamily="'JetBrains Mono',monospace">{possible}</text>
-      <text x={W - 18} y={cy + 24} textAnchor="middle"
-            fill="rgba(255,255,255,0.5)" fontSize="7"
-            fontFamily="'DM Sans',sans-serif" letterSpacing="1.5">{labels.possible}</text>
+      <text x={cx} y={cy - 4} textAnchor="middle"
+            fill="rgba(255,255,255,0.45)" fontSize="9"
+            fontFamily="'DM Sans',sans-serif" letterSpacing="2">{labels.points}</text>
+      {/* Below: out of max possible */}
+      <text x={cx} y={cy + 16} textAnchor="middle"
+            fill="rgba(255,255,255,0.5)" fontSize="10" fontWeight="700"
+            fontFamily="'JetBrains Mono',monospace">/ {possible}</text>
     </svg>
   );
 }
@@ -223,6 +240,9 @@ export default function Home() {
   });
   const { data: nextSessions } = useQuery({
     queryKey: ["nextRaceSessions"], queryFn: () => getNextRaceSessions(), staleTime: 60 * 60 * 1000,
+  });
+  const { data: lastRace } = useQuery({
+    queryKey: ["lastRaceResults"], queryFn: () => getLastRaceResults(), staleTime: 60 * 60 * 1000,
   });
   const { data: upcomingRaces = [] } = useQuery({
     queryKey: ["upcomingRaces"], queryFn: () => getUpcomingRaces(4), staleTime: 60 * 60 * 1000,
@@ -308,6 +328,9 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* ── RECAP ULTIMA GARA (podio) ── */}
+        <LastRaceRecap data={lastRace} t={t} localeTag={LOCALE_TAG[lang] ?? "it-IT"} />
 
         {/* ── PROGRAMMA WEEKEND (orari sessioni nel fuso locale) ── */}
         <SessionSchedule data={nextSessions} t={t} localeTag={LOCALE_TAG[lang] ?? "it-IT"} />
@@ -427,9 +450,8 @@ export default function Home() {
               <div className="w-[160px] shrink-0">
                 <ArcGauge
                   current={leader.points}
-                  needed={neededForTitle}
                   possible={possible}
-                  labels={{ points: t("gauge_points"), current: t("gauge_current"), possible: t("gauge_possible") }}
+                  labels={{ points: t("gauge_points") }}
                 />
               </div>
 
