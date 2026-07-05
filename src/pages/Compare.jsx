@@ -175,15 +175,15 @@ export default function Compare() {
   const seasonRows = [
     { icon: Zap,         label: t("st_points"),          get: (d) => d.points },
     { icon: Trophy,      label: t("st_wins"),            get: (_, s) => s.wins ?? 0 },
-    { icon: Medal,       label: t("st_podiums"),         get: (_, s) => s.podiums ?? 0, tip: "Arrivi nei primi 3 (1°, 2° o 3°)." },
-    { icon: Target,      label: t("st_poles"),           get: (_, s) => s.poles ?? 0, tip: "Volte in cui ha segnato il giro più veloce in qualifica, partendo 1°." },
-    { icon: Timer,       label: t("st_fastestLaps"),     get: (_, s) => s.fastest_laps ?? 0, tip: "Giro più veloce in gara." },
-    { icon: Star,        label: t("st_pointsFinishes"),  get: (_, s) => s.points_finishes ?? 0, tip: "Gare concluse nei primi 10 (zona punti)." },
-    { icon: Award,       label: t("st_dotd"),            get: (_, s) => s.dotd ?? 0, tip: "Premio \"pilota del giorno\" votato dai tifosi a fine gara." },
-    { icon: TrendingUp,  label: t("st_positionsGained"), get: (_, s) => s.positions_gained ?? 0, tip: "Posizioni recuperate dalla griglia di partenza al traguardo, sommate nella stagione." },
-    { icon: Crown,       label: t("st_bestFinish"),      get: (_, s) => s.best_finish, lowerBetter: true, tip: "Miglior piazzamento ottenuto in gara (1 = vittoria)." },
-    { icon: Gauge,       label: t("st_avgFinish"),       get: (_, s) => s.avg_finish, lowerBetter: true, tip: "Posizione media al traguardo: più bassa è meglio." },
-    { icon: ShieldAlert, label: t("st_dnf"),             get: (_, s) => s.dnf ?? 0, lowerBetter: true, tip: "DNF = Did Not Finish: gare non concluse (ritiri)." },
+    { icon: Medal,       label: t("st_podiums"),         get: (_, s) => s.podiums ?? 0, tip: t("tip_podiums") },
+    { icon: Target,      label: t("st_poles"),           get: (_, s) => s.poles ?? 0, tip: t("tip_poles") },
+    { icon: Timer,       label: t("st_fastestLaps"),     get: (_, s) => s.fastest_laps ?? 0, tip: t("tip_fastest") },
+    { icon: Star,        label: t("st_pointsFinishes"),  get: (_, s) => s.points_finishes ?? 0, tip: t("tip_pointsFin") },
+    { icon: Award,       label: t("st_dotd"),            get: (_, s) => s.dotd ?? 0, tip: t("tip_dotd") },
+    { icon: TrendingUp,  label: t("st_positionsGained"), get: (_, s) => s.positions_gained ?? 0, tip: t("tip_positionsGained") },
+    { icon: Crown,       label: t("st_bestFinish"),      get: (_, s) => s.best_finish, lowerBetter: true, tip: t("tip_bestFinish") },
+    { icon: Gauge,       label: t("st_avgFinish"),       get: (_, s) => s.avg_finish, lowerBetter: true, tip: t("tip_avgFinish") },
+    { icon: ShieldAlert, label: t("st_dnf"),             get: (_, s) => s.dnf ?? 0, lowerBetter: true, tip: t("tip_dnf") },
   ];
 
   const careerRows = [
