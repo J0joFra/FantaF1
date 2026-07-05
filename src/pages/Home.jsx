@@ -46,39 +46,55 @@ function FlagImg({ iso, size = "h40", className = "w-8 h-5 object-cover rounded-
 const LOCALE_TAG = { it: "it-IT", en: "en-GB", fr: "fr-FR", es: "es-ES", de: "de-DE" };
 const PODIUM_MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
-// ── Last completed race — podium recap ────────────────────────────────────────
+// ── Last completed race — podium recap (collapsible, closed by default) ───────
 function LastRaceRecap({ data, t, localeTag }) {
+  const [open, setOpen] = useState(false);
   if (!data || !data.podium?.length) return null;
+  const winner = data.podium.find(p => p.pos === 1);
   return (
     <div className="app-card overflow-hidden">
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-4 py-3 text-left active:bg-gray-50 transition-colors">
         <h2 className="font-heading font-black text-base uppercase tracking-wide">{t("recap_title")}</h2>
-        <span className="text-[10px] text-muted-foreground font-body">
+        {!open && winner && (
+          <span className="font-heading font-bold text-sm text-muted-foreground truncate">🥇 {winner.driver}</span>
+        )}
+        <span className="ml-auto text-[10px] text-muted-foreground font-body shrink-0">
           {new Date(data.date).toLocaleDateString(localeTag, { day: "numeric", month: "short" })}
         </span>
-      </div>
-      <p className="px-4 text-[11px] text-muted-foreground font-body -mt-1 mb-2 truncate">{data.name}</p>
-      <div className="px-2 pb-3 space-y-1">
-        {data.podium.map(p => {
-          const color = getTeamColor(p.team);
-          return (
-            <div key={p.pos} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50">
-              <span className="text-lg w-6 text-center shrink-0">{PODIUM_MEDAL[p.pos] ?? p.pos}</span>
-              <span className="w-1 h-6 rounded-full shrink-0" style={{ backgroundColor: color }} />
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                {p.code && <span className="font-heading font-black text-xs text-muted-foreground">{p.code}</span>}
-                <span className="font-heading font-bold text-sm text-foreground truncate">{p.driver}</span>
-              </div>
+        <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22 }} className="overflow-hidden">
+            <p className="px-4 text-[11px] text-muted-foreground font-body pb-2 truncate">{data.name}</p>
+            <div className="px-2 pb-3 space-y-1">
+              {data.podium.map(p => {
+                const color = getTeamColor(p.team);
+                return (
+                  <div key={p.pos} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50">
+                    <span className="text-lg w-6 text-center shrink-0">{PODIUM_MEDAL[p.pos] ?? p.pos}</span>
+                    <span className="w-1 h-6 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      {p.code && <span className="font-heading font-black text-xs text-muted-foreground">{p.code}</span>}
+                      <span className="font-heading font-bold text-sm text-foreground truncate">{p.driver}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 // ── Weekend session schedule (times converted to the user's timezone) ─────────
 function SessionSchedule({ data, t, localeTag }) {
+  const [open, setOpen] = useState(false);
   if (!data || !data.sessions?.length) return null;
   const fmtDay  = iso => new Date(iso).toLocaleDateString(localeTag, { weekday: "short", day: "numeric", month: "short" });
   const fmtTime = (iso, hasTime) => hasTime
@@ -87,34 +103,44 @@ function SessionSchedule({ data, t, localeTag }) {
 
   return (
     <div className="app-card overflow-hidden">
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-4 py-3 text-left active:bg-gray-50 transition-colors">
         <h2 className="font-heading font-black text-base uppercase tracking-wide">{t("sess_schedule")}</h2>
-        <span className="text-[10px] text-muted-foreground font-body">{t("sess_yourTime")}</span>
-      </div>
-      <div className="px-2 pb-2">
-        {data.sessions.map(s => {
-          const isRace = s.key === "race";
-          const isSprint = s.key === "sprint";
-          return (
-            <div key={s.key}
-                 className={`flex items-center justify-between px-3 py-2 rounded-xl ${isRace ? "bg-primary/5" : ""}`}>
-              <div className="flex items-center gap-2 min-w-0">
-                {isRace && <span className="text-sm">🏁</span>}
-                {isSprint && <span className="tag bg-amber-100 text-amber-700 text-[9px]">SPRINT</span>}
-                <span className={`font-heading text-sm ${isRace ? "font-black text-primary" : "font-bold text-foreground"}`}>
-                  {t(`sess_${s.key}`)}
-                </span>
-              </div>
-              <div className="text-right shrink-0">
-                <span className="font-body text-[11px] text-muted-foreground mr-2">{fmtDay(s.iso)}</span>
-                <span className={`font-heading tabular-nums text-sm ${isRace ? "font-black text-primary" : "font-bold"}`}>
-                  {fmtTime(s.iso, s.hasTime)}
-                </span>
-              </div>
+        <span className="ml-auto text-[10px] text-muted-foreground font-body shrink-0">{t("sess_yourTime")}</span>
+        <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22 }} className="overflow-hidden">
+            <div className="px-2 pb-2">
+              {data.sessions.map(s => {
+                const isRace = s.key === "race";
+                const isSprint = s.key === "sprint";
+                return (
+                  <div key={s.key}
+                       className={`flex items-center justify-between px-3 py-2 rounded-xl ${isRace ? "bg-primary/5" : ""}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isRace && <span className="text-sm">🏁</span>}
+                      {isSprint && <span className="tag bg-amber-100 text-amber-700 text-[9px]">SPRINT</span>}
+                      <span className={`font-heading text-sm ${isRace ? "font-black text-primary" : "font-bold text-foreground"}`}>
+                        {t(`sess_${s.key}`)}
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="font-body text-[11px] text-muted-foreground mr-2">{fmtDay(s.iso)}</span>
+                      <span className={`font-heading tabular-nums text-sm ${isRace ? "font-black text-primary" : "font-bold"}`}>
+                        {fmtTime(s.iso, s.hasTime)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
