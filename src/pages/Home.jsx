@@ -24,7 +24,9 @@ import ErrorScreen from "@/components/ErrorScreen";
 import SeasonMapModal from "@/components/SeasonMapModal";
 import { useI18n } from "@/lib/i18n";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+import { it, enGB, fr, es, de } from "date-fns/locale";
+
+const DATE_FNS_LOCALE = { it, en: enGB, fr, es, de };
 
 // ── Flag image component ──────────────────────────────────────────────────────
 function FlagImg({ iso, size = "h40", className = "w-8 h-5 object-cover rounded-sm" }) {
@@ -40,7 +42,7 @@ function FlagImg({ iso, size = "h40", className = "w-8 h-5 object-cover rounded-
 }
 
 // ── Arc gauge — fixed layout, properly centered ───────────────────────────────
-function ArcGauge({ current, needed, possible }) {
+function ArcGauge({ current, needed, possible, labels }) {
   const W = 200, H = 120;
   const cx = W / 2, cy = 106;
   const R = 80;
@@ -89,21 +91,21 @@ function ArcGauge({ current, needed, possible }) {
             fontFamily="'JetBrains Mono',monospace">{needed}</text>
       <text x={cx} y={cy - 8} textAnchor="middle"
             fill="rgba(255,255,255,0.4)" fontSize="9"
-            fontFamily="'DM Sans',sans-serif" letterSpacing="2">PUNTI</text>
+            fontFamily="'DM Sans',sans-serif" letterSpacing="2">{labels.points}</text>
       {/* Left label: current */}
       <text x="18" y={cy + 14} textAnchor="middle"
             fill="rgba(255,255,255,0.65)" fontSize="11" fontWeight="700"
             fontFamily="'JetBrains Mono',monospace">{current}</text>
       <text x="18" y={cy + 24} textAnchor="middle"
             fill="rgba(255,255,255,0.5)" fontSize="7"
-            fontFamily="'DM Sans',sans-serif" letterSpacing="1.5">ATTUALI</text>
+            fontFamily="'DM Sans',sans-serif" letterSpacing="1.5">{labels.current}</text>
       {/* Right label: possible */}
       <text x={W - 18} y={cy + 14} textAnchor="middle"
             fill="rgba(255,255,255,0.65)" fontSize="11" fontWeight="700"
             fontFamily="'JetBrains Mono',monospace">{possible}</text>
       <text x={W - 18} y={cy + 24} textAnchor="middle"
             fill="rgba(255,255,255,0.5)" fontSize="7"
-            fontFamily="'DM Sans',sans-serif" letterSpacing="1.5">POSSIBILI</text>
+            fontFamily="'DM Sans',sans-serif" letterSpacing="1.5">{labels.possible}</text>
     </svg>
   );
 }
@@ -164,7 +166,8 @@ function DriverRow({ driver, leader, index }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Home() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const dfLocale = DATE_FNS_LOCALE[lang] ?? it;
   const [showAllDrivers, setShowAllDrivers] = useState(false);
 
   const { data: drivers = [], isLoading: ld, error: err, refetch } = useQuery({
@@ -375,6 +378,7 @@ export default function Home() {
                   current={leader.points}
                   needed={neededForTitle}
                   possible={possible}
+                  labels={{ points: t("gauge_points"), current: t("gauge_current"), possible: t("gauge_possible") }}
                 />
               </div>
 
@@ -423,7 +427,7 @@ export default function Home() {
                     {r.date && (
                       <p className={`font-heading font-bold text-[11px] text-center leading-tight
                         ${i === 0 ? "text-primary" : "text-foreground"}`}>
-                        {format(new Date(r.date), "d MMM", { locale: it })}
+                        {format(new Date(r.date), "d MMM", { locale: dfLocale })}
                       </p>
                     )}
                     {/* Sprint tag */}
