@@ -4,6 +4,7 @@ import {
   getDriverStandings,
   getSeasonConfig,
   getUpcomingRaces,
+  getNextRaceSessions,
   getLastRaceDate,
   getAllSeasonRaces,
 } from "@/lib/supabaseData";
@@ -38,6 +39,50 @@ function FlagImg({ iso, size = "h40", className = "w-8 h-5 object-cover rounded-
       className={className}
       onError={e => { e.target.style.display = "none"; }}
     />
+  );
+}
+
+const LOCALE_TAG = { it: "it-IT", en: "en-GB", fr: "fr-FR", es: "es-ES", de: "de-DE" };
+
+// ── Weekend session schedule (times converted to the user's timezone) ─────────
+function SessionSchedule({ data, t, localeTag }) {
+  if (!data || !data.sessions?.length) return null;
+  const fmtDay  = iso => new Date(iso).toLocaleDateString(localeTag, { weekday: "short", day: "numeric", month: "short" });
+  const fmtTime = (iso, hasTime) => hasTime
+    ? new Date(iso).toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit" })
+    : "—";
+
+  return (
+    <div className="app-card overflow-hidden">
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <h2 className="font-heading font-black text-base uppercase tracking-wide">{t("sess_schedule")}</h2>
+        <span className="text-[10px] text-muted-foreground font-body">{t("sess_yourTime")}</span>
+      </div>
+      <div className="px-2 pb-2">
+        {data.sessions.map(s => {
+          const isRace = s.key === "race";
+          const isSprint = s.key === "sprint";
+          return (
+            <div key={s.key}
+                 className={`flex items-center justify-between px-3 py-2 rounded-xl ${isRace ? "bg-primary/5" : ""}`}>
+              <div className="flex items-center gap-2 min-w-0">
+                {isRace && <span className="text-sm">🏁</span>}
+                {isSprint && <span className="tag bg-amber-100 text-amber-700 text-[9px]">SPRINT</span>}
+                <span className={`font-heading text-sm ${isRace ? "font-black text-primary" : "font-bold text-foreground"}`}>
+                  {t(`sess_${s.key}`)}
+                </span>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="font-body text-[11px] text-muted-foreground mr-2">{fmtDay(s.iso)}</span>
+                <span className={`font-heading tabular-nums text-sm ${isRace ? "font-black text-primary" : "font-bold"}`}>
+                  {fmtTime(s.iso, s.hasTime)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -176,6 +221,9 @@ export default function Home() {
   const { data: config, isLoading: lc } = useQuery({
     queryKey: ["seasonConfig"], queryFn: getSeasonConfig, staleTime: 10 * 60 * 1000,
   });
+  const { data: nextSessions } = useQuery({
+    queryKey: ["nextRaceSessions"], queryFn: () => getNextRaceSessions(), staleTime: 60 * 60 * 1000,
+  });
   const { data: upcomingRaces = [] } = useQuery({
     queryKey: ["upcomingRaces"], queryFn: () => getUpcomingRaces(4), staleTime: 60 * 60 * 1000,
   });
@@ -260,6 +308,9 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* ── PROGRAMMA WEEKEND (orari sessioni nel fuso locale) ── */}
+        <SessionSchedule data={nextSessions} t={t} localeTag={LOCALE_TAG[lang] ?? "it-IT"} />
 
         {/* ── CLASSIFICA PILOTI ── */}
         <div className="app-card overflow-hidden">
