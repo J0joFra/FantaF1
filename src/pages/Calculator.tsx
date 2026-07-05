@@ -793,10 +793,19 @@ export default function ScenariosPage() {
     return calculateChampionshipAnalysis(selectedDriver, drivers, racesLeft, Math.min(sprintsLeft, racesLeft));
   }, [selectedDriver, drivers, racesLeft, sprintsLeft]);
 
+  // Rivali ancora in corsa e rivale "effettivo": quello scelto a mano, oppure
+  // di default il rivale principale (di norma il 2° in classifica). Così il
+  // mosaico è già pronto appena si apre la scheda, senza dover selezionare nulla.
+  const activeRivals = useMemo(
+    () => (analysis ? analysis.allRivals.filter(r => !r.isMathematicallyEliminated) : []),
+    [analysis]
+  );
+  const effectiveRival = selectedRival || analysis?.mainRival?.driver || activeRivals[0]?.driver || null;
+
   const mosaicData = useMemo(() => {
-    if (!selectedDriver || !selectedRival || racesLeft === 0) return null;
-    return generateMosaic(selectedDriver, selectedRival, racesLeft, Math.min(sprintsLeft, racesLeft));
-  }, [selectedDriver, selectedRival, racesLeft, sprintsLeft]);
+    if (!selectedDriver || !effectiveRival || racesLeft === 0) return null;
+    return generateMosaic(selectedDriver, effectiveRival, racesLeft, Math.min(sprintsLeft, racesLeft));
+  }, [selectedDriver, effectiveRival, racesLeft, sprintsLeft]);
 
   // Scenario contro il rivale principale (per la vista semplice, senza scegliere a mano)
   const mainRivalMosaic = useMemo(() => {
@@ -816,15 +825,8 @@ export default function ScenariosPage() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [driverPickerOpen]);
 
-  // Cambiando pilota azzera il rivale; in vista avanzata pre-seleziona il rivale principale
+  // Cambiando pilota azzera il rivale scelto → torna al rivale principale di default.
   useEffect(() => { setSelectedRival(null); }, [selectedDriverId]);
-  useEffect(() => {
-    if (advanced && !selectedRival && analysis) {
-      const active = analysis.allRivals.filter(r => !r.isMathematicallyEliminated);
-      const def = analysis.mainRival?.driver || active[0]?.driver || null;
-      if (def) setSelectedRival(def);
-    }
-  }, [advanced, selectedRival, analysis]);
 
   const maxPossiblePoints = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
   const leader = drivers.length > 0 ? drivers.reduce((a, b) => a.points > b.points ? a : b) : null;
@@ -1082,54 +1084,48 @@ export default function ScenariosPage() {
               </>
             )}
 
-            {/* ─── VISTA AVANZATA ─── */}
+            {/* ─── VISTA AVANZATA (mosaico) ─── */}
             {advanced && (
-            <>
-            {/* Selettore rivale compatto: il mosaico mostra tutte le combinazioni vs questo pilota */}
-            {(() => {
-              const activeRivals = analysis.allRivals.filter(r => !r.isMathematicallyEliminated);
-              if (activeRivals.length === 0) {
-                return (
-                  <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 text-center">
-                    <Award className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                    <p className="text-gray-600 font-medium">{t("rivals_lead")}</p>
-                    <p className="text-xs text-gray-400 mt-1">{t("rivals_noneAhead")}</p>
-                  </div>
-                );
-              }
-              const current = selectedRival || activeRivals[0].driver;
-              return (
-                <div className="bg-white rounded-xl p-3 shadow-md border border-gray-100">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
-                    {t("sc_chooseDriver")}
-                  </label>
-                  <select
-                    value={current.id}
-                    onChange={(e) => setSelectedRival(activeRivals.find(r => r.driver.id === e.target.value)?.driver || null)}
-                    className="w-full h-10 bg-gray-50 border-0 rounded-lg px-3 text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
-                  >
-                    {activeRivals.map(r => (
-                      <option key={r.driver.id} value={r.driver.id}>
-                        {r.driver.driver_name} — {r.driver.points} pt
-                      </option>
-                    ))}
-                  </select>
+              activeRivals.length === 0 ? (
+                <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 text-center">
+                  <Award className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
+                  <p className="text-gray-600 font-medium">{t("rivals_lead")}</p>
+                  <p className="text-xs text-gray-400 mt-1">{t("rivals_noneAhead")}</p>
                 </div>
-              );
-            })()}
+              ) : (
+                <>
+                  {/* Selettore rivale (facoltativo): di default il rivale principale */}
+                  <div className="bg-white rounded-xl p-3 shadow-md border border-gray-100">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                      {t("sc_chooseDriver")}
+                    </label>
+                    <select
+                      value={effectiveRival?.id || ""}
+                      onChange={(e) => setSelectedRival(activeRivals.find(r => r.driver.id === e.target.value)?.driver || null)}
+                      className="w-full h-10 bg-gray-50 border-0 rounded-lg px-3 text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+                    >
+                      {activeRivals.map(r => (
+                        <option key={r.driver.id} value={r.driver.id}>
+                          {r.driver.driver_name} — {r.driver.points} pt
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-            {selectedRival && mosaicData && (
-              <MosaicDiagram
-                cells={mosaicData.cells}
-                bestCombination={mosaicData.bestCombination}
-                yourDriver={selectedDriver}
-                rival={selectedRival}
-                racesLeft={racesLeft}
-                sprintsLeft={Math.min(sprintsLeft, racesLeft)}
-                onCellClick={(yourPos, rivalPos) => setSelectedCell({ yourPos, rivalPos })}
-              />
-            )}
-            </>
+                  {/* Mosaico: già visibile, nessun click necessario */}
+                  {effectiveRival && mosaicData && (
+                    <MosaicDiagram
+                      cells={mosaicData.cells}
+                      bestCombination={mosaicData.bestCombination}
+                      yourDriver={selectedDriver}
+                      rival={effectiveRival}
+                      racesLeft={racesLeft}
+                      sprintsLeft={Math.min(sprintsLeft, racesLeft)}
+                      onCellClick={(yourPos, rivalPos) => setSelectedCell({ yourPos, rivalPos })}
+                    />
+                  )}
+                </>
+              )
             )}
 
           </motion.div>
@@ -1145,12 +1141,12 @@ export default function ScenariosPage() {
       </div>
 
       {/* Cell Detail Modal */}
-      {selectedCell && selectedDriver && selectedRival && (
+      {selectedCell && selectedDriver && effectiveRival && (
         <CellDetailModal
           isOpen={!!selectedCell}
           onClose={() => setSelectedCell(null)}
           yourDriver={selectedDriver}
-          rival={selectedRival}
+          rival={effectiveRival}
           yourPos={selectedCell.yourPos}
           rivalPos={selectedCell.rivalPos}
           racesLeft={racesLeft}
