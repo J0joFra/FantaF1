@@ -60,6 +60,7 @@ const CAT_BADGE = {
 };
 
 function NewsCard({ item, index }) {
+  const { t } = useI18n();
   const badge = CAT_BADGE[item.category] ?? CAT_BADGE["F1 NEWS"];
 
   return (
@@ -104,7 +105,7 @@ function NewsCard({ item, index }) {
             {item.date}
           </time>
           <span className="inline-flex items-center gap-1 text-[10px] font-semibold font-body text-primary">
-            Leggi <ExternalLink className="w-2.5 h-2.5" />
+            {t("news_read")} <ExternalLink className="w-2.5 h-2.5" />
           </span>
         </div>
       </div>
@@ -160,7 +161,7 @@ export default function News() {
       <div className="px-4 pt-1 pb-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-primary">Live · F1 News</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-primary">{t("news_live")}</span>
         </div>
       </div>
 
@@ -169,13 +170,13 @@ export default function News() {
 
         {error && (
           <div className="app-card p-6 flex flex-col items-center gap-3 text-center">
-            <p className="font-heading font-black text-base text-foreground">Notizie non disponibili</p>
+            <p className="font-heading font-black text-base text-foreground">{t("news_unavailable")}</p>
             <p className="text-sm text-muted-foreground font-body">{error.message}</p>
             <button
               onClick={() => refetch()}
               className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold font-body"
             >
-              Riprova
+              {t("news_retry")}
             </button>
           </div>
         )}
@@ -188,20 +189,20 @@ export default function News() {
         {!isLoading && !error && items.length === 0 && (
           <div className="app-card p-6 flex flex-col items-center gap-3 text-center">
             <Newspaper className="w-8 h-8 text-gray-300" />
-            <p className="font-heading font-black text-base text-foreground">Nessuna notizia</p>
-            <p className="text-sm text-muted-foreground font-body">Le notizie per questa lingua saranno disponibili a breve.</p>
+            <p className="font-heading font-black text-base text-foreground">{t("news_none")}</p>
+            <p className="text-sm text-muted-foreground font-body">{t("news_comingSoon")}</p>
             <button
               onClick={() => refetch()}
               className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold font-body"
             >
-              Aggiorna
+              {t("news_retry")}
             </button>
           </div>
         )}
 
         {!isLoading && !error && items.length > 0 && (
           <p className="text-center text-muted-foreground/50 text-[11px] font-body py-2 tracking-wider">
-            Aggiornato ogni 3 ore
+            {t("news_updated")}
           </p>
         )}
       </div>
