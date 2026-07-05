@@ -462,6 +462,52 @@ export async function getFerrariArchiveStats() {
 }
 
 // ─── NEXT N RACES ─────────────────────────────────────────────────────────────
+// Podium (top 3) of the most recent completed race of the season.
+export async function getLastRaceResults(season = new Date().getFullYear()) {
+  const today = new Date().toISOString().split('T')[0];
+  const { data: races } = await supabase
+    .from('race')
+    .select('id, official_name, date, grand_prix_id')
+    .eq('year', season)
+    .lt('date', today)
+    .order('date', { ascending: false })
+    .limit(5);
+  if (!races || !races.length) return null;
+
+  for (const r of races) {
+    const { data: rows } = await supabase
+      .from('race_data')
+      .select('position_number, driver_id, constructor_id')
+      .eq('race_id', r.id)
+      .eq('type', 'RACE_RESULT')
+      .lte('position_number', 3)
+      .order('position_number', { ascending: true });
+    if (!rows || !rows.length) continue;
+
+    const driverIds = rows.map(x => x.driver_id).filter(Boolean);
+    const { data: drivers } = await supabase
+      .from('driver').select('id, name, abbreviation').in('id', driverIds);
+    const dmap = {};
+    (drivers || []).forEach(d => { dmap[d.id] = d; });
+
+    let name = r.official_name || '';
+    if (r.grand_prix_id) {
+      const { data: gps } = await supabase
+        .from('grand_prix').select('name').eq('id', r.grand_prix_id).limit(1);
+      if (gps && gps[0]?.name) name = gps[0].name;
+    }
+
+    const podium = rows.map(x => ({
+      pos:    x.position_number,
+      driver: dmap[x.driver_id]?.name || x.driver_id || '',
+      code:   dmap[x.driver_id]?.abbreviation || '',
+      team:   (x.constructor_id || '').replace(/-/g, ' '),
+    }));
+    return { name, date: r.date, podium };
+  }
+  return null;
+}
+
 // Sessions (FP/Qualifying/Sprint/Race) of the next race, with UTC datetimes.
 // Times in the DB are UTC "HH:MM" strings — we build ISO-UTC so the client can
 // render them in the user's own timezone.
