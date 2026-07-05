@@ -213,6 +213,22 @@ export default function Compare() {
   const lead = h2h.w1 > h2h.w2 ? 1 : h2h.w2 > h2h.w1 ? 2 : 0;
 
   const swap = () => { setId1(id2); setId2(id1); };
+  const teammates = () => {
+    // If a driver is already picked, jump to their teammate…
+    if (d1 && d1.team) {
+      const mate = drivers.find(x => x.id !== d1.id && x.team === d1.team);
+      if (mate) { setId2(mate.id); return; }
+    }
+    // …otherwise pick the first team that fields two drivers.
+    const byTeam = {};
+    for (const d of drivers) {
+      if (!d.team) continue;
+      if (!byTeam[d.team]) byTeam[d.team] = [];
+      byTeam[d.team].push(d);
+    }
+    const pair = Object.values(byTeam).find(a => a.length >= 2);
+    if (pair) { setId1(pair[0].id); setId2(pair[1].id); }
+  };
   const shuffle = () => {
     if (drivers.length < 2) return;
     const i = Math.floor(Math.random() * drivers.length);
@@ -266,6 +282,15 @@ export default function Compare() {
           </button>
           <DriverSelect label={t("cmp_pilot2")} placeholder={t("cmp_selectDriver")} value={id2} onChange={setId2} color={c2} d={d2}
             options={drivers.filter(x => x.id !== id1)} />
+        </div>
+
+        {/* Quick action: compare teammates */}
+        <div className="flex justify-center -mt-1">
+          <button onClick={teammates}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-gray-200 shadow-sm text-xs font-heading font-bold text-primary active:scale-95 transition-transform">
+            <Users className="w-3.5 h-3.5" />
+            {t("cmp_teammates")}
+          </button>
         </div>
 
         {d1 && d2 && (
