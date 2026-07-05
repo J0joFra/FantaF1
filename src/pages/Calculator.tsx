@@ -327,10 +327,10 @@ function MosaicDiagram({
   const getCellStyle = (cell: MosaicCell | null) => {
     if (!cell || !cell.isPossible) return "bg-gray-100 text-gray-300";
     const percent = (cell.racesNeeded / racesLeft) * 100;
-    if (percent <= 30) return "bg-emerald-500 text-white";
-    if (percent <= 50) return "bg-lime-500 text-white";
-    if (percent <= 70) return "bg-amber-500 text-white";
-    return "bg-orange-500 text-white";
+    if (percent <= 30) return "bg-gradient-to-br from-emerald-400 to-emerald-600 text-white";
+    if (percent <= 50) return "bg-gradient-to-br from-lime-400 to-lime-600 text-white";
+    if (percent <= 70) return "bg-gradient-to-br from-amber-400 to-amber-600 text-white";
+    return "bg-gradient-to-br from-orange-400 to-orange-600 text-white";
   };
 
   return (
@@ -425,20 +425,35 @@ function MosaicDiagram({
               const isBest = cell && bestCombination &&
                 cell.yourPos === bestCombination.yourPos &&
                 cell.rivalPos === bestCombination.rivalPos;
+              // Diagonal wave: cells nearer the top-left reveal first.
+              const wave = (yourPos.position + rivalPos.position) * 0.018;
 
               return (
                 <motion.button
-                  key={`cell-${yourPos.position}-${rivalPos.position}`}
-                  whileTap={{ scale: cell?.isPossible ? 0.9 : 1 }}
+                  key={`cell-${yourDriver.id}-${rival.id}-${yourPos.position}-${rivalPos.position}`}
+                  initial={{ opacity: 0, scale: 0.3 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.28, delay: wave, ease: "backOut" }}
+                  whileTap={{ scale: cell?.isPossible ? 0.88 : 1 }}
+                  whileHover={cell?.isPossible ? { scale: 1.12, zIndex: 20 } : undefined}
                   onClick={() => cell?.isPossible && onCellClick(cell.yourPos, cell.rivalPos)}
                   disabled={!cell?.isPossible}
                   className={`
                     relative flex items-center justify-center aspect-square rounded
                     text-[11px] font-black leading-none transition-colors
                     ${getCellStyle(cell)}
+                    ${cell?.isPossible ? "shadow-sm" : ""}
                     ${isBest ? "ring-2 ring-rose-500 ring-offset-1 z-10" : ""}
                   `}
                 >
+                  {/* Pulsing glow on the best (fastest) cell */}
+                  {isBest && (
+                    <motion.span
+                      className="absolute inset-0 rounded ring-2 ring-rose-400 pointer-events-none"
+                      animate={{ opacity: [0.9, 0.2, 0.9], scale: [1, 1.18, 1] }}
+                      transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                  )}
                   {cell?.isPossible ? cell.racesNeeded : ""}
                 </motion.button>
               );
@@ -449,12 +464,21 @@ function MosaicDiagram({
 
       {/* Combinazione ottimale (tappabile) */}
       {bestCombination && (
-        <button
+        <motion.button
+          key={`best-${yourDriver.id}-${rival.id}`}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45, duration: 0.35 }}
           onClick={() => onCellClick(bestCombination.yourPos, bestCombination.rivalPos)}
           className="mt-3 w-full text-left p-3 bg-gradient-to-r from-rose-50 to-orange-50 rounded-xl border border-rose-200 active:scale-[0.98] transition-transform"
         >
           <div className="flex items-center gap-2 mb-1.5">
-            <Trophy className="w-4 h-4 text-rose-600 shrink-0" />
+            <motion.span
+              animate={{ rotate: [0, -12, 12, 0] }}
+              transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 1.2 }}
+            >
+              <Trophy className="w-4 h-4 text-rose-600 shrink-0" />
+            </motion.span>
             <span className="text-xs font-bold text-gray-700">{t("mos_fastest")}</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
@@ -465,7 +489,7 @@ function MosaicDiagram({
               {bestCombination.racesNeeded} {bestCombination.racesNeeded === 1 ? t("mos_raceOne") : t("mos_raceMany")}
             </span>
           </div>
-        </button>
+        </motion.button>
       )}
     </div>
   );
