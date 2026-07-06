@@ -438,60 +438,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── PUNTI NECESSARI (dark card) ── */}
-        {leader && p2 && (
-          <div className="dark-card px-5 pt-4 pb-5">
-            {/* Header */}
-            <h2 className="font-heading font-black text-xs uppercase tracking-widest
-                           text-white/50 mb-3 flex items-center gap-1.5">
-              {t("home_needed")}
-              <InfoTip>{t("home_neededHint")}</InfoTip>
-            </h2>
-
-            {/* Two-column layout: left = text, right = gauge */}
-            <div className="flex items-center gap-2">
-
-              {/* Left column */}
-              <div className="flex-1 min-w-0">
-                <p className="text-white/65 text-sm font-body leading-snug">
-                  <span className="font-heading font-black text-white">
-                    {leader.driver_name}
-                  </span>
-                  {" "}{t("home_canWin")}
-                </p>
-                <div className="flex items-baseline gap-1 mt-3">
-                  <span className="font-heading font-black leading-none text-primary"
-                        style={{ fontSize: "3.5rem" }}>
-                    {neededForTitle}
-                  </span>
-                  <span className="font-heading font-black text-2xl text-primary/70 mb-1">
-                    PTI
-                  </span>
-                </div>
-                {/* P2 info */}
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-white/30 text-xs font-body">vs</span>
-                  <span className="font-heading font-bold text-sm text-white/60">
-                    {p2.driver_name}
-                  </span>
-                  <span className="font-mono text-xs text-white/35">
-                    ({p2.points} pts)
-                  </span>
-                </div>
-              </div>
-
-              {/* Right column — gauge, fixed width */}
-              <div className="w-[160px] shrink-0">
-                <ArcGauge
-                  current={leader.points}
-                  possible={possible}
-                  labels={{ points: t("gauge_points") }}
-                />
-              </div>
-
-            </div>
-          </div>
-        )}
 
         {/* ── PROSSIMI GP — 4 boxes, centered grid ── */}
         {calRaces.length > 0 && (
