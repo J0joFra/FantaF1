@@ -361,6 +361,48 @@ export async function getSeasonConfig() {
   };
 }
 
+// Current-or-next race using the real start datetime (UTC) with a 2h window:
+// a race stays "current" until ~2h after lights-out (i.e. until it's over), then
+// the next race takes over. Returns the ISO start (for the countdown) + flag info.
+export async function getNextRace() {
+  const now = Date.now();
+  const RACE_WINDOW_MS = 2 * 60 * 60 * 1000; // gara considerata "in corso" per 2h dal via
+  const yesterday = new Date(now - 24 * 3600 * 1000).toISOString().split('T')[0];
+
+  const { data } = await supabase
+    .from('race')
+    .select('id, round, date, time, official_name, grand_prix_id, sprint_race_date, year')
+    .gte('date', yesterday)
+    .order('date', { ascending: true })
+    .limit(12);
+
+  if (!data || !data.length) return null;
+
+  const startMs = (r) => new Date(`${r.date}T${(r.time || '00:00').slice(0, 5)}:00Z`).getTime();
+  // Prima gara la cui fine (via + 2h) è ancora nel futuro.
+  const r = data.find(x => startMs(x) + RACE_WINDOW_MS > now) || data[data.length - 1];
+
+  let name = r.official_name || '';
+  let country_id = null;
+  if (r.grand_prix_id) {
+    const { data: gps } = await supabase
+      .from('grand_prix').select('name, country_id').eq('id', r.grand_prix_id).limit(1);
+    if (gps && gps[0]) {
+      name = gps[0].name || name;
+      country_id = gps[0].country_id || null;
+    }
+  }
+
+  return {
+    id:            r.id,
+    name,
+    official_name: r.official_name || '',
+    startIso:      `${r.date}T${(r.time || '00:00').slice(0, 5)}:00Z`,
+    country_id,
+    has_sprint:    !!r.sprint_race_date,
+  };
+}
+
 // ─── NEXT GRAND PRIX ─────────────────────────────────────────────────────────
 export async function getNextGrandPrix() {
   const today = new Date().toISOString().split('T')[0];
