@@ -6,6 +6,7 @@ import {
   getUpcomingRaces,
   getNextRaceSessions,
   getLastRaceResults,
+  getNextRace,
   getLastRaceDate,
   getAllSeasonRaces,
 } from "@/lib/supabaseData";
@@ -270,6 +271,9 @@ export default function Home() {
   const { data: lastRace } = useQuery({
     queryKey: ["lastRaceResults"], queryFn: () => getLastRaceResults(), staleTime: 60 * 60 * 1000,
   });
+  const { data: nextRace } = useQuery({
+    queryKey: ["nextRace"], queryFn: () => getNextRace(), staleTime: 5 * 60 * 1000,
+  });
   const { data: upcomingRaces = [] } = useQuery({
     queryKey: ["upcomingRaces"], queryFn: () => getUpcomingRaces(4), staleTime: 60 * 60 * 1000,
   });
@@ -338,17 +342,21 @@ export default function Home() {
           <p className="text-xs text-muted-foreground font-body leading-snug mb-3">
             {t("home_tagline")}
           </p>
-          {config?.next_race_name && (
+          {(nextRace?.name || config?.next_race_name) && (
             <div className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
               {(() => {
-                const src = calRaces[0] ? raceFlagUrl(calRaces[0], "h80") : (nextRaceIso ? flagUrl(nextRaceIso, "h80") : null);
+                // Bandiera del GP corrente/prossimo: prima da nextRace (allineato al
+                // countdown col fuso reale), poi fallback al calendario / nome GP.
+                const src = nextRace
+                  ? raceFlagUrl({ country_id: nextRace.country_id, official_name: nextRace.official_name, name: nextRace.name }, "h80")
+                  : (calRaces[0] ? raceFlagUrl(calRaces[0], "h80") : (nextRaceIso ? flagUrl(nextRaceIso, "h80") : null));
                 return src
                   ? <img src={src} alt="" className="h-9 w-auto object-cover rounded-md shrink-0"
                          onError={e => { e.target.style.display = "none"; }} />
                   : <span className="text-xl shrink-0">🏁</span>;
               })()}
-              <GpCountdown targetDate={config.next_race_date} compact />
-              {config.next_race_has_sprint && (
+              <GpCountdown targetDate={nextRace?.startIso || config?.next_race_date} compact />
+              {(nextRace?.has_sprint ?? config?.next_race_has_sprint) && (
                 <span className="tag bg-amber-100 text-amber-700 shrink-0 ml-auto">Sprint</span>
               )}
             </div>
