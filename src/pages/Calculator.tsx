@@ -327,6 +327,16 @@ function MosaicDiagram({
   // Di default mostra solo le posizioni che contano per il titolo (P1-P6);
   // le posizioni basse aggiungono solo rumore. Toggle per vederle tutte.
   const positions = showAllPos ? SCORING_POSITIONS : SCORING_POSITIONS.slice(0, 6);
+
+  // "Migliore" tra le SOLE posizioni mostrate, così la cella che pulsa e la card
+  // "strategia più veloce" coincidono sempre con la griglia visibile (evita di
+  // indicare un rivale a P9 quando la griglia arriva solo a P6).
+  const maxVisiblePos = positions[positions.length - 1].position;
+  const displayBest = cells.reduce<MosaicCell | null>((best, c) => {
+    if (!c.isPossible || c.yourPos > maxVisiblePos || c.rivalPos > maxVisiblePos) return best;
+    if (!best || c.racesNeeded < best.racesNeeded) return c;
+    return best;
+  }, null);
   
   // Colore piatto in base alla difficoltà (% delle gare necessarie)
   const getCellStyle = (cell: MosaicCell | null) => {
@@ -428,9 +438,9 @@ function MosaicDiagram({
             </div>
             {positions.map(rivalPos => {
               const cell = matrix[yourPos.position - 1][rivalPos.position - 1];
-              const isBest = cell && bestCombination &&
-                cell.yourPos === bestCombination.yourPos &&
-                cell.rivalPos === bestCombination.rivalPos;
+              const isBest = cell && displayBest &&
+                cell.yourPos === displayBest.yourPos &&
+                cell.rivalPos === displayBest.rivalPos;
               // Diagonal wave: cells nearer the top-left reveal first.
               const wave = (yourPos.position + rivalPos.position) * 0.018;
 
@@ -478,14 +488,14 @@ function MosaicDiagram({
         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllPos ? "rotate-180" : ""}`} />
       </button>
 
-      {/* Combinazione ottimale (tappabile) */}
-      {bestCombination && (
+      {/* Combinazione ottimale tra le posizioni mostrate (tappabile) */}
+      {displayBest && (
         <motion.button
-          key={`best-${yourDriver.id}-${rival.id}`}
+          key={`best-${yourDriver.id}-${rival.id}-${maxVisiblePos}`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45, duration: 0.35 }}
-          onClick={() => onCellClick(bestCombination.yourPos, bestCombination.rivalPos)}
+          onClick={() => onCellClick(displayBest.yourPos, displayBest.rivalPos)}
           className="mt-3 w-full text-left p-3 bg-gradient-to-r from-rose-50 to-orange-50 rounded-xl border border-rose-200 active:scale-[0.98] transition-transform"
         >
           <div className="flex items-center gap-2 mb-1.5">
@@ -498,11 +508,11 @@ function MosaicDiagram({
             <span className="text-xs font-bold text-gray-700">{t("mos_fastest")}</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <span className="font-bold text-gray-900">{yourDriver.driver_code} {bestCombination.yourPos}°</span>
+            <span className="font-bold text-gray-900">{yourDriver.driver_code} {displayBest.yourPos}°</span>
             <span className="text-gray-400">{t("vs")}</span>
-            <span className="font-bold text-gray-900">{rival.driver_code} {bestCombination.rivalPos}°</span>
+            <span className="font-bold text-gray-900">{rival.driver_code} {displayBest.rivalPos}°</span>
             <span className="ml-auto text-emerald-600 font-bold whitespace-nowrap">
-              {bestCombination.racesNeeded} {bestCombination.racesNeeded === 1 ? t("mos_raceOne") : t("mos_raceMany")}
+              {displayBest.racesNeeded} {displayBest.racesNeeded === 1 ? t("mos_raceOne") : t("mos_raceMany")}
             </span>
           </div>
         </motion.button>
