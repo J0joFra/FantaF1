@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
-import { getDriverStandings, getDriverSeasonStats } from "../lib/supabaseData";
+import { getDriverStandings, getDriverSeasonStats, getUpcomingRaces } from "../lib/supabaseData";
 import { getDriverColor } from "../lib/f1Utils";
 import PageHeader from "@/components/PageHeader";
 import { useI18n } from "@/lib/i18n";
@@ -520,7 +520,8 @@ function CellDetailModal({
   yourPos,
   rivalPos,
   racesLeft,
-  sprintsLeft
+  sprintsLeft,
+  remainingRaces = []
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -530,6 +531,7 @@ function CellDetailModal({
   rivalPos: number;
   racesLeft: number;
   sprintsLeft: number;
+  remainingRaces?: { name: string; country_id?: string | null }[];
 }) {
   const yourPosData = SCORING_POSITIONS.find(p => p.position === yourPos)!;
   const rivalPosData = SCORING_POSITIONS.find(p => p.position === rivalPos)!;
@@ -634,7 +636,9 @@ function CellDetailModal({
                         }`}>
                           {result.raceNumber}
                         </div>
-                        <span className="font-medium text-gray-700">{t("cd_gp")} {result.raceNumber}</span>
+                        <span className="font-medium text-gray-700">
+                          {remainingRaces[result.raceNumber - 1]?.name || `${t("cd_gp")} ${result.raceNumber}`}
+                        </span>
                         {result.isSprint && (
                           <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wide">
                             {t("cd_sprint")}
@@ -746,6 +750,7 @@ export default function ScenariosPage() {
   const [rivalsOpen, setRivalsOpen] = useState(false);
   const [advanced, setAdvanced] = useState(false);
   const [driverPickerOpen, setDriverPickerOpen] = useState(false);
+  const [remainingRaces, setRemainingRaces] = useState<{ name: string; country_id?: string | null }[]>([]);
   const driverPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -754,10 +759,13 @@ export default function ScenariosPage() {
       setError(null);
       
       try {
-        const [standings, seasonStats] = await Promise.all([
+        const [standings, seasonStats, upcoming] = await Promise.all([
           getDriverStandings(),
           getDriverSeasonStats(),
+          getUpcomingRaces(30),
         ]);
+        // GP rimanenti in ordine (nome pulito + bandiera) per etichettare la timeline.
+        setRemainingRaces((upcoming || []).map((r: any) => ({ name: r.name, country_id: r.country_id })));
 
         // Gare mancanti dall'intero calendario: tutte le gare della stagione senza risultati
         // (indipendente dalla data odierna). La stagione = l'anno con gare ancora da disputare.
@@ -1169,6 +1177,7 @@ export default function ScenariosPage() {
           rivalPos={selectedCell.rivalPos}
           racesLeft={racesLeft}
           sprintsLeft={Math.min(sprintsLeft, racesLeft)}
+          remainingRaces={remainingRaces}
         />
       )}
 
