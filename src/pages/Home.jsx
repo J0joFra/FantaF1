@@ -146,59 +146,6 @@ function SessionSchedule({ data, t, localeTag }) {
   );
 }
 
-// ── Arc gauge — fixed layout, properly centered ───────────────────────────────
-function ArcGauge({ current, possible, labels }) {
-  const W = 200, H = 120;
-  const cx = W / 2, cy = 106;
-  const R = 80;
-  const toRad = d => (d * Math.PI) / 180;
-  const startA = -180, endA = 0; // clean semicircle
-
-  const arc = (pct) => {
-    const clamped = Math.min(Math.max(pct, 0.001), 0.9999);
-    const a = toRad(startA + (endA - startA) * clamped);
-    const x1 = cx + R * Math.cos(toRad(startA));
-    const y1 = cy + R * Math.sin(toRad(startA));
-    const x2 = cx + R * Math.cos(a);
-    const y2 = cy + R * Math.sin(a);
-    const large = (endA - startA) * clamped > 180 ? 1 : 0;
-    return `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2}`;
-  };
-
-  const currPct = possible > 0 ? Math.min(current / possible, 1) : 0;
-
-  // Dot position at current
-  const dotA = toRad(startA + (endA - startA) * Math.min(Math.max(currPct, 0.001), 0.9999));
-  const dotX = cx + R * Math.cos(dotA);
-  const dotY = cy + R * Math.sin(dotA);
-
-  // Single clean fill arc: current points out of the max still achievable.
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
-      {/* Track (grey) */}
-      <path d={arc(1)} fill="none" stroke="rgba(255,255,255,0.12)"
-            strokeWidth="10" strokeLinecap="round" />
-      {/* Current progress (red) */}
-      <path d={arc(currPct)} fill="none" stroke="#E8002D"
-            strokeWidth="10" strokeLinecap="round" />
-      {/* Dot at current */}
-      <circle cx={dotX} cy={dotY} r="6" fill="white"
-              style={{ filter: "drop-shadow(0 0 3px rgba(0,0,0,0.4))" }} />
-      {/* Center: current points */}
-      <text x={cx} y={cy - 20} textAnchor="middle" fill="white"
-            fontSize="30" fontWeight="800"
-            fontFamily="'JetBrains Mono',monospace">{current}</text>
-      <text x={cx} y={cy - 4} textAnchor="middle"
-            fill="rgba(255,255,255,0.45)" fontSize="9"
-            fontFamily="'DM Sans',sans-serif" letterSpacing="2">{labels.points}</text>
-      {/* Below: out of max possible */}
-      <text x={cx} y={cy + 16} textAnchor="middle"
-            fill="rgba(255,255,255,0.5)" fontSize="10" fontWeight="700"
-            fontFamily="'JetBrains Mono',monospace">/ {possible}</text>
-    </svg>
-  );
-}
-
 // ── Driver row ────────────────────────────────────────────────────────────────
 function DriverRow({ driver, leader, index }) {
   const isLeader = index === 0;
@@ -296,12 +243,7 @@ export default function Home() {
   if (err) return <ErrorScreen onRetry={refetch} />;
 
   const leader         = drivers[0];
-  const p2             = drivers[1];
   const maxAvailable   = calculateMaxAvailablePoints(config);
-  const neededForTitle = p2
-    ? Math.max(0, p2.points + maxAvailable - (leader?.points ?? 0) + 1)
-    : 0;
-  const possible       = (leader?.points ?? 0) + maxAvailable;
   const visibleDrivers = showAllDrivers ? drivers : drivers.slice(0, 5);
 
   // Next race flag iso
