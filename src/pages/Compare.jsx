@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { shareElementAsImage } from "@/lib/shareImage";
+import { shareCanvas, buildH2HCard } from "@/lib/shareImage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getTeamColor } from "@/lib/f1Utils";
 import { getDriverStandings, getDriverSeasonStats } from "@/lib/supabaseData";
@@ -238,13 +238,26 @@ export default function Compare() {
   };
   const share = async () => {
     if (!d1 || !d2) return;
-    const winner = lead === 1 ? d1.driver_name : lead === 2 ? d2.driver_name : "Pareggio";
-    await shareElementAsImage(shareRef.current, {
+    const winner = lead === 1 ? d1.driver_name : lead === 2 ? d2.driver_name : "";
+    const modeTxt = mode === "season" ? t("season") : t("career");
+    // Build a custom, precise head-to-head card (drawn on canvas, not a screenshot)
+    const cmpRows = rows.map(r => {
+      const a = r.get(d1, s1), b = r.get(d2, s2);
+      return { label: r.label, v1: a, v2: b, win: cmp(a, b, r.lowerBetter) };
+    });
+    const card = buildH2HCard({
+      heading: t("cmp_headToHead"),
+      mode: modeTxt,
+      d1: { name: d1.driver_name, code: d1.driver_code, color: c1 },
+      d2: { name: d2.driver_name, code: d2.driver_code, color: c2 },
+      rows: cmpRows,
+      score: h2h,
+      winner,
+    });
+    await shareCanvas(card, {
       fileName: `gridup-${d1.driver_code}-vs-${d2.driver_code}.png`,
       title: "GridUP",
-      text: `🏎️ ${d1.driver_name} vs ${d2.driver_name} — ${mode === "season" ? t("season") : t("career")}: ${h2h.w1}–${h2h.w2} (${winner})`,
-      heading: t("nav_compare"),
-      sub: `${d1.driver_name} vs ${d2.driver_name}`,
+      text: `🏎️ ${d1.driver_name} vs ${d2.driver_name} — ${modeTxt}: ${h2h.w1}–${h2h.w2}${winner ? ` (${winner})` : ""}`,
     });
   };
 
