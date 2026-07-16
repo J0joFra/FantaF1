@@ -106,6 +106,16 @@ const DICT = {
     home_dataAsOf: "Aggiornato al",
     err_title: "Manutenzione in corso", err_msg: "Ci scusiamo per il disagio. I dati F1 sono temporaneamente non disponibili. Riprova tra qualche minuto.",
     map_title: "GP Stagione 2026", map_next: "Prossimo GP", map_upcoming: "In programma", map_past: "Disputato", map_tap: "Tocca per la mappa",
+    // dettaglio pilota
+    dd_notFound: "Pilota non trovato", dd_years: "anni", dd_form: "Forma (ultime gare)",
+    dd_noResults: "Nessun risultato disponibile", dd_dnf: "DNF", dd_seasonTitle: "Questa stagione",
+    // promemoria gara (notifiche)
+    rem_title: "Promemoria gara", rem_desc: "Ti avvisiamo un'ora prima di qualifiche e gara",
+    rem_on: "Attivi", rem_off: "Attiva", rem_denied: "Attiva le notifiche dalle impostazioni",
+    rem_empty: "Nessuna sessione in programma",
+    notif_quali_title: "🏁 {gp}: qualifiche", notif_quali_body: "Le qualifiche iniziano tra {min} minuti",
+    notif_sprint_title: "🏁 {gp}: sprint", notif_sprint_body: "La sprint inizia tra {min} minuti",
+    notif_race_title: "🏁 {gp}: gara", notif_race_body: "La gara inizia tra {min} minuti",
   },
   en: {
     nav_overview: "Overview", nav_scenarios: "Scenarios", nav_compare: "Compare", nav_teams: "Teams", nav_news: "News",
@@ -191,6 +201,16 @@ const DICT = {
     home_dataAsOf: "Updated on",
     err_title: "Under maintenance", err_msg: "We apologise for the inconvenience. F1 data is temporarily unavailable. Please try again in a few minutes.",
     map_title: "2026 Season GPs", map_next: "Next GP", map_upcoming: "Upcoming", map_past: "Completed", map_tap: "Tap for the map",
+    // driver detail
+    dd_notFound: "Driver not found", dd_years: "yrs", dd_form: "Form (recent races)",
+    dd_noResults: "No results yet", dd_dnf: "DNF", dd_seasonTitle: "This season",
+    // race reminders (notifications)
+    rem_title: "Race reminders", rem_desc: "We'll alert you an hour before qualifying and the race",
+    rem_on: "On", rem_off: "Turn on", rem_denied: "Enable notifications in system settings",
+    rem_empty: "No upcoming sessions",
+    notif_quali_title: "🏁 {gp}: qualifying", notif_quali_body: "Qualifying starts in {min} minutes",
+    notif_sprint_title: "🏁 {gp}: sprint", notif_sprint_body: "The sprint starts in {min} minutes",
+    notif_race_title: "🏁 {gp}: race", notif_race_body: "The race starts in {min} minutes",
   },
   fr: {
     nav_overview: "Aperçu", nav_scenarios: "Scénarios", nav_compare: "Comparer", nav_teams: "Écuries", nav_news: "News",
