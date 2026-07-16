@@ -18,13 +18,14 @@ import {
 } from "@/lib/f1Utils";
 import { raceFlagUrl, gpIso, flagUrl } from "@/lib/flagUtils";
 import GpCountdown from "@/components/GpCountdown";
-import { Loader2, ChevronDown, ChevronUp, Info, Trophy } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, ChevronRight, Info, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import InfoTip from "@/components/InfoTip";
 import ErrorScreen from "@/components/ErrorScreen";
 import SeasonMapModal from "@/components/SeasonMapModal";
+import RaceReminderToggle from "@/components/RaceReminderToggle";
 import { useI18n } from "@/lib/i18n";
 import { format } from "date-fns";
 import { it, enGB, fr, es, de } from "date-fns/locale";
@@ -147,7 +148,7 @@ function SessionSchedule({ data, t, localeTag }) {
 }
 
 // ── Driver row ────────────────────────────────────────────────────────────────
-function DriverRow({ driver, leader, index }) {
+function DriverRow({ driver, leader, index, onOpen }) {
   const isLeader = index === 0;
   const color    = getTeamColor(driver.team);
   const gap      = leader.points - driver.points;
@@ -158,7 +159,11 @@ function DriverRow({ driver, leader, index }) {
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.04 }}
-      className={`flex items-center gap-4 py-3.5
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === "Enter") onOpen?.(); }}
+      className={`flex items-center gap-4 py-3.5 cursor-pointer active:bg-gray-50 transition-colors
         ${index > 0 ? "border-t border-gray-100" : ""}
         ${isLeader ? "accent-bar" : ""}`}
     >
@@ -196,6 +201,8 @@ function DriverRow({ driver, leader, index }) {
           {isLeader ? "PTI" : `−${gap}`}
         </p>
       </div>
+
+      <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 -ml-1" />
     </motion.div>
   );
 }
@@ -203,6 +210,7 @@ function DriverRow({ driver, leader, index }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Home() {
   const { t, lang } = useI18n();
+  const navigate = useNavigate();
   const dfLocale = DATE_FNS_LOCALE[lang] ?? it;
   const [showAllDrivers, setShowAllDrivers] = useState(false);
 
@@ -311,6 +319,11 @@ export default function Home() {
         {/* ── PROGRAMMA WEEKEND (orari sessioni nel fuso locale) ── */}
         <SessionSchedule data={nextSessions} t={t} localeTag={LOCALE_TAG[lang] ?? "it-IT"} />
 
+        {/* ── PROMEMORIA GARA (notifiche locali, solo su app nativa) ── */}
+        {nextSessions?.sessions?.length > 0 && (
+          <RaceReminderToggle sessions={nextSessions.sessions} gpName={nextSessions.name} />
+        )}
+
         {/* ── CLASSIFICA PILOTI ── */}
         <div className="app-card overflow-hidden">
           <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100">
@@ -331,7 +344,8 @@ export default function Home() {
           <div className="px-4">
             <AnimatePresence initial={false}>
               {visibleDrivers.map((d, i) => (
-                <DriverRow key={d.id} driver={d} leader={leader} index={i} />
+                <DriverRow key={d.id} driver={d} leader={leader} index={i}
+                  onOpen={() => navigate(`/driver/${d.id}`)} />
               ))}
             </AnimatePresence>
           </div>
