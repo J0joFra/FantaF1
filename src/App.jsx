@@ -12,6 +12,7 @@ import Calculator from './pages/Calculator';
 import Compare from './pages/Compare';
 import Ferrari from './pages/Ferrari';
 import News from './pages/News';
+import DriverDetail from './pages/DriverDetail';
 import { useState } from 'react';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/calculator" element={<Calculator />} />
               <Route path="/compare" element={<Compare />} />
+              <Route path="/driver/:id" element={<DriverDetail />} />
               <Route path="/ferrari" element={<Ferrari />} />
               <Route path="/news" element={<News />} />
             </Route>
