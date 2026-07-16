@@ -602,6 +602,58 @@ export async function getNextRaceSessions(season = new Date().getFullYear()) {
   return { name, round: r.round, sessions };
 }
 
+// ─── DRIVER RECENT RESULTS (form) ────────────────────────────────────────────
+// Finishing position of a driver in the most recent completed races of the season.
+// Returns most-recent-first: [{ race_id, date, name, country_id, position, dnf }].
+export async function getDriverRecentResults(driverId, limit = 5, season = new Date().getFullYear()) {
+  if (!driverId) return [];
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: races, error } = await supabase
+    .from('race')
+    .select('id, date, official_name, grand_prix_id')
+    .eq('year', season)
+    .lt('date', today)
+    .order('date', { ascending: false })
+    .limit(limit);
+
+  if (error) { console.error('Driver recent results (races):', error.message); return []; }
+  if (!races || !races.length) return [];
+
+  const ids = races.map(r => r.id);
+  const { data: rows } = await supabase
+    .from('race_data')
+    .select('race_id, position_number, race_reason_retired')
+    .in('race_id', ids)
+    .eq('type', 'RACE_RESULT')
+    .eq('driver_id', driverId);
+
+  const byRace = {};
+  (rows || []).forEach(r => { byRace[r.race_id] = r; });
+
+  // Enrich with grand_prix names/flags
+  const gpIds = races.map(r => r.grand_prix_id).filter(Boolean);
+  let gpMap = {};
+  if (gpIds.length) {
+    const { data: gps } = await supabase
+      .from('grand_prix').select('id, name, country_id').in('id', gpIds);
+    (gps || []).forEach(g => { gpMap[g.id] = g; });
+  }
+
+  return races.map(r => {
+    const rd = byRace[r.id] || null;
+    const gp = gpMap[r.grand_prix_id] || {};
+    return {
+      race_id:    r.id,
+      date:       r.date,
+      name:       gp.name || r.official_name || '',
+      country_id: gp.country_id || null,
+      position:   rd?.position_number ?? null,
+      dnf:        !!rd?.race_reason_retired,
+    };
+  });
+}
+
 export async function getUpcomingRaces(limit = 5, season = new Date().getFullYear()) {
   const today = new Date().toISOString().split('T')[0];
   const { data, error } = await supabase
