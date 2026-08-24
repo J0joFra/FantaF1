@@ -233,7 +233,7 @@ export default function Ferrari() {
               <div className="flex items-center gap-2 mb-1">
                 <FlagImg iso={selected.nationality_iso} />
                 <span className="font-body text-[11px] text-white/80 uppercase tracking-widest">
-                  Stagione {config?.season ?? new Date().getFullYear()}
+                  {tr("season")} {config?.season ?? new Date().getFullYear()}
                 </span>
               </div>
               <h2 className="font-heading font-black text-3xl leading-none truncate">{selected.team_name}</h2>
