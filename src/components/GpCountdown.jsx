@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useI18n } from "@/lib/i18n";
 
 export default function GpCountdown({ targetDate, light = false, compact = false }) {
+  const { t: tr } = useI18n();
   const calc = useCallback(() => {
     if (!targetDate) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
     const diff = new Date(targetDate).getTime() - Date.now();
@@ -22,10 +24,10 @@ export default function GpCountdown({ targetDate, light = false, compact = false
   }, [calc]);
 
   const units = [
-    { l: "GG",  v: t.days    },
-    { l: "ORE", v: t.hours   },
-    { l: "MIN", v: t.minutes },
-    { l: "SEC", v: t.seconds },
+    { l: tr("cd_days"),    v: t.days    },
+    { l: tr("cd_hours"),   v: t.hours   },
+    { l: tr("cd_minutes"), v: t.minutes },
+    { l: tr("cd_seconds"), v: t.seconds },
   ];
 
   // ── Compact mode: inline red numbers ──────────────────────────────────────
