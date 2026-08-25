@@ -13,8 +13,8 @@ export default function BugReportButton() {
         onClick={() => setOpen(true)}
         title={t("bug_report_title")}
         aria-label={t("bug_report_title")}
-        className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center
-                   text-white shrink-0 active:scale-95 transition-transform"
+        className="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center
+                   text-muted-foreground shrink-0 active:scale-95 transition-transform"
       >
         <Bug className="w-4 h-4" />
       </button>

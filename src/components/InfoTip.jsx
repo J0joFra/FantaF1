@@ -23,7 +23,7 @@ export default function InfoTip({ children, className = "" }) {
         type="button"
         aria-label="Informazioni"
         onClick={(e) => { e.stopPropagation(); e.preventDefault(); setOpen(o => !o); }}
-        className="inline-flex items-center justify-center text-gray-400 active:text-gray-700"
+        className="inline-flex items-center justify-center text-muted-foreground active:text-foreground"
       >
         <HelpCircle className="w-3.5 h-3.5" />
       </button>
@@ -32,14 +32,14 @@ export default function InfoTip({ children, className = "" }) {
           role="tooltip"
           onClick={(e) => e.stopPropagation()}
           className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50
-                     w-max max-w-[72vw] rounded-lg bg-gray-900 text-white
+                     w-max max-w-[72vw] rounded-lg bg-foreground text-background
                      text-[11px] leading-snug font-body normal-case tracking-normal
                      px-2.5 py-1.5 shadow-xl"
           style={{ textAlign: "left" }}
         >
           {children}
           <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-px
-                           border-4 border-transparent border-t-gray-900" />
+                           border-4 border-transparent border-t-foreground" />
         </span>
       )}
     </span>
