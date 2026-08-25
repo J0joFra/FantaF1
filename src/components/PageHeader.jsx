@@ -1,5 +1,6 @@
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import BugReportButton from "@/components/BugReportButton";
 
 export default function PageHeader({ icon: Icon, title, color = "#E8002D", right }) {
   return (
@@ -18,6 +19,7 @@ export default function PageHeader({ icon: Icon, title, color = "#E8002D", right
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {right}
+          <BugReportButton />
           <LanguageSwitcher />
           <ThemeToggle />
         </div>
