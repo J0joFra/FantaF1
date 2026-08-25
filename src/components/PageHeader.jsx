@@ -1,6 +1,6 @@
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import BugReportButton from "@/components/BugReportButton";
+import BugReportButton from "@/components/Bugreportbutton";
 
 export default function PageHeader({ icon: Icon, title, color = "#E8002D", right }) {
   return (
