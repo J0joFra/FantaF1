@@ -294,17 +294,24 @@ export default function Home() {
           </p>
           {(nextRace?.name || config?.next_race_name) && (
             <div className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-              {(() => {
-                // Bandiera del GP corrente/prossimo: prima da nextRace (allineato al
-                // countdown col fuso reale), poi fallback al calendario / nome GP.
-                const src = nextRace
-                  ? raceFlagUrl({ country_id: nextRace.country_id, official_name: nextRace.official_name, name: nextRace.name }, "h80")
-                  : (calRaces[0] ? raceFlagUrl(calRaces[0], "h80") : (nextRaceIso ? flagUrl(nextRaceIso, "h80") : null));
-                return src
-                  ? <img src={src} alt="" className="h-9 w-auto object-cover rounded-md shrink-0"
-                         onError={e => { e.target.style.display = "none"; }} />
-                  : <span className="text-xl shrink-0">🏁</span>;
-              })()}
+              <div className="flex flex-col items-center gap-1 shrink-0">
+                {(() => {
+                  // Bandiera del GP corrente/prossimo: prima da nextRace (allineato al
+                  // countdown col fuso reale), poi fallback al calendario / nome GP.
+                  const src = nextRace
+                    ? raceFlagUrl({ country_id: nextRace.country_id, official_name: nextRace.official_name, name: nextRace.name }, "h80")
+                    : (calRaces[0] ? raceFlagUrl(calRaces[0], "h80") : (nextRaceIso ? flagUrl(nextRaceIso, "h80") : null));
+                  return src
+                    ? <img src={src} alt="" className="h-9 w-auto object-cover rounded-md"
+                           onError={e => { e.target.style.display = "none"; }} />
+                    : <span className="text-xl">🏁</span>;
+                })()}
+                {nextRace?.city && (
+                  <span className="text-[10px] font-heading font-bold uppercase tracking-wide text-muted-foreground leading-none text-center max-w-[68px] truncate">
+                    {nextRace.city}
+                  </span>
+                )}
+              </div>
               <GpCountdown targetDate={nextRace?.startIso || config?.next_race_date} compact />
               {(nextRace?.has_sprint ?? config?.next_race_has_sprint) && (
                 <span className="tag bg-amber-100 text-amber-700 shrink-0 ml-auto">Sprint</span>

@@ -371,7 +371,7 @@ export async function getNextRace() {
 
   const { data } = await supabase
     .from('race')
-    .select('id, round, date, time, official_name, grand_prix_id, sprint_race_date, year')
+    .select('id, round, date, time, official_name, grand_prix_id, circuit_id, sprint_race_date, year')
     .gte('date', yesterday)
     .order('date', { ascending: true })
     .limit(12);
@@ -393,12 +393,21 @@ export async function getNextRace() {
     }
   }
 
+  // City (circuit place name) shown under the flag in the countdown card.
+  let city = '';
+  if (r.circuit_id) {
+    const { data: cir } = await supabase
+      .from('circuit').select('place_name').eq('id', r.circuit_id).limit(1);
+    city = cir?.[0]?.place_name || '';
+  }
+
   return {
     id:            r.id,
     name,
     official_name: r.official_name || '',
     startIso:      `${r.date}T${(r.time || '00:00').slice(0, 5)}:00Z`,
     country_id,
+    city,
     has_sprint:    !!r.sprint_race_date,
   };
 }
