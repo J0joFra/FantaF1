@@ -393,7 +393,7 @@ export async function getNextRace() {
     }
   }
 
-  // City (circuit place name) shown under the flag in the countdown card.
+  // City (circuit place name)
   let city = '';
   if (r.circuit_id) {
     const { data: cir } = await supabase
