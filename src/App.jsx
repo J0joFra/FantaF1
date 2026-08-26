@@ -13,10 +13,14 @@ import Compare from './pages/Compare';
 import Ferrari from './pages/Ferrari';
 import News from './pages/News';
 import DriverDetail from './pages/DriverDetail';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { showBanner } from '@/lib/ads';
 
 function App() {
   const [splashDone, setSplashDone] = useState(false);
+
+  // Show the AdMob banner on the native build (no-op on web).
+  useEffect(() => { showBanner(); }, []);
 
   return (
     <I18nProvider>
