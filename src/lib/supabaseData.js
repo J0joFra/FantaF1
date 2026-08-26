@@ -104,15 +104,19 @@ export async function getAllSeasonRaces(season = currentYear()) {
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from('race')
-    .select('id, round, date, sprint_race_date, official_name')
+    .select('id, round, date, sprint_race_date, official_name, circuit_id')
     .eq('year', season)
     .order('round', { ascending: true });
   throwIfError(error, 'All season races');
+
+  const cityMap = await fetchCityMap(data);
+
   return (data || []).map(r => ({
     id:        r.id,
     round:     r.round,
     date:      r.date,
     name:      r.official_name || '',
+    city:      cityMap[r.circuit_id] || '',
     hasSprint: !!r.sprint_race_date,
     isPast:    r.date <= today,
   }));
@@ -526,20 +530,8 @@ export async function getLastRaceResults(season = new Date().getFullYear()) {
   if (!races || !races.length) return null;
 
   for (const r of races) {
-    const { data: rows } = await supabase
-      .from('race_data')
-      .select('position_number, driver_id, constructor_id')
-      .eq('race_id', r.id)
-      .eq('type', 'RACE_RESULT')
-      .lte('position_number', 3)
-      .order('position_number', { ascending: true });
-    if (!rows || !rows.length) continue;
-
-    const driverIds = rows.map(x => x.driver_id).filter(Boolean);
-    const { data: drivers } = await supabase
-      .from('driver').select('id, name, abbreviation').in('id', driverIds);
-    const dmap = {};
-    (drivers || []).forEach(d => { dmap[d.id] = d; });
+    const results = await fetchRaceResults(r.id);
+    if (!results.length) continue;
 
     let name = r.official_name || '';
     if (r.grand_prix_id) {
@@ -548,15 +540,45 @@ export async function getLastRaceResults(season = new Date().getFullYear()) {
       if (gps && gps[0]?.name) name = gps[0].name;
     }
 
-    const podium = rows.map(x => ({
-      pos:    x.position_number,
-      driver: dmap[x.driver_id]?.name || x.driver_id || '',
-      code:   dmap[x.driver_id]?.abbreviation || '',
-      team:   (x.constructor_id || '').replace(/-/g, ' '),
-    }));
-    return { name, date: r.date, podium };
+    // `podium` kept for back-compat; `results` is the full classification.
+    return { name, date: r.date, results, podium: results.slice(0, 3) };
   }
   return null;
+}
+
+// Full race classification (with points) for one race, ordered as officially
+// finished (DNFs last). Shared by the last-race recap and the calendar modal.
+async function fetchRaceResults(raceId) {
+  const { data: rows } = await supabase
+    .from('race_data')
+    .select('position_number, position_text, driver_id, constructor_id, race_points, position_display_order')
+    .eq('race_id', raceId)
+    .eq('type', 'RACE_RESULT')
+    .order('position_display_order', { ascending: true });
+  if (!rows || !rows.length) return [];
+
+  const driverIds = rows.map(x => x.driver_id).filter(Boolean);
+  const dmap = {};
+  if (driverIds.length) {
+    const { data: drivers } = await supabase
+      .from('driver').select('id, name, abbreviation').in('id', driverIds);
+    (drivers || []).forEach(d => { dmap[d.id] = d; });
+  }
+
+  return rows.map(x => ({
+    pos:     x.position_number,
+    posText: x.position_text || (x.position_number != null ? String(x.position_number) : '—'),
+    driver:  dmap[x.driver_id]?.name || x.driver_id || '',
+    code:    dmap[x.driver_id]?.abbreviation || '',
+    team:    (x.constructor_id || '').replace(/-/g, ' '),
+    points:  x.race_points != null ? Number(x.race_points) : 0,
+  }));
+}
+
+// On-demand race results, used when a past race is expanded in the calendar.
+export async function getRaceResults(raceId) {
+  if (!raceId) return [];
+  return fetchRaceResults(raceId);
 }
 
 // Sessions (FP/Qualifying/Sprint/Race) of the next race, with UTC datetimes.
@@ -667,7 +689,7 @@ export async function getUpcomingRaces(limit = 5, season = new Date().getFullYea
   const today = new Date().toISOString().split('T')[0];
   const { data, error } = await supabase
     .from('race')
-    .select('id, round, date, sprint_race_date, official_name, grand_prix_id')
+    .select('id, round, date, sprint_race_date, official_name, grand_prix_id, circuit_id')
     .eq('year', season)
     .gte('date', today)
     .order('round', { ascending: true })
@@ -689,6 +711,8 @@ export async function getUpcomingRaces(limit = 5, season = new Date().getFullYea
     (gps || []).forEach(g => { gpMap[g.id] = g; });
   }
 
+  const cityMap = await fetchCityMap(data);
+
   return (data || []).map(r => {
     const gp = gpMap[r.grand_prix_id] || {};
     return {
@@ -698,6 +722,18 @@ export async function getUpcomingRaces(limit = 5, season = new Date().getFullYea
       date:        r.date,
       has_sprint:  !!(r.sprint_race_date),
       country_id:  gp.country_id || null,
+      city:        cityMap[r.circuit_id] || '',
     };
   });
+}
+
+// Maps circuit_id → place_name (city) for a list of race rows, in one query.
+async function fetchCityMap(rows) {
+  const ids = [...new Set((rows || []).map(r => r.circuit_id).filter(Boolean))];
+  if (!ids.length) return {};
+  const { data } = await supabase
+    .from('circuit').select('id, place_name').in('id', ids);
+  const map = {};
+  (data || []).forEach(c => { map[c.id] = c.place_name; });
+  return map;
 }

@@ -48,11 +48,37 @@ function FlagImg({ iso, size = "h40", className = "w-8 h-5 object-cover rounded-
 const LOCALE_TAG = { it: "it-IT", en: "en-GB", fr: "fr-FR", es: "es-ES", de: "de-DE" };
 const PODIUM_MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
-// ── Last completed race — podium recap (collapsible, closed by default) ───────
+// ── Single classification row (podium medal for top-3, else position) ─────────
+function ResultRow({ p, t }) {
+  const color = getTeamColor(p.team);
+  const isPodium = p.pos >= 1 && p.pos <= 3;
+  return (
+    <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50">
+      <span className={`w-6 text-center shrink-0 ${isPodium
+        ? "text-lg"
+        : "font-heading font-black text-xs text-muted-foreground tabular-nums"}`}>
+        {isPodium ? PODIUM_MEDAL[p.pos] : (p.posText || "—")}
+      </span>
+      <span className="w-1 h-6 rounded-full shrink-0" style={{ backgroundColor: color }} />
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        {p.code && <span className="font-heading font-black text-xs text-muted-foreground">{p.code}</span>}
+        <span className="font-heading font-bold text-sm text-foreground truncate">{p.driver}</span>
+      </div>
+      <span className="shrink-0 font-heading font-black text-xs tabular-nums text-foreground">
+        {p.points > 0 ? `${p.points} ${t("pts")}` : "–"}
+      </span>
+    </div>
+  );
+}
+
+// ── Last completed race — recap with points (collapsible, closed by default) ──
 function LastRaceRecap({ data, t, localeTag }) {
   const [open, setOpen] = useState(false);
-  if (!data || !data.podium?.length) return null;
-  const winner = data.podium.find(p => p.pos === 1);
+  const [showAll, setShowAll] = useState(false);
+  const results = data?.results || data?.podium;
+  if (!data || !results?.length) return null;
+  const winner = results.find(p => p.pos === 1);
+  const visible = showAll ? results : results.slice(0, 3);
   return (
     <div className="app-card overflow-hidden">
       <button onClick={() => setOpen(o => !o)}
@@ -72,21 +98,20 @@ function LastRaceRecap({ data, t, localeTag }) {
             initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22 }} className="overflow-hidden">
             <p className="px-4 text-[11px] text-muted-foreground font-body pb-2 truncate">{data.name}</p>
-            <div className="px-2 pb-3 space-y-1">
-              {data.podium.map(p => {
-                const color = getTeamColor(p.team);
-                return (
-                  <div key={p.pos} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50">
-                    <span className="text-lg w-6 text-center shrink-0">{PODIUM_MEDAL[p.pos] ?? p.pos}</span>
-                    <span className="w-1 h-6 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      {p.code && <span className="font-heading font-black text-xs text-muted-foreground">{p.code}</span>}
-                      <span className="font-heading font-bold text-sm text-foreground truncate">{p.driver}</span>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="px-2 pb-2 space-y-1">
+              {visible.map((p, i) => <ResultRow key={`${p.posText}-${p.code}-${i}`} p={p} t={t} />)}
             </div>
+            {results.length > 3 && (
+              <button
+                onClick={() => setShowAll(v => !v)}
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 border-t border-gray-100
+                           text-xs font-body font-semibold text-primary hover:bg-gray-50 transition-colors"
+              >
+                {showAll
+                  ? <><ChevronUp className="w-3.5 h-3.5" /> {t("showLess")}</>
+                  : <><ChevronDown className="w-3.5 h-3.5" /> {t("showAll")} ({results.length})</>}
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -444,6 +469,12 @@ export default function Home() {
                       <p className={`font-heading font-bold text-[11px] text-center leading-tight
                         ${i === 0 ? "text-primary" : "text-foreground"}`}>
                         {format(new Date(r.date), "d MMM", { locale: dfLocale })}
+                      </p>
+                    )}
+                    {/* City */}
+                    {r.city && (
+                      <p className="text-[9px] text-muted-foreground font-body text-center leading-tight mt-0.5 truncate max-w-full">
+                        {r.city}
                       </p>
                     )}
                     {/* Sprint tag */}
