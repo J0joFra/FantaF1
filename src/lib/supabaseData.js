@@ -371,7 +371,7 @@ export async function getNextRace() {
 
   const { data } = await supabase
     .from('race')
-    .select('id, round, date, time, official_name, grand_prix_id, sprint_race_date, year')
+    .select('id, round, date, time, official_name, grand_prix_id, circuit_id, sprint_race_date, year')
     .gte('date', yesterday)
     .order('date', { ascending: true })
     .limit(12);
@@ -391,6 +391,14 @@ export async function getNextRace() {
       name = gps[0].name || name;
       country_id = gps[0].country_id || null;
     }
+  }
+
+  // City (circuit place name)
+  let city = '';
+  if (r.circuit_id) {
+    const { data: cir } = await supabase
+      .from('circuit').select('place_name').eq('id', r.circuit_id).limit(1);
+    city = cir?.[0]?.place_name || '';
   }
 
   return {
