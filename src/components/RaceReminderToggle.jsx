@@ -5,24 +5,36 @@ import {
   notificationsSupported, getRemindersEnabled,
   enableRaceReminders, disableRaceReminders,
 } from "@/lib/notifications";
+import {
+  webPushSupported, webPushEnabled,
+  subscribeWebPush, unsubscribeWebPush,
+} from "@/lib/webpush";
 
-// Toggle that schedules on-device reminders for the next GP's sessions.
-// Renders nothing on the web build (local notifications are native-only).
+// Toggle that schedules race-session reminders.
+//  • Native build (Capacitor): on-device local notifications, scheduled from `sessions`.
+//  • Web build: Web Push — a scheduled Supabase Edge Function sends the reminder,
+//    so it works even when the tab is closed.
+// Renders nothing when neither channel is available.
 export default function RaceReminderToggle({ sessions, gpName }) {
   const { t } = useI18n();
-  const supported = notificationsSupported();
-  const [on, setOn] = useState(() => supported && getRemindersEnabled());
+  const native = notificationsSupported();
+  const web = !native && webPushSupported();
+  const available = native || web;
+
+  const [on, setOn] = useState(() =>
+    native ? getRemindersEnabled() : web ? webPushEnabled() : false
+  );
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState("");
 
-  // Keep reminders aligned with the latest session data while they're enabled.
+  // Native only: keep on-device reminders aligned with the latest session data.
   useEffect(() => {
-    if (supported && on && sessions?.length) {
+    if (native && on && sessions?.length) {
       enableRaceReminders(sessions, gpName, t).catch(() => {});
     }
   }, [sessions, gpName]);
 
-  if (!supported) return null;
+  if (!available) return null;
 
   const toggle = async () => {
     if (busy) return;
@@ -30,12 +42,19 @@ export default function RaceReminderToggle({ sessions, gpName }) {
     setHint("");
     try {
       if (on) {
-        await disableRaceReminders();
+        if (native) await disableRaceReminders();
+        else await unsubscribeWebPush();
         setOn(false);
-      } else {
+      } else if (native) {
         const res = await enableRaceReminders(sessions, gpName, t);
-        if (res === "denied") { setHint(t("rem_denied")); }
+        if (res === "denied") setHint(t("rem_denied"));
         else { setOn(true); if (res === "empty") setHint(t("rem_empty")); }
+      } else {
+        const res = await subscribeWebPush();
+        if (res === "ok") setOn(true);
+        else if (res === "denied") setHint(t("rem_denied"));
+        else if (res === "unconfigured") setHint(t("rem_unconfigured"));
+        else setHint(t("rem_error"));
       }
     } finally {
       setBusy(false);

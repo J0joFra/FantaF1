@@ -407,6 +407,7 @@ export async function getNextRace() {
     official_name: r.official_name || '',
     startIso:      `${r.date}T${(r.time || '00:00').slice(0, 5)}:00Z`,
     country_id,
+    city,
     has_sprint:    !!r.sprint_race_date,
   };
 }
