@@ -997,10 +997,18 @@ export default function ScenariosPage() {
           </AnimatePresence>
 
           {leader && (
-            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" />
-              Leader: <span className="font-bold">{leader.driver_name}</span> ({leader.points} pt)
-            </p>
+            <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-primary/10 border border-primary/20 px-3 py-2.5">
+              <span className="text-lg shrink-0">👑</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-primary/80 leading-none flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" /> {t("sc_leaderToBeat")}
+                </p>
+                <p className="font-heading font-black text-sm text-foreground truncate mt-1">{leader.driver_name}</p>
+              </div>
+              <span className="font-heading font-black text-sm text-primary tabular-nums shrink-0">
+                {leader.points} <span className="text-[10px] font-normal">pt</span>
+              </span>
+            </div>
           )}
         </div>
 
