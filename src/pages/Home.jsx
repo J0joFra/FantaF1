@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   getDriverStandings,
@@ -18,14 +18,16 @@ import {
 } from "@/lib/f1Utils";
 import { raceFlagUrl, gpIso, flagUrl } from "@/lib/flagUtils";
 import GpCountdown from "@/components/GpCountdown";
-import { Loader2, ChevronDown, ChevronUp, ChevronRight, Info, Trophy } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, ChevronRight, Info, Trophy, Bell, BellRing } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import InfoTip from "@/components/InfoTip";
 import ErrorScreen from "@/components/ErrorScreen";
 import SeasonMapModal from "@/components/SeasonMapModal";
-import RaceReminderToggle from "@/components/RaceReminderToggle";
+import {
+  notificationsSupported, getEnabledReminders, toggleReminder, syncReminders,
+} from "@/lib/notifications";
 import { useI18n } from "@/lib/i18n";
 import { format } from "date-fns";
 import { it, enGB, fr, es, de } from "date-fns/locale";
@@ -119,14 +121,33 @@ function LastRaceRecap({ data, t, localeTag }) {
   );
 }
 
-// ── Weekend session schedule (times converted to the user's timezone) ─────────
+// ── Weekend session schedule (times in the user's timezone + per-session bells) ─
+const REMINDABLE_SESSIONS = new Set(["quali", "sprint", "race"]);
+
 function SessionSchedule({ data, t, localeTag }) {
   const [open, setOpen] = useState(false);
+  const notifOk = notificationsSupported();
+  const [enabled, setEnabled] = useState(() => (notifOk ? getEnabledReminders() : []));
+
+  // Keep scheduled reminders aligned with the latest session data.
+  useEffect(() => {
+    if (notifOk && data?.sessions?.length) {
+      syncReminders(data.sessions, data.name, t).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
   if (!data || !data.sessions?.length) return null;
   const fmtDay  = iso => new Date(iso).toLocaleDateString(localeTag, { weekday: "short", day: "numeric", month: "short" });
   const fmtTime = (iso, hasTime) => hasTime
     ? new Date(iso).toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit" })
     : "—";
+
+  const toggle = async (s) => {
+    const res = await toggleReminder(s.key, s, data.name, t);
+    if (res === "on") setEnabled(e => [...new Set([...e, s.key])]);
+    else if (res === "off") setEnabled(e => e.filter(k => k !== s.key));
+  };
 
   return (
     <div className="app-card overflow-hidden">
@@ -141,14 +162,16 @@ function SessionSchedule({ data, t, localeTag }) {
           <motion.div
             initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22 }} className="overflow-hidden">
-            <div className="px-2 pb-2">
+            <div className="px-2 pb-1">
               {data.sessions.map(s => {
                 const isRace = s.key === "race";
                 const isSprint = s.key === "sprint";
+                const canRemind = notifOk && REMINDABLE_SESSIONS.has(s.key) && s.hasTime;
+                const on = enabled.includes(s.key);
                 return (
                   <div key={s.key}
-                       className={`flex items-center justify-between px-3 py-2 rounded-xl ${isRace ? "bg-primary/5" : ""}`}>
-                    <div className="flex items-center gap-2 min-w-0">
+                       className={`flex items-center gap-2 px-3 py-2 rounded-xl ${isRace ? "bg-primary/5" : ""}`}>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       {isRace && <span className="text-sm">🏁</span>}
                       {isSprint && <span className="tag bg-amber-100 text-amber-700 text-[9px]">SPRINT</span>}
                       <span className={`font-heading text-sm ${isRace ? "font-black text-primary" : "font-bold text-foreground"}`}>
@@ -161,10 +184,26 @@ function SessionSchedule({ data, t, localeTag }) {
                         {fmtTime(s.iso, s.hasTime)}
                       </span>
                     </div>
+                    {canRemind && (
+                      <button
+                        onClick={() => toggle(s)}
+                        aria-pressed={on}
+                        aria-label={t("rem_title")}
+                        className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors active:scale-95
+                          ${on ? "bg-primary/10 text-primary" : "bg-gray-100 text-muted-foreground"}`}
+                      >
+                        {on ? <BellRing className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                      </button>
+                    )}
                   </div>
                 );
               })}
             </div>
+            {notifOk && (
+              <p className="px-4 pb-3 pt-1 text-[10px] text-muted-foreground font-body leading-snug">
+                {t("rem_desc")}
+              </p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -349,12 +388,8 @@ export default function Home() {
         <LastRaceRecap data={lastRace} t={t} localeTag={LOCALE_TAG[lang] ?? "it-IT"} />
 
         {/* ── PROGRAMMA WEEKEND (orari sessioni nel fuso locale) ── */}
+        {/* Promemoria gara: campanella per-sessione dentro il programma weekend (solo app nativa) */}
         <SessionSchedule data={nextSessions} t={t} localeTag={LOCALE_TAG[lang] ?? "it-IT"} />
-
-        {/* ── PROMEMORIA GARA (notifiche locali, solo su app nativa) ── */}
-        {nextSessions?.sessions?.length > 0 && (
-          <RaceReminderToggle sessions={nextSessions.sessions} gpName={nextSessions.name} />
-        )}
 
         {/* ── CLASSIFICA PILOTI ── */}
         <div className="app-card overflow-hidden">
