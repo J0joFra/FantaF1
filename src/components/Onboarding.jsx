@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Calculator, GitCompare, Globe } from "lucide-react";
 import { useI18n, LANGS } from "@/lib/i18n";
+import { useBannerSpace } from "@/lib/useBannerSpace";
 
 const STORAGE_KEY = "gridup_onboarded_v1";
 
@@ -57,6 +58,12 @@ export default function Onboarding() {
     try { return !localStorage.getItem(STORAGE_KEY); } catch { return false; }
   });
   const [step, setStep] = useState(0);
+
+  /* Il pulsante "Avanti"/"Inizia" e il "Salta" stanno in fondo alla scheda,
+     cioè esattamente dove atterra il banner AdMob — che è una vista nativa
+     sopra la webview e vince su qualsiasi z-index. Finché il tutorial è
+     aperto, quello spazio è suo. */
+  useBannerSpace("onboarding", open);
 
   if (!open) return null;
 

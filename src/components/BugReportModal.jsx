@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useBannerSpace } from "@/lib/useBannerSpace";
 
 // URL del Google Apps Script Web App (vedi istruzioni di deploy).
 // Va impostata come variabile d'ambiente Vite in fase di build.
@@ -11,6 +12,9 @@ export default function BugReportModal({ open, onClose }) {
   const { t } = useI18n();
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState("idle"); // idle | sending | success | error
+
+  // Il pulsante "Invia" sta in fondo: il banner nativo ci finisce sopra.
+  useBannerSpace("bug-report", open);
 
   function handleClose() {
     if (status === "sending") return;

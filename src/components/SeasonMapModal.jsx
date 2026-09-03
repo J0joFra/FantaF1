@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { X, CheckCircle2, Circle, ChevronRight, ChevronDown, Loader2, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useBannerSpace } from "@/lib/useBannerSpace";
 import { flagUrl, gpIso } from "@/lib/flagUtils";
 import { getRaceResults } from "@/lib/supabaseData";
 
@@ -147,6 +148,10 @@ function RaceRow({ race, isNext, innerRef, index, t }) {
 }
 
 export default function SeasonCalendarModal({ races = [], error, open, onClose }) {
+  /* Calendario a tutto schermo: le ultime gare dell'anno finiscono sotto il
+     banner, e sono quelle che si guardano. */
+  useBannerSpace("season-map", open);
+
   const { t } = useI18n();
   const nextRef = useRef(null);
 

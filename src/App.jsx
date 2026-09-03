@@ -15,11 +15,17 @@ import News from './pages/News';
 import DriverDetail from './pages/DriverDetail';
 import { useState, useEffect } from 'react';
 import { showBanner } from '@/lib/ads';
+import { useBannerSpace } from '@/lib/useBannerSpace';
 
 function App() {
   const [splashDone, setSplashDone] = useState(false);
 
-  // Show the AdMob banner on the native build (no-op on web).
+  /* The splash covers the whole screen: an ad on top of it is the first thing
+     the app shows, before its own logo. */
+  useBannerSpace('splash', !splashDone);
+
+  // Show the AdMob banner on the native build (no-op on web). Overlays that
+  // need the bottom of the screen hold it back until they close.
   useEffect(() => { showBanner(); }, []);
 
   return (
