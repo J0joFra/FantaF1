@@ -1,9 +1,15 @@
 import { motion } from "framer-motion";
 import { WrenchIcon } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useBannerSpace } from "@/lib/useBannerSpace";
 
 export default function ErrorScreen({ onRetry }) {
   const { t } = useI18n();
+
+  /* Se è andato storto qualcosa, l'unica cosa che serve è il pulsante
+     "Riprova": un annuncio piazzato sopra trasforma un errore in un vicolo
+     cieco. Il componente esiste solo quando è a schermo, quindi vale sempre. */
+  useBannerSpace("error-screen");
   return (
     <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-md p-3">
       <motion.div
