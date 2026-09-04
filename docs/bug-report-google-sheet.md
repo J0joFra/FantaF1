@@ -73,10 +73,50 @@ Variables**:
 Poi fai un nuovo deploy perché le variabili `VITE_` vengono incorporate al
 momento della build.
 
+### Nell'APK Android — la parte che si dimentica
+
+Vale la stessa regola, ed è la ragione per cui il pulsante ha smesso di
+funzionare nell'app pubblicata mentre in locale andava: il workflow
+`Build Android APK` compilava senza la variabile, quindi nel bundle finito
+dentro l'APK l'URL era `undefined`. Non è recuperabile a runtime: se manca
+alla build, manca per sempre in quella versione dell'app.
+
+Va impostata come **secret del repository** — GitHub → Settings → Secrets and
+variables → Actions → *New repository secret*:
+
+| Secret | Valore |
+| --- | --- |
+| `VITE_BUG_REPORT_WEBHOOK_URL` | l'URL `/exec` dell'Apps Script |
+| `VITE_VAPID_PUBLIC_KEY` | la chiave pubblica VAPID (notifiche push) |
+
+Il workflow li legge da lì. Se mancano, la build **non fallisce** — sarebbe
+peggio bloccare un rilascio — ma stampa un avviso ben visibile nel riepilogo
+del run: *"VITE_BUG_REPORT_WEBHOOK_URL non è nel bundle"*. Se lo vedi, la
+segnalazione bug in quell'APK non funziona.
+
 ## Passo 5 — Prova
 
 1. Apri l'app, premi il pulsante 🐞 "Segnala un problema", scrivi un messaggio e invia.
 2. Controlla che compaia una nuova riga nel Google Sheet.
+
+## Perché l'invio usa `mode: "no-cors"`
+
+Un Web App di Apps Script risponde con un redirect verso
+`script.googleusercontent.com`, e quella risposta non porta gli header CORS.
+Con una `fetch` normale il browser rifiuta di farci leggere la risposta e la
+promise viene respinta — **anche quando la segnalazione è arrivata e la riga è
+già nel foglio**. Era il comportamento peggiore possibile: l'utente leggeva
+"Invio non riuscito", riprovava, e ogni tentativo finiva nel foglio.
+
+Con `mode: "no-cors"` la richiesta parte lo stesso (`text/plain` è fra i
+Content-Type ammessi senza preflight) e la risposta torna opaca. Non possiamo
+leggere lo stato — quindi un errore *dentro* lo script non lo vedremo — ma una
+rete assente o un timeout fanno comunque fallire la fetch, che è la distinzione
+che serve davvero a chi sta scrivendo.
+
+C'è anche un timeout di 15 secondi: senza, una rete che non risponde lasciava
+la finestra in "Invio in corso…" per sempre, e siccome durante l'invio non si
+poteva chiudere, l'unico modo di uscire era terminare l'app.
 
 ## Note
 

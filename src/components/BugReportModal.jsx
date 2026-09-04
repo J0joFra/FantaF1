@@ -5,8 +5,15 @@ import { useI18n } from "@/lib/i18n";
 import { useBannerSpace } from "@/lib/useBannerSpace";
 
 // URL del Google Apps Script Web App (vedi istruzioni di deploy).
-// Va impostata come variabile d'ambiente Vite in fase di build.
+// Va impostata come variabile d'ambiente Vite in fase di build: Vite la
+// sostituisce nel bundle, quindi se manca al momento della build manca per
+// sempre nell'APK, e non c'è modo di rimediarla a runtime.
 const WEBHOOK_URL = import.meta.env.VITE_BUG_REPORT_WEBHOOK_URL;
+
+// Oltre questo tempo si smette di aspettare. Senza, una rete che non risponde
+// lasciava la finestra in "Invio…" per sempre — e siccome durante l'invio non
+// si poteva chiudere, l'unico modo di uscire era terminare l'app.
+const TIMEOUT_MS = 15000;
 
 export default function BugReportModal({ open, onClose }) {
   const { t } = useI18n();
@@ -17,7 +24,6 @@ export default function BugReportModal({ open, onClose }) {
   useBannerSpace("bug-report", open);
 
   function handleClose() {
-    if (status === "sending") return;
     onClose();
     // reset dopo la chiusura (piccolo delay per non far "sfarfallare" l'animazione)
     setTimeout(() => { setMessage(""); setStatus("idle"); }, 300);
@@ -31,10 +37,27 @@ export default function BugReportModal({ open, onClose }) {
       return;
     }
     setStatus("sending");
+
+    const stop = new AbortController();
+    const timer = setTimeout(() => stop.abort(), TIMEOUT_MS);
+
     try {
       await fetch(WEBHOOK_URL, {
         method: "POST",
-        // niente header custom: evita la preflight CORS, l'Apps Script legge comunque il body
+        /* `no-cors`: un Web App di Apps Script risponde con un redirect verso
+           script.googleusercontent.com, e quella risposta non porta gli header
+           CORS. Con una fetch normale il browser rifiuta di farci leggere la
+           risposta e la promise viene respinta — anche quando la segnalazione
+           è arrivata e la riga è già nel foglio. Il risultato era il peggiore
+           possibile: l'utente vedeva "errore", riprovava, e ogni tentativo
+           finiva nel foglio.
+
+           In `no-cors` la richiesta parte lo stesso (Content-Type text/plain è
+           fra quelli ammessi senza preflight) e la risposta torna opaca. Non
+           possiamo leggere lo stato — quindi non sapremo se lo script è andato
+           in errore — ma una rete assente o un timeout fanno comunque fallire
+           la fetch, che è la distinzione che serve davvero a chi scrive. */
+        mode: "no-cors",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
           message: message.trim(),
@@ -43,12 +66,15 @@ export default function BugReportModal({ open, onClose }) {
           userAgent: navigator.userAgent,
           timestamp: new Date().toISOString(),
         }),
+        signal: stop.signal,
       });
       setStatus("success");
       setTimeout(handleClose, 1400);
     } catch (err) {
       console.error("Bug report send failed", err);
       setStatus("error");
+    } finally {
+      clearTimeout(timer);
     }
   }
 
@@ -73,7 +99,10 @@ export default function BugReportModal({ open, onClose }) {
                 <h2 className="font-heading font-black text-white text-lg uppercase tracking-wide leading-none">
                   {t("bug_report_title")}
                 </h2>
-                <button onClick={handleClose}
+                {/* Chiudibile anche mentre invia: la segnalazione è già
+                    partita, e restare bloccati a guardare uno spinner non
+                    aiuta nessuno. */}
+                <button onClick={handleClose} aria-label={t("bug_report_close")}
                   className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white active:scale-95 transition-transform">
                   <X className="w-4 h-4" />
                 </button>
