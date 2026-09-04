@@ -23,7 +23,28 @@ jobs:
         run: npm ci
 
       - name: Build web app
+        # Vite incorpora le variabili VITE_ nel bundle al momento della build:
+        # se non ci sono qui, nell'APK sono `undefined` e non c'è modo di
+        # rimediarle a runtime. È il motivo per cui la segnalazione bug non
+        # partiva nell'app pubblicata mentre in locale, con il .env, funzionava.
+        # I secret vanno impostati in Settings → Secrets and variables →
+        # Actions; se mancano, la build passa lo stesso e la funzione resta
+        # spenta invece di far fallire il rilascio.
+        env:
+          VITE_BUG_REPORT_WEBHOOK_URL: ${{ secrets.VITE_BUG_REPORT_WEBHOOK_URL }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+          VITE_APP_VERSION: ${{ github.ref_name }}-${{ github.run_number }}
         run: npm run build
+
+      - name: Controlla cosa è finito nel bundle
+        # Un avviso visibile invece di scoprirlo da un utente che segnala che
+        # le segnalazioni non arrivano.
+        run: |
+          if grep -rqs "script.google.com/macros" dist/assets; then
+            echo "✅ Webhook segnalazioni presente nel bundle"
+          else
+            echo "::warning::VITE_BUG_REPORT_WEBHOOK_URL non è nel bundle: nell'APK il pulsante \"Segnala un problema\" darà errore. Imposta il secret e ricompila."
+          fi
 
       - name: Setup Java (JDK 21)
         uses: actions/setup-java@v4
