@@ -37,4 +37,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- In-app purchases (rimozione pubblicità) -->
+    <uses-permission android:name="com.android.vending.BILLING" />
 </manifest>

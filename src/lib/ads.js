@@ -53,6 +53,17 @@ export function adsSupported() {
   }
 }
 
+// The user bought "remove ads": the banner never shows. Read straight from
+// localStorage (no import) to avoid a cycle with the purchases module, which
+// is the one that sets this flag.
+function adFreePurchased() {
+  try {
+    return localStorage.getItem('gridup_no_ads') === '1';
+  } catch {
+    return false;
+  }
+}
+
 let initPromise = null;
 
 // Initialize the SDK once: ATT (iOS), UMP consent (GDPR), then initialize.
@@ -81,6 +92,7 @@ async function ensureInit() {
 }
 
 export async function showBanner() {
+  if (adFreePurchased()) return;
   if (bannerBlocked()) return;
   if (!(await ensureInit())) return;
   /* Re-checked after the await: initialisation takes a moment, and in that
