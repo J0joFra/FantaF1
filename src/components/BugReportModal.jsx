@@ -82,14 +82,14 @@ export default function BugReportModal({ open, onClose }) {
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/40"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           onClick={handleClose}
         >
           <motion.div
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 32, stiffness: 320 }}
-            className="w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl bg-background shadow-xl max-w-[430px] overflow-hidden"
+            className="w-full max-w-sm rounded-3xl bg-background shadow-xl overflow-hidden max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

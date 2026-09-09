@@ -15,6 +15,7 @@ import News from './pages/News';
 import DriverDetail from './pages/DriverDetail';
 import { useState, useEffect } from 'react';
 import { showBanner } from '@/lib/ads';
+import { initPurchases } from '@/lib/purchases';
 import { useBannerSpace } from '@/lib/useBannerSpace';
 
 function App() {
@@ -26,7 +27,10 @@ function App() {
 
   // Show the AdMob banner on the native build (no-op on web). Overlays that
   // need the bottom of the screen hold it back until they close.
-  useEffect(() => { showBanner(); }, []);
+  useEffect(() => {
+    initPurchases();  // restores "remove ads" entitlement (native only)
+    showBanner();
+  }, []);
 
   return (
     <I18nProvider>

@@ -22,6 +22,7 @@ import { Loader2, ChevronDown, ChevronUp, ChevronRight, Info, Trophy, Bell, Bell
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
+import RemoveAdsCard from "@/components/RemoveAdsCard";
 import InfoTip from "@/components/InfoTip";
 import ErrorScreen from "@/components/ErrorScreen";
 import SeasonMapModal from "@/components/SeasonMapModal";
@@ -390,6 +391,9 @@ export default function Home() {
         {/* ── PROGRAMMA WEEKEND (orari sessioni nel fuso locale) ── */}
         {/* Promemoria gara: campanella per-sessione dentro il programma weekend (solo app nativa) */}
         <SessionSchedule data={nextSessions} t={t} localeTag={LOCALE_TAG[lang] ?? "it-IT"} />
+
+        {/* ── RIMUOVI PUBBLICITÀ (acquisto in-app, solo app nativa) ── */}
+        <RemoveAdsCard />
 
         {/* ── CLASSIFICA PILOTI ── */}
         <div className="app-card overflow-hidden">
