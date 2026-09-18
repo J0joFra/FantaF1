@@ -875,13 +875,6 @@ export default function ScenariosPage() {
     return generateMosaic(selectedDriver, effectiveRival, racesLeft, Math.min(sprintsLeft, racesLeft));
   }, [selectedDriver, effectiveRival, racesLeft, sprintsLeft]);
 
-  // Scenario contro il rivale principale (per la vista semplice, senza scegliere a mano)
-  const mainRivalMosaic = useMemo(() => {
-    const mr = analysis?.mainRival?.driver;
-    if (!selectedDriver || !mr || racesLeft === 0) return null;
-    return generateMosaic(selectedDriver, mr, racesLeft, Math.min(sprintsLeft, racesLeft));
-  }, [selectedDriver, analysis, racesLeft, sprintsLeft]);
-
   // Chiudi il driver picker cliccando fuori
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -913,17 +906,7 @@ export default function ScenariosPage() {
   // Il modale è ancorato in basso: il banner AdMob gli coprirebbe la chiusura.
   useBannerSpace("scenariosInfo", showInfo);
 
-  const maxPossiblePoints = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
   const leader = drivers.length > 0 ? drivers.reduce((a, b) => a.points > b.points ? a : b) : null;
-
-  // Punti per essere sicuri del titolo: per chi insegue usa l'analisi; per il
-  // leader (magicNumber=0) calcola la soglia matematica come nella Panoramica.
-  const titleNeeded = (analysis && analysis.magicNumber > 0)
-    ? analysis.magicNumber
-    : (selectedDriver
-        ? Math.max(0, drivers.filter(d => d.id !== selectedDriver.id).reduce((m, d) => Math.max(m, d.points), 0)
-            + maxPossiblePoints - selectedDriver.points + 1)
-        : 0);
 
   if (loading) {
     return (
@@ -952,6 +935,15 @@ export default function ScenariosPage() {
       />
 
       <div className="max-w-md mx-auto px-4 py-5 space-y-5">
+        {/* Rivedi il tutorial — in cima, subito sotto l'intestazione. */}
+        <button
+          onClick={() => setShowInfo(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-600 shadow-sm active:scale-[0.98] transition-transform"
+        >
+          <HelpCircle className="w-4 h-4 text-gray-400" />
+          {t("sc_replayTutorial")}
+        </button>
+
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4">
             <p className="text-red-600 text-sm">{error}</p>
@@ -1071,73 +1063,20 @@ export default function ScenariosPage() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-5"
           >
-            {/* ─── SINTESI: campione, fuori gioco o punti al titolo ─── */}
-            {analysis.isAlreadyChampion ? (
+            {/* ─── ESITO GIÀ DECISO: titolo vinto o fuori dai giochi ─── */}
+            {analysis.isAlreadyChampion && (
               <div className="bg-white rounded-2xl p-6 shadow-md border border-emerald-200 text-center">
                 <Trophy className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
                 <p className="font-heading font-black text-xl text-emerald-600">{t("sc_champion")}</p>
                 <p className="text-sm text-gray-500 mt-1">{selectedDriver.driver_name}</p>
               </div>
-            ) : analysis.isMathematicallyOut ? (
+            )}
+
+            {analysis.isMathematicallyOut && (
               <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-200 text-center">
                 <AlertTriangle className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                 <p className="font-heading font-black text-xl text-gray-500">{t("sc_out")}</p>
                 <p className="text-sm text-gray-500 mt-1">{selectedDriver.driver_name}</p>
-              </div>
-            ) : (
-              <div className="dark-card rounded-2xl px-5 py-6 text-center">
-                <p className="text-white/70 text-sm font-body">
-                  <span className="font-heading font-black text-white">{selectedDriver.driver_name}</span>
-                  {selectedDriver.position === 1 ? ` ${t("sc_isLeading")}` : ""}
-                </p>
-                <div className="flex items-baseline justify-center gap-1 mt-2">
-                  <span className="font-heading font-black text-primary" style={{ fontSize: "4rem", lineHeight: 1 }}>
-                    {titleNeeded}
-                  </span>
-                  <span className="font-heading font-black text-2xl text-primary/70">PTI</span>
-                </div>
-                <p className="text-white/60 text-sm mt-1">{t("sc_neededShort")}</p>
-                <p className="text-white/40 text-xs mt-1">{racesLeft} {t("sc_inRaces")}{sprintsLeft > 0 ? ` · ${Math.min(sprintsLeft, racesLeft)} sprint` : ""}</p>
-              </div>
-            )}
-
-            {/* Come superare il rivale principale (in chiaro) */}
-            {!analysis.isAlreadyChampion && !analysis.isMathematicallyOut && analysis.mainRival && mainRivalMosaic && (
-              <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  {t("sc_howToBeat", { rival: analysis.mainRival.driver.driver_name })}
-                </p>
-                {mainRivalMosaic.bestCombination ? (
-                  <>
-                    <div className="flex items-center gap-3">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="font-heading font-black text-white text-xs bg-primary rounded-lg px-2 py-1">{selectedDriver.driver_code}</span>
-                        <span className="text-xl font-black text-gray-900">P{mainRivalMosaic.bestCombination.yourPos}</span>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-300" />
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="font-heading font-black text-gray-700 text-xs bg-gray-200 rounded-lg px-2 py-1">{analysis.mainRival.driver.driver_code}</span>
-                        <span className="text-xl font-black text-gray-900">P{mainRivalMosaic.bestCombination.rivalPos}</span>
-                      </div>
-                      <div className="ml-auto text-right">
-                        <span className="font-heading font-black text-3xl text-emerald-600">{mainRivalMosaic.bestCombination.racesNeeded}</span>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-widest">
-                          {mainRivalMosaic.bestCombination.racesNeeded === 1 ? t("mos_raceOne") : t("mos_raceMany")}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-3 leading-snug">
-                      {t("sc_scenario", {
-                        a: mainRivalMosaic.bestCombination.yourPos,
-                        rival: analysis.mainRival.driver.driver_code,
-                        b: mainRivalMosaic.bestCombination.rivalPos,
-                        n: mainRivalMosaic.bestCombination.racesNeeded,
-                      })}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm text-gray-500">{t("sc_hardToBeat")}</p>
-                )}
               </div>
             )}
 
@@ -1195,15 +1134,6 @@ export default function ScenariosPage() {
             <p className="text-xs text-gray-400 mt-2">{t("nd_hint")}</p>
           </div>
         )}
-
-        {/* Rivedi il tutorial — in fondo, dove si arriva dopo aver provato. */}
-        <button
-          onClick={() => setShowInfo(true)}
-          className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-600 shadow-sm active:scale-[0.98] transition-transform"
-        >
-          <HelpCircle className="w-4 h-4 text-gray-400" />
-          {t("sc_replayTutorial")}
-        </button>
       </div>
 
       {/* Cell Detail Modal */}

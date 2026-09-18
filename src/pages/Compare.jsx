@@ -286,6 +286,8 @@ export default function Compare() {
       } />
 
       <div className="px-4 py-5 space-y-4">
+        <TutorialSection items={["tut_cmp_1", "tut_cmp_2", "tut_cmp_3"]} />
+
         {/* ── SELECTORS + swap ── */}
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 items-end">
           <DriverSelect label={t("cmp_pilot1")} placeholder={t("cmp_selectDriver")} value={id1} onChange={setId1} color={c1} d={d1}
@@ -392,8 +394,6 @@ export default function Compare() {
             </button>
           </div>
         )}
-
-        <TutorialSection items={["tut_cmp_1", "tut_cmp_2", "tut_cmp_3"]} />
       </div>
     </div>
   );

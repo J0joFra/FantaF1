@@ -204,6 +204,8 @@ export default function Ferrari() {
       <PageHeader icon={Shield} title={tr("nav_teams")} color={color} />
 
       <div className="px-4 py-5 space-y-4">
+        <TutorialSection items={["tut_fer_1", "tut_fer_2", "tut_fer_3"]} />
+
         {/* ── TEAM SELECTOR ── */}
         <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: color }} />
@@ -482,8 +484,6 @@ export default function Ferrari() {
         </div>
         </>
         )}
-
-        <TutorialSection items={["tut_fer_1", "tut_fer_2", "tut_fer_3"]} />
       </div>
     </div>
   );

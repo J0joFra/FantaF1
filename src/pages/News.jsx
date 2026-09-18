@@ -167,6 +167,8 @@ export default function News() {
       </div>
 
       <div className="px-4 space-y-3">
+        <TutorialSection items={["tut_news_1", "tut_news_2"]} />
+
         {isLoading && [...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
 
         {error && (
@@ -206,8 +208,6 @@ export default function News() {
             {t("news_updated")}
           </p>
         )}
-
-        <TutorialSection items={["tut_news_1", "tut_news_2"]} />
       </div>
     </div>
   );
