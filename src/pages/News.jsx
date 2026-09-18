@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, RefreshCw, Newspaper } from "lucide-react";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/PageHeader";
+import TutorialSection from "@/components/TutorialSection";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n";
 
@@ -205,6 +206,8 @@ export default function News() {
             {t("news_updated")}
           </p>
         )}
+
+        <TutorialSection items={["tut_news_1", "tut_news_2"]} />
       </div>
     </div>
   );

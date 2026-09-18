@@ -12,6 +12,7 @@ import {
   ShieldAlert, Zap, Flag, GitCompare,
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import TutorialSection from "@/components/TutorialSection";
 import InfoTip from "@/components/InfoTip";
 import { useI18n } from "@/lib/i18n";
 
@@ -391,6 +392,8 @@ export default function Compare() {
             </button>
           </div>
         )}
+
+        <TutorialSection items={["tut_cmp_1", "tut_cmp_2", "tut_cmp_3"]} />
       </div>
     </div>
   );

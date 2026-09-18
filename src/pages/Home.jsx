@@ -26,6 +26,7 @@ import RemoveAdsCard from "@/components/RemoveAdsCard";
 import InfoTip from "@/components/InfoTip";
 import ErrorScreen from "@/components/ErrorScreen";
 import SeasonMapModal from "@/components/SeasonMapModal";
+import TutorialSection from "@/components/TutorialSection";
 import {
   notificationsSupported, getEnabledReminders, toggleReminder, syncReminders,
 } from "@/lib/notifications";
@@ -528,6 +529,8 @@ export default function Home() {
             </div>
           </button>
         )}
+
+        <TutorialSection items={["tut_home_1", "tut_home_2", "tut_home_3"]} />
 
       </div>
 
