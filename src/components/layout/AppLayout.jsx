@@ -2,6 +2,7 @@ import { Outlet, useLocation, Link } from "react-router-dom";
 import { BarChart2, Calculator, GitCompare, Shield, Newspaper } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
+import { useAndroidBack } from "@/lib/useAndroidBack";
 
 const tabs = [
   { path: "/",           key: "nav_overview",  icon: BarChart2  },
@@ -14,6 +15,9 @@ const tabs = [
 export default function AppLayout() {
   const { pathname } = useLocation();
   const { t } = useI18n();
+
+  // Il gesto indietro riporta alla Panoramica invece di chiudere l'app.
+  useAndroidBack();
 
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-[430px] mx-auto overflow-x-hidden">
