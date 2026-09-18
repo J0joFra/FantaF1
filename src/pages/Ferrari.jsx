@@ -10,6 +10,7 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
 import PageHeader from "@/components/PageHeader";
+import TutorialSection from "@/components/TutorialSection";
 import InfoTip from "@/components/InfoTip";
 import { useI18n } from "@/lib/i18n";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -481,6 +482,8 @@ export default function Ferrari() {
         </div>
         </>
         )}
+
+        <TutorialSection items={["tut_fer_1", "tut_fer_2", "tut_fer_3"]} />
       </div>
     </div>
   );
