@@ -12,6 +12,7 @@ import { getDriverStandings, getDriverSeasonStats, getUpcomingRaces } from "../l
 import { getDriverColor } from "../lib/f1Utils";
 import PageHeader from "@/components/PageHeader";
 import { useI18n } from "@/lib/i18n";
+import { useBannerSpace } from "@/lib/useBannerSpace";
 
 // ─── Costanti F1 2026 ──────────────────────────────────────────────────────
 const MAX_RACE_PTS = 25;
@@ -318,6 +319,9 @@ function MosaicDiagram({
   const { t } = useI18n();
   const mosaicRef = useRef<HTMLDivElement>(null);
   const [showAllPos, setShowAllPos] = useState(false);
+  // La spiegazione sta SOTTO la griglia e parte chiusa: aperta in cima
+  // spingeva il mosaico fuori schermo, e senza vederlo non lo si tocca.
+  const [howToOpen, setHowToOpen] = useState(false);
   const matrix: (MosaicCell | null)[][] = Array(10).fill(null).map(() => Array(10).fill(null));
 
   cells.forEach(cell => {
@@ -377,34 +381,6 @@ function MosaicDiagram({
         >
           <Share2 className="w-4 h-4" />
         </button>
-      </div>
-
-      {/* Come si legge */}
-      <div className="mb-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
-        <p className="text-[11px] text-gray-700 leading-snug">
-          {t("mos_howto", { you: yourDriver.driver_name, rival: rival.driver_name })}
-        </p>
-        <p className="text-[11px] text-gray-500 leading-snug mt-2 pt-2 border-t border-gray-200">
-          {t("mos_example", { you: yourDriver.driver_name, rival: rival.driver_name })}
-        </p>
-        {sprintsLeft > 0 && (
-          <p className="text-[11px] text-amber-700 leading-snug mt-2 pt-2 border-t border-gray-200">
-            {t("mos_sprintNote", { n: sprintsLeft })}
-          </p>
-        )}
-      </div>
-
-      {/* Scala colori */}
-      <div className="mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-emerald-600 shrink-0">{t("mos_easy")}</span>
-          <div
-            className="h-2 flex-1 rounded-full"
-            style={{ background: "linear-gradient(to right, #10b981, #84cc16, #f59e0b, #f97316)" }}
-          />
-          <span className="text-[10px] font-bold text-orange-600 shrink-0">{t("mos_hard")}</span>
-        </div>
-        <p className="text-[10px] text-gray-400 mt-1.5 text-center">{t("mos_grey")}</p>
       </div>
 
       {/* Etichetta asse colonne (rivale) */}
@@ -517,6 +493,59 @@ function MosaicDiagram({
           </div>
         </motion.button>
       )}
+
+      {/* Come si legge + scala colori — sotto la griglia e richiudibile, così
+          il mosaico resta la prima cosa che si vede aprendo la scheda. */}
+      <div className="mt-3 pt-3 border-t border-gray-100">
+        <button
+          data-html2canvas-ignore
+          onClick={() => setHowToOpen(o => !o)}
+          aria-expanded={howToOpen}
+          className="w-full flex items-center gap-2 text-left active:scale-[0.99] transition-transform"
+        >
+          <HelpCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+          <span className="text-[11px] font-bold text-gray-500 flex-1">{t("im_howRead")}</span>
+          <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${howToOpen ? "rotate-180" : ""}`} />
+        </button>
+
+        <AnimatePresence initial={false}>
+          {howToOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="mt-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-[11px] text-gray-700 leading-snug">
+                  {t("mos_howto", { you: yourDriver.driver_name, rival: rival.driver_name })}
+                </p>
+                <p className="text-[11px] text-gray-500 leading-snug mt-2 pt-2 border-t border-gray-200">
+                  {t("mos_example", { you: yourDriver.driver_name, rival: rival.driver_name })}
+                </p>
+                {sprintsLeft > 0 && (
+                  <p className="text-[11px] text-amber-700 leading-snug mt-2 pt-2 border-t border-gray-200">
+                    {t("mos_sprintNote", { n: sprintsLeft })}
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-emerald-600 shrink-0">{t("mos_easy")}</span>
+                  <div
+                    className="h-2 flex-1 rounded-full"
+                    style={{ background: "linear-gradient(to right, #10b981, #84cc16, #f59e0b, #f97316)" }}
+                  />
+                  <span className="text-[10px] font-bold text-orange-600 shrink-0">{t("mos_hard")}</span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1.5 text-center">{t("mos_grey")}</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -744,6 +773,10 @@ function RivalCard({
   );
 }
 
+/* Il tutorial del mosaico parte da solo alla prima visita di questa pagina.
+   Alza la versione della chiave per rimostrarlo a tutti dopo un redesign. */
+const TUTORIAL_KEY = "gridup_scenarios_tutorial_v1";
+
 // ─── MAIN PAGE ──────────────────────────────────────────────────────────────
 
 export default function ScenariosPage() {
@@ -863,6 +896,23 @@ export default function ScenariosPage() {
 
   // Cambiando pilota azzera il rivale scelto → torna al rivale principale di default.
   useEffect(() => { setSelectedRival(null); }, [selectedDriverId]);
+
+  /* Prima visita: apre il tutorial una volta caricati i dati, così il modale
+     non si sovrappone allo spinner. Se localStorage non è disponibile
+     (private browsing) si salta, senza riproporlo a ogni apertura. */
+  useEffect(() => {
+    // Con un errore di caricamento non c'è nessun mosaico da spiegare: meglio
+    // rimandare il tutorial al prossimo avvio che bruciarlo su una schermata vuota.
+    if (loading || error) return;
+    try {
+      if (localStorage.getItem(TUTORIAL_KEY)) return;
+      localStorage.setItem(TUTORIAL_KEY, "1");
+      setShowInfo(true);
+    } catch { /* niente storage: nessun tutorial automatico */ }
+  }, [loading, error]);
+
+  // Il modale è ancorato in basso: il banner AdMob gli coprirebbe la chiusura.
+  useBannerSpace("scenariosInfo", showInfo);
 
   const maxPossiblePoints = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
   const leader = drivers.length > 0 ? drivers.reduce((a, b) => a.points > b.points ? a : b) : null;
@@ -1182,6 +1232,15 @@ export default function ScenariosPage() {
             <p className="text-xs text-gray-400 mt-2">{t("nd_hint")}</p>
           </div>
         )}
+
+        {/* Rivedi il tutorial — in fondo, dove si arriva dopo aver provato. */}
+        <button
+          onClick={() => setShowInfo(true)}
+          className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-600 shadow-sm active:scale-[0.98] transition-transform"
+        >
+          <HelpCircle className="w-4 h-4 text-gray-400" />
+          {t("sc_replayTutorial")}
+        </button>
       </div>
 
       {/* Cell Detail Modal */}
