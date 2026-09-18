@@ -352,6 +352,8 @@ export default function Home() {
       />
 
       <div className="px-4 py-5 space-y-4">
+        <TutorialSection items={["tut_home_1", "tut_home_2", "tut_home_3"]} />
+
 
         {/* ── INTRO + PROSSIMA GARA ── */}
         <div className="app-card p-4">
@@ -529,8 +531,6 @@ export default function Home() {
             </div>
           </button>
         )}
-
-        <TutorialSection items={["tut_home_1", "tut_home_2", "tut_home_3"]} />
 
       </div>
 

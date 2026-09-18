@@ -114,7 +114,7 @@ const DICT = {
     ob_skip: "Salta", ob_next: "Avanti", ob_start: "Inizia",
     back_exitHint: "Premi di nuovo per uscire", sc_replayTutorial: "Rivedi il tutorial",
     // tendina tutorial in fondo alle pagine
-    tut_title: "Tutorial",
+    tut_title: "Rivedi tutorial",
     tut_home_1: "La classifica piloti è aggiornata all'ultima gara disputata: tocca «Vedi tutti» per l'intero schieramento.",
     tut_home_2: "Nel riepilogo trovi i risultati dell'ultima gara e i prossimi GP, con gli orari già convertiti nel tuo fuso.",
     tut_home_3: "Tocca la striscia dei prossimi GP per aprire la mappa della stagione.",
@@ -233,7 +233,7 @@ const DICT = {
     ob_skip: "Skip", ob_next: "Next", ob_start: "Start",
     back_exitHint: "Press back again to exit", sc_replayTutorial: "Replay the tutorial",
     // tendina tutorial in fondo alle pagine
-    tut_title: "Tutorial",
+    tut_title: "Replay tutorial",
     tut_home_1: "The drivers' standings are up to date as of the last race held: tap «Show all» for the full grid.",
     tut_home_2: "The recap holds the last race results and the next GPs, with times already converted to your time zone.",
     tut_home_3: "Tap the strip of upcoming GPs to open the season map.",
@@ -350,7 +350,7 @@ const DICT = {
     ob_skip: "Passer", ob_next: "Suivant", ob_start: "Commencer",
     back_exitHint: "Appuyez à nouveau pour quitter", sc_replayTutorial: "Revoir le tutoriel",
     // tendina tutorial in fondo alle pagine
-    tut_title: "Tutoriel",
+    tut_title: "Revoir le tutoriel",
     tut_home_1: "Le classement des pilotes est à jour après la dernière course : touchez «Voir tout» pour toute la grille.",
     tut_home_2: "Le récapitulatif réunit les résultats de la dernière course et les prochains GP, avec les horaires déjà convertis dans votre fuseau.",
     tut_home_3: "Touchez la bande des prochains GP pour ouvrir la carte de la saison.",
@@ -459,7 +459,7 @@ const DICT = {
     ob_skip: "Saltar", ob_next: "Siguiente", ob_start: "Empezar",
     back_exitHint: "Pulsa de nuevo para salir", sc_replayTutorial: "Ver el tutorial de nuevo",
     // tendina tutorial in fondo alle pagine
-    tut_title: "Tutorial",
+    tut_title: "Ver el tutorial",
     tut_home_1: "La clasificación de pilotos está actualizada a la última carrera disputada: toca «Ver todos» para ver toda la parrilla.",
     tut_home_2: "En el resumen están los resultados de la última carrera y los próximos GP, con los horarios ya convertidos a tu zona.",
     tut_home_3: "Toca la franja de los próximos GP para abrir el mapa de la temporada.",
@@ -565,7 +565,7 @@ const DICT = {
     ob_skip: "Überspringen", ob_next: "Weiter", ob_start: "Los geht's",
     back_exitHint: "Zum Beenden erneut drücken", sc_replayTutorial: "Tutorial erneut ansehen",
     // tendina tutorial in fondo alle pagine
-    tut_title: "Tutorial",
+    tut_title: "Tutorial ansehen",
     tut_home_1: "Die Fahrerwertung ist auf dem Stand des letzten Rennens: Tippe auf «Alle anzeigen», um das ganze Feld zu sehen.",
     tut_home_2: "Die Übersicht zeigt die Ergebnisse des letzten Rennens und die nächsten GP, mit Zeiten in deiner Zeitzone.",
     tut_home_3: "Tippe auf die Leiste der nächsten GP, um die Saisonkarte zu öffnen.",
