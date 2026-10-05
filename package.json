@@ -10,6 +10,8 @@
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "check:back": "node scripts/check-backstack.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

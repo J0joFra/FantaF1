@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useBannerSpace } from "@/lib/useBannerSpace";
+import { useBackHandler } from "@/lib/backStack";
 
 // URL del Google Apps Script Web App (vedi istruzioni di deploy).
 // Va impostata come variabile d'ambiente Vite in fase di build: Vite la
@@ -22,6 +23,11 @@ export default function BugReportModal({ open, onClose }) {
 
   // Il pulsante "Invia" sta in fondo: il banner nativo ci finisce sopra.
   useBannerSpace("bug-report", open);
+
+  /* Durante l'invio la finestra non si chiude — vale per la X e vale per il
+     gesto indietro, che devono fare la stessa cosa o il secondo diventa una
+     scorciatoia per perdere quello che si è scritto. */
+  useBackHandler(open, () => { if (status !== "sending") handleClose(); });
 
   function handleClose() {
     onClose();

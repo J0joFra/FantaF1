@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { toast } from 'sonner';
 import { useI18n } from '@/lib/i18n';
+import { handleBack } from '@/lib/backStack';
 
 /* ─── TASTO/GESTO INDIETRO (Android) ─────────────────────────────────────────
    Di default Capacitor chiude l'app al primo "indietro", ovunque ci si trovi:
@@ -10,6 +11,8 @@ import { useI18n } from '@/lib/i18n';
    quello che fanno le altre app.
 
    Qui:
+     - con una finestra aperta (tutorial, segnalazione, mappa…) → la chiude,
+       una alla volta, partendo dall'ultima aperta;
      - da una delle schede della bottom nav  → torna alla Panoramica;
      - da una pagina di dettaglio (/driver/…) → torna indietro nella cronologia;
      - dalla Panoramica                       → serve un secondo "indietro"
@@ -43,6 +46,12 @@ export function useAndroidBack() {
     // Import dinamico: il bundle web non tocca il bridge nativo.
     import('@capacitor/app').then(({ App }) => {
       const onBack = () => {
+        /* Prima di tutto: se c'è qualcosa di aperto, il gesto chiude quello.
+           Senza questo, da una finestra aperta il tasto indietro saltava
+           l'overlay e chiudeva l'app — il difetto che i tester hanno segnalato
+           per primo. */
+        if (handleBack()) return;
+
         const current = pathnameRef.current;
 
         if (current !== HOME_PATH) {

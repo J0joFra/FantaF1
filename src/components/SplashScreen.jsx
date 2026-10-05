@@ -86,7 +86,7 @@ export default function SplashScreen({ onDone }) {
         initial={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.5 }}
-        className="fixed inset-0 z-[9999] mx-auto w-full max-w-[430px] overflow-hidden flex items-center justify-center"
+        className="fixed inset-0 z-[9999] app-column overflow-hidden flex items-center justify-center"
         style={{ background: "radial-gradient(120% 90% at 50% 30%, #16161f 0%, #0b0b11 60%, #07070b 100%)" }}
       >
         {/* subtle track-line accents in the background */}

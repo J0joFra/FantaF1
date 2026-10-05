@@ -92,6 +92,9 @@
   }
 }
 
+@media (min-width: 640px)  { :root { --app-max: 560px; } }
+@media (min-width: 820px)  { :root { --app-max: 680px; } }
+
 @layer utilities {
   .font-heading { font-family: var(--font-heading); }
   .font-mono    { font-family: var(--font-mono); }
@@ -117,6 +120,23 @@
   }
 
   /* Bottom nav safe area */
+  /* ─── LARGHEZZA DELLA COLONNA ──────────────────────────────────────────
+     L'app è nata con la colonna bloccata a 430px in quattro punti diversi —
+     guscio, barra di navigazione, mappa stagione, splash — e se ne cambiavi
+     uno gli altri restavano indietro. Peggio: su un pieghevole aperto quei
+     430px sono una striscia stretta in mezzo a due fasce di vuoto, ed è
+     quello che un tester ha segnalato («new fold 8»).
+
+     Adesso la misura sta in un posto solo e cresce con lo schermo: resta da
+     telefono sul telefono, si allarga sul pieghevole aperto e sul tablet. Non
+     è una riprogettazione — il contenuto è lo stesso e scorre uguale — è
+     smettere di sprecare metà schermo. */
+  .app-column {
+    width: 100%;
+    max-width: var(--app-max, 430px);
+    margin-inline: auto;
+  }
+
   .pb-nav { padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 

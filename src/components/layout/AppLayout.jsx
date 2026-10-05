@@ -20,7 +20,7 @@ export default function AppLayout() {
   useAndroidBack();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-[430px] mx-auto overflow-x-hidden">
+    <div className="min-h-screen bg-background flex flex-col app-column overflow-x-hidden">
       <main className="flex-1 overflow-y-auto overflow-x-hidden pb-nav">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -37,7 +37,7 @@ export default function AppLayout() {
       </main>
 
       {/* Bottom nav — iOS/Android style */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 app-column z-50
                       bg-white border-t border-border safe-bottom"
            style={{ boxShadow: "0 -1px 0 rgba(0,0,0,0.06), 0 -4px 16px rgba(0,0,0,0.06)" }}>
         <div className="grid grid-cols-5 h-16">
