@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { X, CheckCircle2, Circle, ChevronRight, ChevronDown, Loader2, AlertTriangle } from "lucide-react";
+import { X, Circle, ChevronRight, ChevronDown, Loader2, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useBannerSpace } from "@/lib/useBannerSpace";
+import { useBackHandler } from "@/lib/backStack";
 import { flagUrl, gpIso } from "@/lib/flagUtils";
 import { getRaceResults } from "@/lib/supabaseData";
 
@@ -152,6 +153,9 @@ export default function SeasonCalendarModal({ races = [], error, open, onClose }
      banner, e sono quelle che si guardano. */
   useBannerSpace("season-map", open);
 
+  // Lo stesso che fa Escape sul web, col gesto indietro su Android.
+  useBackHandler(open, onClose);
+
   const { t } = useI18n();
   const nextRef = useRef(null);
 
@@ -179,7 +183,7 @@ export default function SeasonCalendarModal({ races = [], error, open, onClose }
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 32, stiffness: 320 }}
-          className="fixed inset-0 z-[200] flex flex-col bg-background max-w-[430px] mx-auto"
+          className="fixed inset-0 z-[200] flex flex-col bg-background app-column"
         >
           {/* Header */}
           <div className="bg-gradient-to-r from-[#E8002D] to-[#C20028] px-4 shrink-0"

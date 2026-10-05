@@ -125,14 +125,8 @@ const DICT = {
     // dettaglio pilota
     dd_notFound: "Pilota non trovato", dd_years: "anni", dd_form: "Forma (ultime gare)",
     dd_noResults: "Nessun risultato disponibile", dd_dnf: "DNF", dd_seasonTitle: "Questa stagione",
-    // promemoria gara (notifiche)
+    // promemoria gara
     rem_title: "Promemoria gara", rem_desc: "Tocca la campanella per farti avvisare il giorno prima della sessione",
-    rem_on: "Attivi", rem_off: "Attiva", rem_denied: "Attiva le notifiche dalle impostazioni",
-    rem_empty: "Nessuna sessione in programma",
-    rem_unconfigured: "Notifiche non ancora configurate", rem_error: "Qualcosa è andato storto, riprova",
-    notif_quali_title: "🏁 {gp}: qualifiche", notif_quali_body: "Le qualifiche iniziano tra {min} minuti",
-    notif_sprint_title: "🏁 {gp}: sprint", notif_sprint_body: "La sprint inizia tra {min} minuti",
-    notif_race_title: "🏁 {gp}: gara", notif_race_body: "La gara inizia tra {min} minuti",
   },
   en: {
     nav_overview: "Overview", nav_scenarios: "Scenarios", nav_compare: "Compare", nav_teams: "Teams", nav_news: "News",
@@ -237,14 +231,8 @@ const DICT = {
     // driver detail
     dd_notFound: "Driver not found", dd_years: "yrs", dd_form: "Form (recent races)",
     dd_noResults: "No results yet", dd_dnf: "DNF", dd_seasonTitle: "This season",
-    // race reminders (notifications)
+    // race reminders
     rem_title: "Race reminders", rem_desc: "Tap the bell to get reminded the day before the session",
-    rem_on: "On", rem_off: "Turn on", rem_denied: "Enable notifications in system settings",
-    rem_empty: "No upcoming sessions",
-    rem_unconfigured: "Notifications not set up yet", rem_error: "Something went wrong, try again",
-    notif_quali_title: "🏁 {gp}: qualifying", notif_quali_body: "Qualifying starts in {min} minutes",
-    notif_sprint_title: "🏁 {gp}: sprint", notif_sprint_body: "The sprint starts in {min} minutes",
-    notif_race_title: "🏁 {gp}: race", notif_race_body: "The race starts in {min} minutes",
   },
   fr: {
     nav_overview: "Aperçu", nav_scenarios: "Scénarios", nav_compare: "Comparer", nav_teams: "Écuries", nav_news: "News",
@@ -344,6 +332,10 @@ const DICT = {
     home_dataAsOf: "Mis à jour le",
     err_title: "Maintenance en cours", err_msg: "Nous nous excusons pour la gêne occasionnée. Les données F1 sont temporairement indisponibles. Veuillez réessayer dans quelques minutes.",
     map_title: "GP Saison 2026", map_next: "Prochain GP", map_upcoming: "À venir", map_past: "Terminé", map_tap: "Toucher pour la carte",
+    map_noResults: "Résultats non disponibles", map_tapResults: "Toucher pour les résultats",
+    rmads_title: "Supprimer la publicité", rmads_desc: "Soutenez l'app et retirez les bannières pour de bon", rmads_restore: "Restaurer les achats", rmads_thanks: "Merci ! Publicité supprimée.", rmads_error: "Achat échoué, réessayez", rmads_none: "Aucun achat à restaurer",
+    dd_notFound: "Pilote introuvable", dd_years: "ans", dd_form: "Forme (dernières courses)", dd_noResults: "Pas encore de résultats", dd_dnf: "ABD", dd_seasonTitle: "Cette saison",
+    rem_title: "Rappels de course", rem_desc: "Touchez la cloche pour être prévenu la veille de la séance",
   },
   es: {
     nav_overview: "Resumen", nav_scenarios: "Escenarios", nav_compare: "Comparar", nav_teams: "Escuderías", nav_news: "News",
@@ -443,6 +435,10 @@ const DICT = {
     tut_fer_3: "El gráfico del final muestra los puntos conseguidos temporada tras temporada.",
     tut_news_1: "Las noticias llegan de las principales fuentes de Fórmula 1 y se actualizan solas.",
     tut_news_2: "Toca una noticia para leerla entera en la web de origen.",
+    map_noResults: "Resultados no disponibles", map_tapResults: "Toca para ver los resultados",
+    rmads_title: "Quitar publicidad", rmads_desc: "Apoya la app y quita los banners para siempre", rmads_restore: "Restaurar compras", rmads_thanks: "¡Gracias! Publicidad eliminada.", rmads_error: "La compra ha fallado, inténtalo de nuevo", rmads_none: "No hay compras que restaurar",
+    dd_notFound: "Piloto no encontrado", dd_years: "años", dd_form: "Forma (últimas carreras)", dd_noResults: "Aún no hay resultados", dd_dnf: "ABN", dd_seasonTitle: "Esta temporada",
+    rem_title: "Recordatorios de carrera", rem_desc: "Toca la campana para que te avisemos el día antes de la sesión",
   },
   de: {
     nav_overview: "Übersicht", nav_scenarios: "Szenarien", nav_compare: "Vergleich", nav_teams: "Teams", nav_news: "News",
@@ -542,9 +538,12 @@ const DICT = {
     tut_fer_3: "Das Diagramm unten zeigt die Punkte Saison für Saison.",
     tut_news_1: "Die Nachrichten kommen von den wichtigsten Formel-1-Quellen und aktualisieren sich von selbst.",
     tut_news_2: "Tippe auf eine Meldung, um sie vollständig auf der Originalseite zu lesen.",
+    map_noResults: "Ergebnisse nicht verfügbar", map_tapResults: "Für Ergebnisse tippen",
+    rmads_title: "Werbung entfernen", rmads_desc: "Unterstütze die App und entferne die Banner für immer", rmads_restore: "Käufe wiederherstellen", rmads_thanks: "Danke! Werbung entfernt.", rmads_error: "Kauf fehlgeschlagen, bitte erneut versuchen", rmads_none: "Keine Käufe zum Wiederherstellen",
+    dd_notFound: "Fahrer nicht gefunden", dd_years: "J.", dd_form: "Form (letzte Rennen)", dd_noResults: "Noch keine Ergebnisse", dd_dnf: "DNF", dd_seasonTitle: "Diese Saison",
+    rem_title: "Rennerinnerungen", rem_desc: "Tippe auf die Glocke, um am Tag vor der Session erinnert zu werden",
   },
 };
-
 function getInitialLang() {
   if (typeof window === "undefined") return "it";
   try {
@@ -556,9 +555,7 @@ function getInitialLang() {
     return "it";
   }
 }
-
 const I18nContext = createContext({ lang: "it", setLang: () => {}, t: (k) => k });
-
 export function I18nProvider({ children }) {
   const [lang, setLang] = useState(getInitialLang);
   useEffect(() => {
@@ -572,5 +569,4 @@ export function I18nProvider({ children }) {
   };
   return <I18nContext.Provider value={{ lang, setLang, t }}>{children}</I18nContext.Provider>;
 }
-
 export const useI18n = () => useContext(I18nContext);

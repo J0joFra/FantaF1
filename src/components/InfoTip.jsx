@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { HelpCircle } from "lucide-react";
+import { useBackHandler } from "@/lib/backStack";
 
 /**
  * Mobile-first tap tooltip. Tap the (?) to toggle a small popover; tap outside to close.
@@ -8,6 +9,7 @@ import { HelpCircle } from "lucide-react";
  */
 export default function InfoTip({ children, className = "" }) {
   const [open, setOpen] = useState(false);
+  useBackHandler(open, () => setOpen(false));
   const ref = useRef(null);
 
   useEffect(() => {

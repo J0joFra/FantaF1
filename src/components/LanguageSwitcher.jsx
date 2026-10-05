@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Globe } from "lucide-react";
 import { LANGS, useI18n } from "@/lib/i18n";
+import { useBackHandler } from "@/lib/backStack";
 
 export default function LanguageSwitcher() {
   const { lang, setLang } = useI18n();
   const [open, setOpen] = useState(false);
+  useBackHandler(open, () => setOpen(false));
   const ref = useRef(null);
 
   useEffect(() => {

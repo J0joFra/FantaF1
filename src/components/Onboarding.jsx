@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Calculator, GitCompare, Globe } from "lucide-react";
 import { useI18n, LANGS } from "@/lib/i18n";
 import { useBannerSpace } from "@/lib/useBannerSpace";
+import { useBackHandler } from "@/lib/backStack";
 
 const STORAGE_KEY = "gridup_onboarded_v1";
 
@@ -17,6 +18,9 @@ function LangPicker() {
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
+  // Anche la tendina della lingua si chiude col gesto indietro, prima del
+  // tutorial che le sta sotto.
+  useBackHandler(open, () => setOpen(false));
   const current = LANGS.find(l => l.code === lang) || LANGS[0];
   return (
     <div ref={ref} className="relative">
@@ -65,17 +69,19 @@ export default function Onboarding() {
      aperto, quello spazio è suo. */
   useBannerSpace("onboarding", open);
 
+  /* Il gesto indietro chiude il tutorial invece dell'app. Definito prima del
+     ritorno anticipato perché gli hook non si possono chiamare a metà. */
+  const dismiss = () => {
+    try { localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ }
+    setOpen(false);
+  };
+  useBackHandler(open, dismiss);
+
   if (!open) return null;
 
   const last = step === SLIDES.length - 1;
   const S = SLIDES[step];
   const Icon = S.icon;
-
-  const close = () => {
-    try { localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ }
-    setOpen(false);
-  };
-
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-md p-3">
       <motion.div
@@ -133,13 +139,13 @@ export default function Onboarding() {
           {/* Azioni */}
           <div className="mt-5">
             <button
-              onClick={() => (last ? close() : setStep(s => s + 1))}
+              onClick={() => (last ? dismiss() : setStep(s => s + 1))}
               className="w-full py-3 rounded-xl text-sm font-bold text-white bg-primary active:scale-95 transition-transform shadow-sm"
             >
               {last ? t("ob_start") : t("ob_next")}
             </button>
             <button
-              onClick={close}
+              onClick={dismiss}
               className="mt-3 w-full py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {t("ob_skip")}
