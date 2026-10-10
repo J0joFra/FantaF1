@@ -96,14 +96,96 @@ function buildBrandedCanvas(snap, { heading = "GridUP", sub = "" } = {}) {
   return c;
 }
 
+// ── 9:16 story frame ─────────────────────────────────────────────────────────────
+// Instagram (and WhatsApp/TikTok) stories are 1080×1920. A card of any other
+// shape gets shrunk or cropped there, so it is centred on a branded 9:16 ground.
+// The top and bottom bands stay clear of Instagram's own overlays (progress
+// bar + profile on top, reply bar at the bottom).
+const STORY_W = 1080;
+const STORY_H = 1920;
+const STORY_SAFE_TOP = 250;
+const STORY_SAFE_BOTTOM = 330;
+// Below this the card would be too small to read; share it as it is instead.
+const STORY_MIN_SCALE = 0.55;
+
+export function buildStoryCanvas(card) {
+  const maxW = STORY_W - 2 * 60;
+  const maxH = STORY_H - STORY_SAFE_TOP - STORY_SAFE_BOTTOM;
+  const scale = Math.min(maxW / card.width, maxH / card.height, 1);
+  if (scale < STORY_MIN_SCALE) return card;
+
+  const w = Math.round(card.width * scale);
+  const h = Math.round(card.height * scale);
+  const x = Math.round((STORY_W - w) / 2);
+  const y = Math.round(STORY_SAFE_TOP + (maxH - h) / 2);
+
+  const c = document.createElement("canvas");
+  c.width = STORY_W;
+  c.height = STORY_H;
+  const ctx = c.getContext("2d");
+
+  // ground: dark with a red glow behind the card
+  ctx.fillStyle = "#0e0e15";
+  ctx.fillRect(0, 0, STORY_W, STORY_H);
+  const glow = ctx.createRadialGradient(STORY_W / 2, y + h / 2, 0, STORY_W / 2, y + h / 2, STORY_H * 0.6);
+  glow.addColorStop(0, "rgba(232,0,45,0.45)");
+  glow.addColorStop(1, "rgba(232,0,45,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, STORY_W, STORY_H);
+  // diagonal speed lines
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.04)";
+  ctx.lineWidth = 3;
+  for (let i = -STORY_H; i < STORY_W; i += 56) {
+    ctx.beginPath(); ctx.moveTo(i, STORY_H); ctx.lineTo(i + STORY_H * 0.5, 0); ctx.stroke();
+  }
+  ctx.restore();
+
+  // card with shadow and rounded corners
+  const r = 28;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = 50;
+  ctx.shadowOffsetY = 18;
+  roundRectPath(ctx, x, y, w, h, r);
+  ctx.fillStyle = "#0e0e15";
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  roundRectPath(ctx, x, y, w, h, r);
+  ctx.clip();
+  ctx.drawImage(card, x, y, w, h);
+  ctx.restore();
+
+  // call to action, above Instagram's reply bar
+  const ctaY = STORY_H - STORY_SAFE_BOTTOM + 90;
+  const badgeS = 64;
+  ctx.font = '800 44px Arial, "Segoe UI", sans-serif';
+  const nameW = ctx.measureText("GridUP").width;
+  const bx = (STORY_W - (badgeS + 20 + nameW)) / 2;
+  drawBadge(ctx, bx, ctaY - badgeS / 2, badgeS);
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("GridUP", bx + badgeS + 20, ctaY + 2);
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.textAlign = "center";
+  ctx.font = '600 28px Arial, "Segoe UI", sans-serif';
+  ctx.fillText("gridup-f1.web.app", STORY_W / 2, ctaY + 66);
+
+  return c;
+}
+
 // ── Share/save a ready canvas via the native sheet or web download ──────────────
+// The card goes out in the 9:16 story format unless `story: false`.
 export async function shareCanvas(
   card,
-  { fileName = "gridup.png", title = "GridUP", text = "" } = {}
+  { fileName = "gridup.png", title = "GridUP", text = "", story = true } = {}
 ) {
   if (!card) return "no-canvas";
   const tId = toast.loading("Preparo l'immagine…");
   try {
+    if (story) card = buildStoryCanvas(card);
     // ── Native (Capacitor) ──
     if (Capacitor?.isNativePlatform?.()) {
       const base64 = card.toDataURL("image/png").split(",")[1];
@@ -293,7 +375,7 @@ export function buildH2HCard({
   ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
   ctx.font = '700 24px Arial, "Segoe UI", sans-serif';
-  ctx.fillText("www.formula-rossa.it", W / 2, H - 34);
+  ctx.fillText("gridup-f1.web.app", W / 2, H - 34);
 
   return c;
 }
