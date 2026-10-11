@@ -1,69 +1,37 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Share2, Dumbbell, ArrowUp, ArrowDown } from "lucide-react";
+import { toast } from "sonner";
+import { Search, Share2, Dumbbell, ArrowUp, ArrowDown, Bell, BellRing, Filter } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { flagUrl } from "@/lib/flagUtils";
 import { buildGameCard, shareCanvas } from "@/lib/shareImage";
-import DRIVERS from "@/data/driverGame.json";
+import {
+  DRIVERS, MAX_GUESSES, STATE_KEY, STATS_KEY, EMPTY_STATS,
+  dayNumber, driverOfDay, readJSON, writeJSON, liveStreak, readMode, writeMode,
+} from "@/lib/driverGame";
+import {
+  dailyReminderSupported, isDailyReminderOn, toggleDailyReminder, syncDailyReminder,
+} from "@/lib/dailyReminder";
 
 /* ─── PILOTA DEL GIORNO ───────────────────────────────────────────────────────
    Un pilota misterioso al giorno, lo stesso per tutti, sei tentativi. Ogni
    tentativo dice, per cinque indizi, se il misterioso è uguale, vicino, più
-   in alto o più in basso. I dati vengono da scripts/build-driver-game.mjs.
+   in alto o più in basso. Regole e salvataggi stanno in lib/driverGame.
 
-   Il pilota del giorno dipende solo dalla data locale: niente server, e chi
-   gioca alla stessa data trova lo stesso pilota (a patto di avere la stessa
-   versione dei dati). */
-
-export const MAX_GUESSES = 6;
-const STATE_KEY = "gridup_guess_today";
-const STATS_KEY = "gridup_guess_stats";
-// Numero 1 del gioco.
-const EPOCH = Date.UTC(2026, 9, 11);
-// Coprimo con la dimensione del pool: in N giorni passano tutti, senza ripetere.
-const STEP = 37;
+   Due modalità:
+   - hardcore (default): la ricerca suggerisce solo per nome;
+   - facilitato: toccando la ricerca compaiono solo i piloti compatibili con
+     gli indizi già indovinati (verdi). Indovinata la nazionalità, si vedono
+     solo i piloti di quel paese.
+   La modalità si sceglie prima del primo tentativo del giorno e poi resta
+   quella: cambiarla a metà vorrebbe dire giocare in hardcore e chiedere
+   l'aiuto all'ultimo. */
 
 const GREEN = "#16a34a";
 const YELLOW = "#f59e0b";
 const GREY = "#3f3f46";
 
-export function dayNumber(date = new Date()) {
-  const local = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
-  return Math.floor((local - EPOCH) / 86400000) + 1;
-}
-
-function stepFor(n) {
-  let s = STEP;
-  const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-  while (gcd(s, n) !== 1) s++;
-  return s;
-}
-
-function driverOfDay(day) {
-  const n = DRIVERS.length;
-  const i = (((day * stepFor(n) + 11) % n) + n) % n;
-  return DRIVERS[i];
-}
-
 const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-
-function read(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function write(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
-}
-
-/** Ha già giocato la partita di oggi? Serve alla card in Panoramica. */
-export function playedToday() {
-  const s = read(STATE_KEY, null);
-  return !!s && s.day === dayNumber() && s.done;
-}
 
 // Confronto di un indizio numerico: «vicino» se entro `near`.
 function numeric(guess, target, near) {
@@ -74,14 +42,27 @@ function numeric(guess, target, near) {
   };
 }
 
+// Ogni indizio porta con sé il campo del pilota a cui si riferisce: serve al
+// filtro della modalità facilitata.
 function compare(g, target) {
   return [
-    { key: "nat", color: g.iso === target.iso ? GREEN : GREY },
-    { key: "debut", value: g.debut, ...numeric(g.debut, target.debut, 4) },
-    { key: "wins", value: g.wins, ...numeric(g.wins, target.wins, 5) },
-    { key: "titles", value: g.titles, ...numeric(g.titles, target.titles, 1) },
-    { key: "team", value: g.team, color: g.team === target.team ? GREEN : GREY },
+    { key: "nat", field: "iso", color: g.iso === target.iso ? GREEN : GREY },
+    { key: "debut", field: "debut", value: g.debut, ...numeric(g.debut, target.debut, 4) },
+    { key: "wins", field: "wins", value: g.wins, ...numeric(g.wins, target.wins, 5) },
+    { key: "titles", field: "titles", value: g.titles, ...numeric(g.titles, target.titles, 1) },
+    { key: "team", field: "team", value: g.team, color: g.team === target.team ? GREEN : GREY },
   ];
+}
+
+// Gli indizi già indovinati: { iso: "it", team: "Ferrari", … }
+function knownClues(guessed, target) {
+  const known = {};
+  for (const d of guessed) {
+    for (const c of compare(d, target)) {
+      if (c.color === GREEN) known[c.field] = d[c.field];
+    }
+  }
+  return known;
 }
 
 const COLS = ["guess_colNat", "guess_colDebut", "guess_colWins", "guess_colTitles", "guess_colTeam"];
@@ -122,6 +103,27 @@ function GuessRow({ driver, target, lang }) {
   );
 }
 
+function ModeSwitch({ mode, onChange, locked, t }) {
+  return (
+    <div className="mt-3">
+      <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-gray-100 border border-border">
+        {[["hardcore", "💀", "guess_modeHardcore"], ["easy", "🤝", "guess_modeEasy"]].map(([m, icon, label]) => (
+          <button key={m} disabled={locked && mode !== m} onClick={() => onChange(m)}
+            className={`rounded-lg py-1.5 text-xs font-body font-semibold transition-colors
+              ${mode === m ? "bg-white shadow-sm text-foreground" : "text-muted-foreground"}
+              ${locked && mode !== m ? "opacity-40" : ""}`}>
+            {icon} {t(label)}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground font-body leading-snug mt-1.5">
+        {t(mode === "easy" ? "guess_modeEasyDesc" : "guess_modeHardcoreDesc")}
+        {locked && ` ${t("guess_modeLocked")}`}
+      </p>
+    </div>
+  );
+}
+
 export default function DriverGuess() {
   const { t, lang } = useI18n();
   const today = dayNumber();
@@ -129,47 +131,87 @@ export default function DriverGuess() {
   const [practice, setPractice] = useState(null);
   const target = practice ?? driverOfDay(today);
 
-  const [guesses, setGuesses] = useState(() => {
-    const s = read(STATE_KEY, null);
-    return s && s.day === today ? s.guesses : [];
-  });
+  const saved = readJSON(STATE_KEY, null);
+  const savedToday = saved && saved.day === today ? saved : null;
+  const [guesses, setGuesses] = useState(() => savedToday?.guesses ?? []);
+  const [mode, setMode] = useState(() => savedToday?.mode ?? readMode());
   const [query, setQuery] = useState("");
-  const [stats, setStats] = useState(() => read(STATS_KEY, { played: 0, won: 0, streak: 0, maxStreak: 0, lastDay: null }));
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef(null);
+  const [stats, setStats] = useState(() => readJSON(STATS_KEY, EMPTY_STATS));
+  const [reminderOn, setReminderOn] = useState(isDailyReminderOn);
 
   const guessed = guesses.map((id) => DRIVERS.find((d) => d.id === id)).filter(Boolean);
   const won = guessed.some((d) => d.id === target.id);
   const done = won || guessed.length >= MAX_GUESSES;
+  const locked = !practice && guesses.length > 0;
+  const easy = mode === "easy";
+  const streak = liveStreak(stats, today);
 
   // Salva solo la partita del giorno; l'allenamento resta in memoria.
   useEffect(() => {
     if (practice) return;
-    write(STATE_KEY, { day: today, guesses, done });
-  }, [guesses, done, practice, today]);
+    writeJSON(STATE_KEY, { day: today, guesses, done, mode });
+  }, [guesses, done, mode, practice, today]);
+
+  // Partita del giorno finita (e già salvata dall'effetto sopra): il
+  // promemoria di oggi non serve più.
+  useEffect(() => {
+    if (!practice && done) syncDailyReminder(t);
+  }, [done, practice]);
+
+  const known = useMemo(() => (easy ? knownClues(guessed, target) : {}), [easy, guessed, target]);
+  const knownEntries = Object.entries(known);
 
   const suggestions = useMemo(() => {
     const q = norm(query.trim());
-    if (q.length < 2) return [];
-    return DRIVERS.filter((d) => !guesses.includes(d.id) && norm(d.name).includes(q)).slice(0, 6);
-  }, [query, guesses]);
+    // Hardcore: solo ricerca per nome, da due lettere in su.
+    if (!easy) {
+      if (q.length < 2) return [];
+      return DRIVERS.filter((d) => !guesses.includes(d.id) && norm(d.name).includes(q)).slice(0, 6);
+    }
+    // Facilitato: appena si tocca la ricerca, i piloti compatibili con gli indizi verdi.
+    if (!focused && !q) return [];
+    return DRIVERS.filter((d) =>
+      !guesses.includes(d.id)
+      && knownEntries.every(([field, value]) => d[field] === value)
+      && (!q || norm(d.name).includes(q)));
+  }, [query, guesses, easy, focused, knownEntries]);
+
+  const changeMode = (m) => {
+    if (locked) return;
+    setMode(m);
+    writeMode(m);
+  };
 
   const pick = (d) => {
     const next = [...guesses, d.id];
     setGuesses(next);
     setQuery("");
+    // Toglie il fuoco (e la tastiera): il prossimo tocco sulla ricerca la
+    // riapre con la lista aggiornata ai nuovi indizi.
+    inputRef.current?.blur();
     const isWin = d.id === target.id;
     if (practice || !(isWin || next.length >= MAX_GUESSES)) return;
     // Fine della partita del giorno: aggiorna le statistiche una volta sola.
     if (stats.lastDay === today) return;
-    const streak = isWin ? (stats.lastDay === today - 1 && stats.streak > 0 ? stats.streak + 1 : 1) : 0;
+    const nextStreak = isWin ? liveStreak(stats, today) + 1 : 0;
     const s = {
       played: stats.played + 1,
       won: stats.won + (isWin ? 1 : 0),
-      streak,
-      maxStreak: Math.max(stats.maxStreak, streak),
+      streak: nextStreak,
+      maxStreak: Math.max(stats.maxStreak, nextStreak),
       lastDay: today,
     };
     setStats(s);
-    write(STATS_KEY, s);
+    writeJSON(STATS_KEY, s);
+  };
+
+  const toggleReminder = async () => {
+    const r = await toggleDailyReminder(t);
+    if (r === "on") { setReminderOn(true); toast.success(t("guess_reminderOn")); }
+    else if (r === "off") { setReminderOn(false); toast(t("guess_reminderOff")); }
+    else if (r === "denied") toast.error(t("guess_reminderDenied"));
   };
 
   const startPractice = () => {
@@ -183,8 +225,10 @@ export default function DriverGuess() {
 
   const backToDaily = () => {
     setPractice(null);
-    const s = read(STATE_KEY, null);
-    setGuesses(s && s.day === today ? s.guesses : []);
+    const s = readJSON(STATE_KEY, null);
+    const st = s && s.day === today ? s : null;
+    setGuesses(st?.guesses ?? []);
+    setMode(st?.mode ?? readMode());
   };
 
   const share = () => {
@@ -193,32 +237,44 @@ export default function DriverGuess() {
       .map((row) => row.map((c) => (c === GREEN ? "🟩" : c === YELLOW ? "🟨" : "⬛")).join(""))
       .join("\n");
     const score = won ? `${guessed.length}/${MAX_GUESSES}` : `X/${MAX_GUESSES}`;
+    const modeTxt = easy ? ` · ${t("guess_modeEasy")}` : " · 💀";
     const card = buildGameCard({
-      heading: `${t("guess_title")} #${today}`,
+      heading: `${t("guess_title")} #${today}${modeTxt}`,
       big: score,
       bigColor: won ? "#22c55e" : "#ffffff",
-      sub: stats.streak > 1 ? `🔥 ${t("guess_streak")}: ${stats.streak}` : "",
+      sub: streak > 1 ? `🔥 ${t("guess_streak")}: ${streak}` : "",
       grid,
     });
     shareCanvas(card, {
       fileName: `gridup-pilota-${today}.png`,
       title: "GridUP",
-      text: `🏎️ ${t("guess_title")} #${today} ${score}\n${emoji}`,
+      text: `🏎️ ${t("guess_title")} #${today}${modeTxt} ${score}\n${emoji}`,
     });
   };
+
+  const canRemind = dailyReminderSupported();
 
   return (
     <div className="space-y-4">
       <div className="app-card p-4">
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between gap-2 mb-1">
           <h2 className="font-heading font-black text-base uppercase tracking-wide">
             {practice ? t("guess_practice") : `${t("guess_title")} #${today}`}
           </h2>
-          <span className="text-xs font-body text-muted-foreground">
-            {guessed.length}/{MAX_GUESSES}
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-body text-muted-foreground">{guessed.length}/{MAX_GUESSES}</span>
+            {canRemind && (
+              <button onClick={toggleReminder} title={t("guess_reminder")}
+                className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-95 transition-transform
+                  ${reminderOn ? "bg-primary text-white border-primary" : "bg-gray-50 border-border text-muted-foreground"}`}>
+                {reminderOn ? <BellRing className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+              </button>
+            )}
+          </div>
         </div>
         <p className="text-xs text-muted-foreground font-body leading-snug">{t("guess_how")}</p>
+
+        <ModeSwitch mode={mode} onChange={changeMode} locked={locked} t={t} />
 
         {/* intestazioni delle colonne */}
         <div className="grid grid-cols-5 gap-1 mt-3">
@@ -235,18 +291,42 @@ export default function DriverGuess() {
 
         {!done && (
           <div className="relative mt-3">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("guess_placeholder")}
-              className="w-full rounded-xl border border-border bg-background pl-9 pr-3 py-2.5 text-sm font-body
-                         focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
+            {easy && knownEntries.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap mb-2 text-[11px] font-body text-muted-foreground">
+                <Filter className="w-3 h-3" />
+                {knownEntries.map(([field, value]) => (
+                  <span key={field} className="rounded-full bg-green-100 text-green-800 px-2 py-0.5 font-semibold">
+                    {field === "iso" ? countryName(value, lang) : `${t(COLS[["iso", "debut", "wins", "titles", "team"].indexOf(field)])}: ${value}`}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                ref={inputRef}
+                onFocus={() => setFocused(true)}
+                onClick={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                placeholder={t("guess_placeholder")}
+                className="w-full rounded-xl border border-border bg-background pl-9 pr-3 py-2.5 text-sm font-body
+                           focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
             {suggestions.length > 0 && (
-              <div className="absolute z-10 left-0 right-0 mt-1 app-card overflow-hidden border border-border">
+              <div className="absolute z-10 left-0 right-0 mt-1 app-card overflow-y-auto max-h-64 border border-border">
+                {easy && (
+                  <p className="px-3 py-1.5 text-[10px] font-body uppercase tracking-wide text-muted-foreground border-b border-border">
+                    {t("guess_compatible", { n: suggestions.length })}
+                  </p>
+                )}
                 {suggestions.map((d) => (
-                  <button key={d.id} onClick={() => pick(d)}
+                  <button key={d.id}
+                    // mousedown prima del blur: senza, la lista sparisce prima del tocco
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => pick(d)}
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm font-body hover:bg-gray-50 border-b border-border last:border-0">
                     <img src={flagUrl(d.iso, "h20")} alt="" className="h-3.5 w-auto rounded-sm" />
                     {d.name}
@@ -289,6 +369,12 @@ export default function DriverGuess() {
             )}
           </div>
           {!practice && <p className="text-[11px] font-body opacity-60 mt-3">{t("guess_comeBack")}</p>}
+          {!practice && canRemind && !reminderOn && (
+            <button onClick={toggleReminder}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white text-gray-900 px-4 py-2 text-sm font-body font-semibold active:scale-95 transition-transform">
+              <Bell className="w-4 h-4" /> {t("guess_remindMe")}
+            </button>
+          )}
         </div>
       )}
 
@@ -297,7 +383,7 @@ export default function DriverGuess() {
           {[
             [stats.played, t("guess_played")],
             [stats.played ? `${Math.round((stats.won / stats.played) * 100)}%` : "—", t("guess_winRate")],
-            [stats.streak, t("guess_streak")],
+            [streak, t("guess_streak")],
             [stats.maxStreak, t("guess_maxStreak")],
           ].map(([v, l]) => (
             <div key={l}>

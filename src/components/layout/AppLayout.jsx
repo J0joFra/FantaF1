@@ -3,6 +3,8 @@ import { BarChart2, Calculator, GitCompare, Shield, Newspaper } from "lucide-rea
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
 import { useAndroidBack } from "@/lib/useAndroidBack";
+import { syncDailyReminder } from "@/lib/dailyReminder";
+import { useEffect } from "react";
 
 const tabs = [
   { path: "/",           key: "nav_overview",  icon: BarChart2  },
@@ -14,7 +16,11 @@ const tabs = [
 
 export default function AppLayout() {
   const { pathname } = useLocation();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+
+  // Riallinea le notifiche del «Pilota del giorno» a ogni apertura (e al
+  // cambio lingua, perché il testo è già scritto dentro la notifica).
+  useEffect(() => { syncDailyReminder(t); }, [lang]);
 
   // Il gesto indietro riporta alla Panoramica invece di chiudere l'app.
   useAndroidBack();

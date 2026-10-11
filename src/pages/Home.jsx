@@ -31,7 +31,7 @@ import {
   notificationsSupported, getEnabledReminders, toggleReminder, syncReminders,
 } from "@/lib/notifications";
 import { useI18n } from "@/lib/i18n";
-import { playedToday } from "@/components/games/DriverGuess";
+import { playedToday } from "@/lib/driverGame";
 import { format } from "date-fns";
 import { it, enGB, fr, es, de } from "date-fns/locale";
 
