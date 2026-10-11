@@ -31,6 +31,7 @@ import {
   notificationsSupported, getEnabledReminders, toggleReminder, syncReminders,
 } from "@/lib/notifications";
 import { useI18n } from "@/lib/i18n";
+import { playedToday } from "@/components/games/DriverGuess";
 import { format } from "date-fns";
 import { it, enGB, fr, es, de } from "date-fns/locale";
 
@@ -387,6 +388,20 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* ── MINIGIOCHI ── */}
+        <Link to="/games"
+          className="dark-card px-4 py-3.5 flex items-center gap-3 active:scale-[0.99] transition-transform">
+          <span className="text-3xl shrink-0">🎮</span>
+          <div className="min-w-0 flex-1">
+            <p className="font-heading font-black text-sm uppercase tracking-wide flex items-center gap-2">
+              {t("games_title")}
+              {!playedToday() && <span className="tag bg-primary text-white">{t("games_new")}</span>}
+            </p>
+            <p className="text-[11px] font-body opacity-70 leading-snug mt-0.5">{t("games_homeDesc")}</p>
+          </div>
+          <ChevronRight className="w-5 h-5 opacity-60 shrink-0" />
+        </Link>
 
         {/* ── RECAP ULTIMA GARA (podio) ── */}
         <LastRaceRecap data={lastRace} t={t} localeTag={LOCALE_TAG[lang] ?? "it-IT"} />

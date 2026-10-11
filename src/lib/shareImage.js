@@ -410,3 +410,75 @@ export async function shareElementAsImage(
   toast.dismiss(tId);
   return shareCanvas(card, { fileName, title, text });
 }
+
+/**
+ * Result card for the minigames: GridUp header, one big value and an optional
+ * grid of coloured squares (the guesses of «Pilota del giorno»).
+ * data: { heading, big, bigColor, sub, grid: [["#hex", …], …] }
+ */
+export function buildGameCard({ heading = "", big = "", bigColor = "#ffffff", sub = "", grid = [] } = {}) {
+  const W = 1080;
+  const pad = 52;
+  const headerH = 196;
+  const cell = 96;
+  const gap = 14;
+  const cols = grid[0]?.length ?? 0;
+  const gridH = grid.length ? grid.length * (cell + gap) - gap + 60 : 0;
+  const footerH = 92;
+  const H = headerH + 300 + gridH + footerH;
+
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+
+  ctx.fillStyle = "#0e0e15";
+  ctx.fillRect(0, 0, W, H);
+
+  const g = ctx.createLinearGradient(0, 0, W, headerH);
+  g.addColorStop(0, "#E8002D");
+  g.addColorStop(1, "#9e0020");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, headerH);
+  const badgeS = 100;
+  drawBadge(ctx, pad, (headerH - badgeS) / 2, badgeS);
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "#fff";
+  ctx.font = '800 54px Arial, "Segoe UI", sans-serif';
+  ctx.fillText("GridUP", pad + badgeS + 24, headerH / 2 - 6);
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.font = '700 28px Arial, "Segoe UI", sans-serif';
+  ctx.fillText(heading, pad + badgeS + 26, headerH / 2 + 34, W - pad * 2 - badgeS - 26);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = bigColor;
+  fitFont(ctx, big, 130, W - pad * 2, 900);
+  ctx.fillText(big, W / 2, headerH + 130);
+  if (sub) {
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    fitFont(ctx, sub, 36, W - pad * 2, 700);
+    ctx.fillText(sub, W / 2, headerH + 240);
+  }
+
+  if (grid.length) {
+    const gw = cols * (cell + gap) - gap;
+    let y = headerH + 300;
+    grid.forEach((row) => {
+      let x = (W - gw) / 2;
+      row.forEach((color) => {
+        roundRectPath(ctx, x, y, cell, cell, 16);
+        ctx.fillStyle = color;
+        ctx.fill();
+        x += cell + gap;
+      });
+      y += cell + gap;
+    });
+  }
+
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  ctx.font = '700 24px Arial, "Segoe UI", sans-serif';
+  ctx.fillText("gridup-f1.web.app", W / 2, H - 34);
+
+  return c;
+}
