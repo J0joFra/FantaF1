@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Gamepad2, ChevronRight, ArrowLeft } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StartLights from "@/components/games/StartLights";
-import DriverGuess, { dayNumber, playedToday } from "@/components/games/DriverGuess";
+import DriverGuess from "@/components/games/DriverGuess";
+import { dayNumber, playedToday } from "@/lib/driverGame";
 import { useI18n } from "@/lib/i18n";
 import { useBackHandler } from "@/lib/backStack";
 
