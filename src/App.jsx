@@ -13,6 +13,7 @@ import Compare from './pages/Compare';
 import Ferrari from './pages/Ferrari';
 import News from './pages/News';
 import DriverDetail from './pages/DriverDetail';
+import Games from './pages/Games';
 import { useState, useEffect } from 'react';
 import { showBanner } from '@/lib/ads';
 import { initPurchases } from '@/lib/purchases';
@@ -45,6 +46,7 @@ function App() {
               <Route path="/driver/:id" element={<DriverDetail />} />
               <Route path="/ferrari" element={<Ferrari />} />
               <Route path="/news" element={<News />} />
+              <Route path="/games" element={<Games />} />
             </Route>
             <Route path="*" element={<PageNotFound />} />
           </Routes>
