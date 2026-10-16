@@ -6,6 +6,11 @@ import {
   buyRemoveAds, restorePurchases, getRemoveAdsPrice,
 } from "@/lib/purchases";
 
+// L'offerta «Rimuovi pubblicità» è sospesa: la card non compare a nessuno.
+// Chi l'ha già comprata resta senza banner (lo ripristina initPurchases
+// all'avvio). Per rimetterla in vendita basta riportare questo a true.
+const OFFER_ENABLED = false;
+
 // "Remove ads" upsell — native build only, and only until purchased.
 export default function RemoveAdsCard() {
   const { t } = useI18n();
@@ -16,7 +21,7 @@ export default function RemoveAdsCard() {
   const [price, setPrice] = useState(null);
 
   useEffect(() => {
-    if (!supported) return;
+    if (!OFFER_ENABLED || !supported) return;
     onAdFreeChange(setAdFree);
     // The store price loads a moment after init; poll briefly for it.
     const id = setInterval(() => {
@@ -27,7 +32,7 @@ export default function RemoveAdsCard() {
     return () => clearInterval(id);
   }, [supported]);
 
-  if (!supported || adFree) return null;
+  if (!OFFER_ENABLED || !supported || adFree) return null;
 
   const buy = async () => {
     if (busy) return;
