@@ -5,7 +5,7 @@
 import { Capacitor } from '@capacitor/core';
 
 // Production ad unit (banner). App ID lives in AndroidManifest.xml.
-const BANNER_AD_ID = 'ca-app-pub-8762257220044998/4894923352';
+const BANNER_AD_ID = 'ca-app-pub-8762257220044998/9485169352';
 
 // The banner floats over the webview; lift it above the ~64px bottom nav.
 // Tune on-device if the banner overlaps the tab bar.
