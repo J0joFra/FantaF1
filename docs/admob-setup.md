@@ -8,7 +8,7 @@ Sul web (Vercel) è un no-op: gli annunci compaiono solo nell'app nativa.
 | Cosa | Valore | Dove |
 |------|--------|------|
 | App ID | `ca-app-pub-8762257220044998~9823816409` | `android/app/src/main/AndroidManifest.xml` |
-| Banner ad unit | `ca-app-pub-8762257220044998/4894923352` | `src/lib/ads.js` |
+| Banner ad unit («BannerAds») | `ca-app-pub-8762257220044998/9485169352` | `src/lib/ads.js` |
 
 ## Cosa è già stato fatto nel codice
 
