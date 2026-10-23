@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8">
+<!-- Screenshot Play Store 1080×1920. Cambia titolo e sottotitolo qui sotto e apri il file in Chrome. -->
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,600;0,700;1,900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  body { position: relative; font-family: 'Titillium Web', sans-serif; color: #15171d;
+    background: radial-gradient(110% 60% at 50% 70%, #ffd6dc 0%, #fbeff1 45%, #f3f4f8 100%); }
+  .grid { position: absolute; inset: 0; background-image: linear-gradient(#e3001b12 2px, transparent 2px), linear-gradient(90deg, #e3001b12 2px, transparent 2px); background-size: 72px 72px; }
+  .flag { position: absolute; left: 0; right: 0; bottom: 0; height: 230px; opacity: .08;
+    background: conic-gradient(#15171d 25%, transparent 0 50%, #15171d 0 75%, transparent 0) 0 0 / 52px 52px;
+    -webkit-mask-image: linear-gradient(0deg, #000, transparent); mask-image: linear-gradient(0deg, #000, transparent); }
+  .stripe { position: absolute; top: 0; left: 0; right: 0; height: 16px; background: linear-gradient(90deg, #e3001b, #ff4d5e); }
+  h1 { position: absolute; top: 96px; left: 50px; right: 50px; text-align: center; font-size: 104px; line-height: .98; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -1px; }
+  h1 em { color: #e3001b; font-style: italic; }
+  p.sub { position: absolute; top: 236px; left: 90px; right: 90px; text-align: center; font-size: 42px; font-weight: 600; color: #4a505c; line-height: 1.2; }
+  .phone { position: absolute; left: 50%; top: 390px; width: 640px; height: 1385px; margin-left: -320px; border-radius: 78px; padding: 16px;
+    background: linear-gradient(145deg, #3a3d46, #0d0e12); box-shadow: 0 40px 90px #0004, 0 0 0 3px #ffffff1f inset; transform: rotate(-3deg); }
+  .phone img { width: 100%; height: 100%; border-radius: 64px; display: block; object-fit: cover; object-position: top; }
+  .zoom { position: absolute; left: 330px; top: 1240px; width: 700px; border-radius: 34px; transform: rotate(4deg);
+    box-shadow: 0 30px 60px #0003, 0 0 0 6px #fff; }
+</style></head>
+<body>
+  <div class="grid"></div><div class="flag"></div><div class="stripe"></div>
+  <h1>Calcola gli <em>scenari</em></h1>
+  <p class="sub">Quanti punti servono per superare il leader? Scoprilo gara dopo gara</p>
+  <div class="phone"><img src="img/scenari.png"></div>
+  <img class="zoom" src="img/zoom-mosaico.png">
+</body></html>

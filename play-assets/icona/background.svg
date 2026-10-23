@@ -1,0 +1,3 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><defs><radialGradient id="bg" cx="35%" cy="25%" r="90%"><stop offset="0" stop-color="#ff3d4f"/><stop offset=".5" stop-color="#e3001b"/><stop offset="1" stop-color="#9c0012"/></radialGradient>
+  <pattern id="lines" width="64" height="64" patternUnits="userSpaceOnUse"><path d="M0 0H64M0 0V64" stroke="#fff" stroke-opacity=".07" stroke-width="3"/></pattern></defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/><rect width="1024" height="1024" fill="url(#lines)"/></svg>
