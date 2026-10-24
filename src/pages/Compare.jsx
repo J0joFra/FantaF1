@@ -98,6 +98,7 @@ function StatRow({ icon: Icon, label, val1, val2, color1, color2, lowerBetter = 
 
 // ── driver hero panel ─────────────────────────────────────────────────────────
 function DriverPanel({ d, color, lead }) {
+  const { t } = useI18n();
   const age = ageFrom(d.date_of_birth);
   return (
     <div className="relative rounded-2xl overflow-hidden p-3 pt-4 text-white shadow-md min-w-0"
@@ -118,9 +119,9 @@ function DriverPanel({ d, color, lead }) {
       <p className="font-body text-[11px] text-white/80 truncate">{d.team}</p>
       <div className="flex items-end gap-1 mt-2">
         <span className="font-heading font-black text-2xl leading-none">{d.points}</span>
-        <span className="font-body text-[10px] text-white/70 mb-0.5">pti · P{d.position}</span>
+        <span className="font-body text-[10px] text-white/70 mb-0.5">{t("pts")} · P{d.position}</span>
       </div>
-      {age && <p className="font-body text-[10px] text-white/70 mt-0.5">{age} anni</p>}
+      {age && <p className="font-body text-[10px] text-white/70 mt-0.5">{age} {t("dd_years")}</p>}
     </div>
   );
 }
