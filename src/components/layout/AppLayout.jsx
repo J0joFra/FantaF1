@@ -1,10 +1,11 @@
 import { Outlet, useLocation, Link } from "react-router-dom";
 import { BarChart2, Calculator, GitCompare, Shield, Newspaper } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Capacitor } from "@capacitor/core";
 import { useI18n } from "@/lib/i18n";
 import { useAndroidBack } from "@/lib/useAndroidBack";
 import { syncDailyReminder } from "@/lib/dailyReminder";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const tabs = [
   { path: "/",           key: "nav_overview",  icon: BarChart2  },
@@ -25,6 +26,22 @@ export default function AppLayout() {
   // Il gesto indietro riporta alla Panoramica invece di chiudere l'app.
   useAndroidBack();
 
+  // Sul nativo la bottom nav (fixed) salirebbe sopra la tastiera e coprirebbe il
+  // contenuto: la nascondiamo mentre un campo di testo è a fuoco.
+  const [kbOpen, setKbOpen] = useState(false);
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined;
+    const isField = (el) => !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+    const onIn = (e) => { if (isField(e.target)) setKbOpen(true); };
+    const onOut = () => { setTimeout(() => setKbOpen(isField(document.activeElement)), 60); };
+    document.addEventListener("focusin", onIn);
+    document.addEventListener("focusout", onOut);
+    return () => {
+      document.removeEventListener("focusin", onIn);
+      document.removeEventListener("focusout", onOut);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background flex flex-col app-column overflow-x-hidden">
       <main className="flex-1 overflow-y-auto overflow-x-hidden pb-nav">
@@ -42,9 +59,9 @@ export default function AppLayout() {
         </AnimatePresence>
       </main>
 
-      {/* Bottom nav — iOS/Android style */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 app-column z-50
-                      bg-white border-t border-border safe-bottom"
+      {/* Bottom nav — iOS/Android style (hidden while typing so it doesn't cover content) */}
+      <nav className={`fixed bottom-0 left-1/2 -translate-x-1/2 app-column z-50
+                      bg-white border-t border-border safe-bottom ${kbOpen ? "hidden" : ""}`}
            style={{ boxShadow: "0 -1px 0 rgba(0,0,0,0.06), 0 -4px 16px rgba(0,0,0,0.06)" }}>
         <div className="grid grid-cols-5 h-16">
           {tabs.map(({ path, key, icon: Icon }) => {

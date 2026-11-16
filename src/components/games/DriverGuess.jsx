@@ -118,7 +118,7 @@ function ModeSwitch({ mode, onChange, locked, t }) {
       </div>
       <p className="text-[11px] text-muted-foreground font-body leading-snug mt-1.5">
         {t(mode === "easy" ? "guess_modeEasyDesc" : "guess_modeHardcoreDesc")}
-        {locked && ` ${t("guess_modeLocked")}`}
+        {" "}{t("guess_modeLocked")}
       </p>
     </div>
   );
@@ -126,7 +126,7 @@ function ModeSwitch({ mode, onChange, locked, t }) {
 
 export default function DriverGuess() {
   const { t, lang } = useI18n();
-  const today = dayNumber();
+  const [today, setToday] = useState(() => dayNumber());
   // Allenamento: un pilota a caso, non conta per le statistiche.
   const [practice, setPractice] = useState(null);
   const target = practice ?? driverOfDay(today);
@@ -159,6 +159,31 @@ export default function DriverGuess() {
   useEffect(() => {
     if (!practice && done) syncDailyReminder(t);
   }, [done, practice]);
+
+  // Se l'app resta aperta oltre la mezzanotte il giorno cambia: lo rileva (al
+  // ritorno in primo piano o ogni minuto) e aggiorna `today`.
+  useEffect(() => {
+    const check = () => setToday(prev => { const d = dayNumber(); return d !== prev ? d : prev; });
+    const onVis = () => { if (!document.hidden) check(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", check);
+    const id = setInterval(check, 60 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", check);
+      clearInterval(id);
+    };
+  }, []);
+
+  // Nuovo giorno = board pulita: ricarica lo stato salvato per `today` (vuoto se
+  // non si è ancora giocato), così i tentativi di ieri non restano.
+  useEffect(() => {
+    if (practice) return;
+    const s = readJSON(STATE_KEY, null);
+    const st = s && s.day === today ? s : null;
+    setGuesses(st?.guesses ?? []);
+    setMode(st?.mode ?? readMode());
+  }, [today]);
 
   const known = useMemo(() => (easy ? knownClues(guessed, target) : {}), [easy, guessed, target]);
   const knownEntries = Object.entries(known);
