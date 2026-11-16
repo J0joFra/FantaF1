@@ -216,6 +216,7 @@ function SessionSchedule({ data, t, localeTag }) {
 
 // ── Driver row ────────────────────────────────────────────────────────────────
 function DriverRow({ driver, leader, index, onOpen }) {
+  const { t } = useI18n();
   const isLeader = index === 0;
   const color    = getTeamColor(driver.team);
   const gap      = leader.points - driver.points;
@@ -265,7 +266,7 @@ function DriverRow({ driver, leader, index, onOpen }) {
       <div className="text-right shrink-0">
         <span className="font-heading font-black text-xl leading-none">{driver.points}</span>
         <p className="text-[10px] text-muted-foreground font-body mt-0.5">
-          {isLeader ? "PTI" : `−${gap}`}
+          {isLeader ? t("pts").toUpperCase() : `−${gap}`}
         </p>
       </div>
 
@@ -422,7 +423,7 @@ export default function Home() {
               </h2>
               {lastRaceDate && (
                 <p className="text-[10px] text-muted-foreground font-body mt-0.5">
-                  {t("home_dataAsOf")} {new Date(lastRaceDate).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+                  {t("home_dataAsOf")} {new Date(lastRaceDate).toLocaleDateString(LOCALE_TAG[lang] || "it-IT", { day: "numeric", month: "short", year: "numeric" })}
                 </p>
               )}
             </div>

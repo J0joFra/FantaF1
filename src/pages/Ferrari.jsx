@@ -16,10 +16,11 @@ import { useI18n } from "@/lib/i18n";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   getConstructorStandings, getConstructorSeasonStats,
-  getConstructorPointsByYear, getDriverStandings, getSeasonConfig,
+  getConstructorPointsByYear, getConstructorRecentResults,
+  getDriverStandings, getSeasonConfig,
 } from "@/lib/supabaseData";
 import { getTeamColor } from "@/lib/f1Utils";
-import { flagUrl } from "@/lib/flagUtils";
+import { flagUrl, raceFlagUrl } from "@/lib/flagUtils";
 
 // Constructor max points per weekend (two cars): race 25+18, sprint 8+7
 const MAX_C_RACE = 43;
@@ -38,6 +39,14 @@ function cmp(v1, v2, lower) {
   if (a === b) return 0;
   if (lower) return a < b ? 1 : 2;
   return a > b ? 1 : 2;
+}
+
+// Colour of a constructor finishing-position chip (best of the two cars).
+function resultStyle(r) {
+  if (r.dnf || r.position == null) return "bg-gray-200 text-gray-500";
+  if (r.position <= 3)  return "bg-emerald-100 text-emerald-700";
+  if (r.position <= 10) return "bg-sky-100 text-sky-700";
+  return "bg-gray-100 text-gray-500";
 }
 
 function FlagImg({ iso, className = "w-5 h-3.5" }) {
@@ -145,6 +154,12 @@ export default function Ferrari() {
   const { data: history = [] } = useQuery({
     queryKey: ["constructorPointsByYear", selectedId],
     queryFn: () => getConstructorPointsByYear(selectedId),
+    enabled: !!selectedId, staleTime: 30 * 60 * 1000,
+  });
+
+  const { data: form = [] } = useQuery({
+    queryKey: ["constructorRecent", selectedId],
+    queryFn: () => getConstructorRecentResults(selectedId, 5),
     enabled: !!selectedId, staleTime: 30 * 60 * 1000,
   });
 
@@ -279,6 +294,35 @@ export default function Ferrari() {
             </div>
           )}
         </motion.div>
+
+        {/* ── FORMA (ultime gare, miglior piazzamento tra le due monoposto) ── */}
+        <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
+          <h3 className="font-heading font-black text-sm uppercase tracking-wide mb-3">{tr("dd_form")}</h3>
+          {form.length === 0 ? (
+            <p className="text-xs text-muted-foreground font-body">{tr("dd_noResults")}</p>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                {[...form].reverse().map(r => {
+                  const flag = raceFlagUrl(r, "h20");
+                  return (
+                    <div key={r.race_id} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+                      {flag
+                        ? <img src={flag} alt="" className="h-4 w-auto object-cover rounded-[2px]"
+                            style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.12)" }}
+                            onError={e => { e.target.style.display = "none"; }} />
+                        : <span className="text-xs">🏁</span>}
+                      <div className={`w-full rounded-lg py-1.5 text-center font-heading font-black text-sm ${resultStyle(r)}`}>
+                        {r.dnf ? tr("dd_dnf") : r.position != null ? `P${r.position}` : "–"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-muted-foreground font-body mt-2">{tr("td_formHint")}</p>
+            </>
+          )}
+        </div>
 
         {/* ── TITLE RACE (constructors' championship calc) ── */}
         {titleRace && (

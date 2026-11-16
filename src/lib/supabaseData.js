@@ -296,6 +296,64 @@ export async function getConstructorSeasonStats(season = currentYear()) {
   return stats;
 }
 
+// ─── CONSTRUCTOR RECENT RESULTS (form) ───────────────────────────────────────
+// Best finishing position (of either car) in the most recent completed races.
+// Returns most-recent-first: [{ race_id, date, name, country_id, position, dnf }].
+export async function getConstructorRecentResults(constructorId, limit = 5, season = new Date().getFullYear()) {
+  if (!constructorId) return [];
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: races, error } = await supabase
+    .from('race')
+    .select('id, date, official_name, grand_prix_id')
+    .eq('year', season)
+    .lt('date', today)
+    .order('date', { ascending: false })
+    .limit(limit);
+
+  if (error) { console.error('Constructor recent results (races):', error.message); return []; }
+  if (!races || !races.length) return [];
+
+  const ids = races.map(r => r.id);
+  const { data: rows } = await supabase
+    .from('race_data')
+    .select('race_id, position_number, race_reason_retired')
+    .in('race_id', ids)
+    .eq('type', 'RACE_RESULT')
+    .eq('constructor_id', constructorId);
+
+  const byRace = {};
+  (rows || []).forEach(r => {
+    const g = (byRace[r.race_id] ||= { best: null, finishers: 0, cars: 0 });
+    g.cars++;
+    if (r.position_number != null) {
+      g.finishers++;
+      if (g.best === null || r.position_number < g.best) g.best = r.position_number;
+    }
+  });
+
+  const gpIds = races.map(r => r.grand_prix_id).filter(Boolean);
+  let gpMap = {};
+  if (gpIds.length) {
+    const { data: gps } = await supabase
+      .from('grand_prix').select('id, name, country_id').in('id', gpIds);
+    (gps || []).forEach(g => { gpMap[g.id] = g; });
+  }
+
+  return races.map(r => {
+    const g = byRace[r.id] || null;
+    const gp = gpMap[r.grand_prix_id] || {};
+    return {
+      race_id:    r.id,
+      date:       r.date,
+      name:       gp.name || r.official_name || '',
+      country_id: gp.country_id || null,
+      position:   g?.best ?? null,
+      dnf:        !!g && g.cars > 0 && g.finishers === 0,
+    };
+  });
+}
+
 // ─── CONSTRUCTOR POINTS BY YEAR (history, any team) ──────────────────────────
 export async function getConstructorPointsByYear(constructorId) {
   if (!constructorId) return [];

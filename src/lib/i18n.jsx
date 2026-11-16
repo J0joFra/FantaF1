@@ -127,7 +127,7 @@ const DICT = {
     map_title: "GP Stagione 2026", map_next: "Prossimo GP", map_upcoming: "In programma", map_past: "Disputato", map_tap: "Tocca per la mappa",
     // dettaglio pilota
     dd_notFound: "Pilota non trovato", dd_years: "anni", dd_form: "Forma (ultime gare)",
-    dd_noResults: "Nessun risultato disponibile", dd_dnf: "DNF", dd_seasonTitle: "Questa stagione",
+    dd_noResults: "Nessun risultato disponibile", dd_dnf: "DNF", dd_seasonTitle: "Questa stagione", td_formHint: "Miglior risultato tra le due monoposto",
     // promemoria gara
     rem_title: "Promemoria gara", rem_desc: "Tocca la campanella per farti avvisare il giorno prima della sessione",
   },
@@ -236,7 +236,7 @@ const DICT = {
     map_title: "2026 Season GPs", map_next: "Next GP", map_upcoming: "Upcoming", map_past: "Completed", map_tap: "Tap for the map",
     // driver detail
     dd_notFound: "Driver not found", dd_years: "yrs", dd_form: "Form (recent races)",
-    dd_noResults: "No results yet", dd_dnf: "DNF", dd_seasonTitle: "This season",
+    dd_noResults: "No results yet", dd_dnf: "DNF", dd_seasonTitle: "This season", td_formHint: "Best finish of the two cars",
     // race reminders
     rem_title: "Race reminders", rem_desc: "Tap the bell to get reminded the day before the session",
   },
@@ -343,7 +343,7 @@ const DICT = {
     map_title: "GP Saison 2026", map_next: "Prochain GP", map_upcoming: "À venir", map_past: "Terminé", map_tap: "Toucher pour la carte",
     map_noResults: "Résultats non disponibles", map_tapResults: "Toucher pour les résultats",
     rmads_title: "Supprimer la publicité", rmads_desc: "Soutenez l'app et retirez les bannières pour de bon", rmads_restore: "Restaurer les achats", rmads_thanks: "Merci ! Publicité supprimée.", rmads_error: "Achat échoué, réessayez", rmads_none: "Aucun achat à restaurer",
-    dd_notFound: "Pilote introuvable", dd_years: "ans", dd_form: "Forme (dernières courses)", dd_noResults: "Pas encore de résultats", dd_dnf: "ABD", dd_seasonTitle: "Cette saison",
+    dd_notFound: "Pilote introuvable", dd_years: "ans", dd_form: "Forme (dernières courses)", dd_noResults: "Pas encore de résultats", dd_dnf: "ABD", dd_seasonTitle: "Cette saison", td_formHint: "Meilleur résultat des deux monoplaces",
     rem_title: "Rappels de course", rem_desc: "Touchez la cloche pour être prévenu la veille de la séance",
   },
   es: {
@@ -449,7 +449,7 @@ const DICT = {
     tut_news_2: "Toca una noticia para leerla entera en la web de origen.",
     map_noResults: "Resultados no disponibles", map_tapResults: "Toca para ver los resultados",
     rmads_title: "Quitar publicidad", rmads_desc: "Apoya la app y quita los banners para siempre", rmads_restore: "Restaurar compras", rmads_thanks: "¡Gracias! Publicidad eliminada.", rmads_error: "La compra ha fallado, inténtalo de nuevo", rmads_none: "No hay compras que restaurar",
-    dd_notFound: "Piloto no encontrado", dd_years: "años", dd_form: "Forma (últimas carreras)", dd_noResults: "Aún no hay resultados", dd_dnf: "ABN", dd_seasonTitle: "Esta temporada",
+    dd_notFound: "Piloto no encontrado", dd_years: "años", dd_form: "Forma (últimas carreras)", dd_noResults: "Aún no hay resultados", dd_dnf: "ABN", dd_seasonTitle: "Esta temporada", td_formHint: "Mejor resultado de los dos monoplazas",
     rem_title: "Recordatorios de carrera", rem_desc: "Toca la campana para que te avisemos el día antes de la sesión",
   },
   de: {
@@ -555,7 +555,7 @@ const DICT = {
     tut_news_2: "Tippe auf eine Meldung, um sie vollständig auf der Originalseite zu lesen.",
     map_noResults: "Ergebnisse nicht verfügbar", map_tapResults: "Für Ergebnisse tippen",
     rmads_title: "Werbung entfernen", rmads_desc: "Unterstütze die App und entferne die Banner für immer", rmads_restore: "Käufe wiederherstellen", rmads_thanks: "Danke! Werbung entfernt.", rmads_error: "Kauf fehlgeschlagen, bitte erneut versuchen", rmads_none: "Keine Käufe zum Wiederherstellen",
-    dd_notFound: "Fahrer nicht gefunden", dd_years: "J.", dd_form: "Form (letzte Rennen)", dd_noResults: "Noch keine Ergebnisse", dd_dnf: "DNF", dd_seasonTitle: "Diese Saison",
+    dd_notFound: "Fahrer nicht gefunden", dd_years: "J.", dd_form: "Form (letzte Rennen)", dd_noResults: "Noch keine Ergebnisse", dd_dnf: "DNF", dd_seasonTitle: "Diese Saison", td_formHint: "Bestes Ergebnis der beiden Autos",
     rem_title: "Rennerinnerungen", rem_desc: "Tippe auf die Glocke, um am Tag vor der Session erinnert zu werden",
   },
 };
