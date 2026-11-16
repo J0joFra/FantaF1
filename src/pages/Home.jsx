@@ -18,7 +18,7 @@ import {
 } from "@/lib/f1Utils";
 import { raceFlagUrl, gpIso, flagUrl } from "@/lib/flagUtils";
 import GpCountdown from "@/components/GpCountdown";
-import { ChevronDown, ChevronUp, ChevronRight, Info, Trophy, Bell, BellRing } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight, Info, Trophy, Bell, BellRing, Timer, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
@@ -69,6 +69,18 @@ function ResultRow({ p, t }) {
       <div className="flex items-center gap-2 min-w-0 flex-1">
         {p.code && <span className="font-heading font-black text-xs text-muted-foreground">{p.code}</span>}
         <span className="font-heading font-bold text-sm text-foreground truncate">{p.driver}</span>
+        {p.fl && (
+          <span title={t("recap_fl")} aria-label={t("recap_fl")}
+            className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-700">
+            <Timer className="w-3 h-3" />
+          </span>
+        )}
+        {p.dotd && (
+          <span title={t("recap_dotd")} aria-label={t("recap_dotd")}
+            className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700">
+            <Star className="w-3 h-3" />
+          </span>
+        )}
       </div>
       <span className="shrink-0 font-heading font-black text-xs tabular-nums text-foreground">
         {p.points > 0 ? `${p.points} ${t("pts")}` : "–"}
@@ -85,10 +97,14 @@ function LastRaceRecap({ data, t, localeTag }) {
   if (!data || !results?.length) return null;
   const winner = results.find(p => p.pos === 1);
   const visible = showAll ? results : results.slice(0, 3);
+  const flagSrc = raceFlagUrl({ name: data.name, country_id: data.country_id }, "h40");
   return (
     <div className="app-card overflow-hidden">
       <button onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-2 px-4 py-3 text-left active:bg-gray-50 transition-colors">
+        {flagSrc && (
+          <img src={flagSrc} alt="" className="w-7 h-[18px] object-cover rounded-sm shrink-0 ring-1 ring-black/5" loading="lazy" />
+        )}
         <h2 className="font-heading font-black text-base uppercase tracking-wide">{t("recap_title")}</h2>
         {!open && winner && (
           <span className="font-heading font-bold text-sm text-muted-foreground truncate">🥇 {winner.driver}</span>
