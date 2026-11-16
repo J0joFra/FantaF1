@@ -18,10 +18,11 @@ import {
 } from "@/lib/f1Utils";
 import { raceFlagUrl, gpIso, flagUrl } from "@/lib/flagUtils";
 import GpCountdown from "@/components/GpCountdown";
-import { Loader2, ChevronDown, ChevronUp, ChevronRight, Info, Trophy, Bell, BellRing } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight, Info, Trophy, Bell, BellRing } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
+import PageSkeleton from "@/components/PageSkeleton";
 import RemoveAdsCard from "@/components/RemoveAdsCard";
 import InfoTip from "@/components/InfoTip";
 import ErrorScreen from "@/components/ErrorScreen";
@@ -321,9 +322,11 @@ export default function Home() {
   const [mapOpen, setMapOpen] = useState(false);
 
   if (ld || lc) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-gradient-to-b from-gray-100 to-gray-200">
-      <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      <p className="text-sm text-muted-foreground font-body">{t("loading")}</p>
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
+      <PageHeader icon={Trophy} title={
+        <div className="font-heading font-black text-xl leading-none truncate text-white tracking-wide">GridUP</div>
+      } />
+      <PageSkeleton />
     </div>
   );
 

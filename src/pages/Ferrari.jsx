@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Shield, Trophy, TrendingUp, Loader2, Users, Flag, Crown,
+  Shield, Trophy, TrendingUp, Users, Flag, Crown,
   Target, Timer, Star, ShieldAlert, Zap, Medal, Share2, ChevronDown,
 } from "lucide-react";
 import { shareElementAsImage } from "@/lib/shareImage";
@@ -10,6 +10,7 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
 import PageHeader from "@/components/PageHeader";
+import PageSkeleton from "@/components/PageSkeleton";
 import TutorialSection from "@/components/TutorialSection";
 import InfoTip from "@/components/InfoTip";
 import { useI18n } from "@/lib/i18n";
@@ -209,8 +210,9 @@ export default function Ferrari() {
   );
 
   if (isLoading || !selected) return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
-      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
+      <PageHeader icon={Shield} title={tr("nav_teams")} />
+      <PageSkeleton />
     </div>
   );
 

@@ -7,11 +7,12 @@ import { getDriverStandings, getDriverSeasonStats } from "@/lib/supabaseData";
 import { flagUrl } from "@/lib/flagUtils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Users, Loader2, ArrowLeftRight, Shuffle, Share2, Crown,
+  Users, ArrowLeftRight, Shuffle, Share2, Crown,
   Trophy, Medal, Target, Timer, Star, Award, TrendingUp, Gauge,
   ShieldAlert, Zap, Flag, GitCompare,
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import PageSkeleton from "@/components/PageSkeleton";
 import TutorialSection from "@/components/TutorialSection";
 import InfoTip from "@/components/InfoTip";
 import { useI18n } from "@/lib/i18n";
@@ -271,8 +272,9 @@ export default function Compare() {
   };
 
   if (isLoading) return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
-      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
+      <PageHeader icon={GitCompare} title={t("nav_compare")} />
+      <PageSkeleton />
     </div>
   );
 
