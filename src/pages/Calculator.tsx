@@ -4,7 +4,7 @@ import { shareElementAsImage } from "@/lib/shareImage";
 import {
   Calculator, Info, X, Share2, ChevronDown, ChevronUp,
   Trophy, AlertTriangle, Sparkles, Target, TrendingUp, Award, Eye, HelpCircle,
-  ChevronRight, Grid3x3, Zap, Clock, TrendingDown
+  ChevronRight, Grid3x3, Zap, Clock, TrendingDown, Flame
 } from "lucide-react";
 
 import { getDriverStandings, getDriverSeasonStats, getUpcomingRaces, getSeasonRaceStatus } from "../lib/supabaseData";
@@ -785,6 +785,7 @@ export default function ScenariosPage() {
   const [selectedDriverId, setSelectedDriverId] = useState<string>("");
   const [racesLeft, setRacesLeft] = useState(0);
   const [sprintsLeft, setSprintsLeft] = useState(0);
+  const [seasonYear, setSeasonYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
@@ -826,6 +827,7 @@ export default function ScenariosPage() {
         // risultati, non le date — il dataset può avere risultati in anticipo).
         setRacesLeft(season.totalCount - season.completedCount);
         setSprintsLeft(season.sprintsTotal - season.sprintsCompleted);
+        setSeasonYear(season.season);
         
         if (processedDrivers.length > 0) {
           // Default: il 2° in classifica (l'inseguitore) — così lo scenario è
@@ -864,6 +866,21 @@ export default function ScenariosPage() {
     if (!selectedDriver || !effectiveRival || racesLeft === 0) return null;
     return generateMosaic(selectedDriver, effectiveRival, racesLeft, Math.min(sprintsLeft, racesLeft));
   }, [selectedDriver, effectiveRival, racesLeft, sprintsLeft]);
+
+  // Stato della stagione a colpo d'occhio: il titolo è già assegnato o ancora
+  // aperto? Indipendente dal pilota selezionato — è la prima cosa che l'utente
+  // deve capire aprendo la pagina.
+  const seasonState = useMemo(() => {
+    if (drivers.length === 0) return null;
+    const sorted = [...drivers].sort((a, b) => b.points - a.points);
+    const leaderD = sorted[0];
+    const chaser = sorted[1] || null;
+    const gap = chaser ? leaderD.points - chaser.points : leaderD.points;
+    const maxRemaining = racesLeft * MAX_RACE_PTS + sprintsLeft * MAX_SPRINT_PTS;
+    // "Assegnato" solo quando il distacco supera tutti i punti ancora in palio.
+    const decided = chaser ? leaderD.points > chaser.points + maxRemaining : true;
+    return { leader: leaderD, chaser, gap, decided };
+  }, [drivers, racesLeft, sprintsLeft]);
 
   // Chiudi il driver picker cliccando fuori
   useEffect(() => {
@@ -923,6 +940,62 @@ export default function ScenariosPage() {
       />
 
       <div className="max-w-md mx-auto px-4 py-5 space-y-5">
+        {/* Stato stagione: titolo assegnato o ancora in palio — a colpo d'occhio. */}
+        {seasonState && (
+          <div
+            className={`rounded-2xl p-4 shadow-md border flex items-center gap-3 ${
+              seasonState.decided
+                ? "bg-gradient-to-br from-primary to-primary/80 text-white border-primary/30"
+                : "bg-white border-gray-200"
+            }`}
+          >
+            <div
+              className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center ${
+                seasonState.decided ? "bg-white/20" : "bg-primary/10"
+              }`}
+            >
+              {seasonState.decided ? (
+                <Trophy className="w-6 h-6 text-white" />
+              ) : (
+                <Flame className="w-6 h-6 text-primary" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p
+                className={`text-[10px] font-bold uppercase tracking-wider leading-none ${
+                  seasonState.decided ? "text-white/80" : "text-primary/80"
+                }`}
+              >
+                {seasonState.decided ? t("ss_decided") : t("ss_open")}
+              </p>
+              <p
+                className={`font-heading font-black text-sm leading-tight mt-1 ${
+                  seasonState.decided ? "text-white" : "text-foreground"
+                }`}
+              >
+                {seasonState.decided
+                  ? t("ss_isChamp", { driver: seasonState.leader.driver_name, year: seasonYear })
+                  : t("ss_lead", {
+                      leader: seasonState.leader.driver_name,
+                      gap: seasonState.gap,
+                      chaser: seasonState.chaser?.driver_name ?? "—",
+                    })}
+              </p>
+              <p
+                className={`text-[11px] leading-tight mt-0.5 ${
+                  seasonState.decided ? "text-white/70" : "text-gray-500"
+                }`}
+              >
+                {racesLeft === 0
+                  ? t("ss_racesLeft0")
+                  : racesLeft === 1
+                  ? t("ss_racesLeft1")
+                  : t("ss_racesLeftN", { n: racesLeft })}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Rivedi il tutorial — in cima, subito sotto l'intestazione. */}
         <button
           onClick={() => setShowInfo(true)}
