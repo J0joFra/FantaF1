@@ -65,7 +65,7 @@ const DICT = {
     newscat_piloti: "PILOTI", newscat_scuderia: "SCUDERIA", countdown_toRace: "alla gara", change_theme: "Cambia tema",
     tip_wins: "Gare vinte dalla scuderia (somma delle vittorie dei due piloti).", tip_podiums: "Arrivi nei primi 3 (1°, 2° o 3°).", tip_poles: "Partenze dalla 1ª posizione conquistate in qualifica.", tip_fastest: "Giro più veloce in gara.", tip_pointsFin: "Piazzamenti nei primi 10 (zona punti).", tip_dotd: "Premio \"pilota del giorno\" votato dai tifosi a fine gara.", tip_positionsGained: "Posizioni recuperate dalla griglia al traguardo, sommate nella stagione.", tip_bestFinish: "Miglior piazzamento in gara (1 = vittoria).", tip_avgFinish: "Posizione media al traguardo: più bassa è meglio.", tip_dnf: "DNF = Did Not Finish: gare non concluse (ritiri).",
     sess_schedule: "Programma weekend", sess_yourTime: "Orari nel tuo fuso", sess_fp1: "Libere 1", sess_fp2: "Libere 2", sess_fp3: "Libere 3", sess_sq: "Qualifiche Sprint", sess_sprint: "Sprint", sess_quali: "Qualifiche", sess_race: "Gara", recap_title: "Ultima gara", cmp_teammates: "Compagni di squadra",
-    notif_reminder_title: "🏁 {gp}", notif_reminder_body: "Domani alle {time}: {session}", sc_leaderToBeat: "Leader da battere",
+    notif_reminder_title: "🏁 {gp}", notif_reminder_body: "Domani alle {time}: {session}", notif_reminder_soon_body: "Tra circa 1 ora ({time}): {session}", sc_leaderToBeat: "Leader da battere",
     st_positionsGained: "Posizioni guadagnate", st_bestFinish: "Miglior arrivo", st_avgFinish: "Arrivo medio",
     st_dnf: "Ritiri (DNF)", st_titles: "Titoli mondiali", st_constructorTitles: "Titoli costruttori",
     st_careerPoints: "Punti carriera", st_totalPoints: "Punti totali", st_racesEntered: "Gare disputate", st_gpEntered: "GP disputati",
@@ -130,7 +130,7 @@ const DICT = {
     dd_notFound: "Pilota non trovato", dd_years: "anni", dd_form: "Forma (ultime gare)",
     dd_noResults: "Nessun risultato disponibile", dd_dnf: "DNF", dd_seasonTitle: "Questa stagione", td_formHint: "Miglior risultato tra le due monoposto",
     // promemoria gara
-    rem_title: "Promemoria gara", rem_desc: "Tocca la campanella per farti avvisare il giorno prima della sessione",
+    rem_title: "Promemoria gara", rem_desc: "Tocca la campanella: ti avvisiamo il giorno prima e 1 ora prima della sessione",
   },
   en: {
     nav_overview: "Overview", nav_scenarios: "Scenarios", nav_compare: "Compare", nav_teams: "Teams", nav_news: "News",
@@ -180,7 +180,7 @@ const DICT = {
     newscat_piloti: "DRIVERS", newscat_scuderia: "TEAM", countdown_toRace: "to the race", change_theme: "Toggle theme",
     tip_wins: "Race wins by the team (sum of both drivers' wins).", tip_podiums: "Top-3 finishes (1st, 2nd or 3rd).", tip_poles: "Pole positions taken in qualifying.", tip_fastest: "Fastest lap in the race.", tip_pointsFin: "Top-10 finishes (points zone).", tip_dotd: "\"Driver of the Day\" award voted by fans after the race.", tip_positionsGained: "Positions gained from the grid to the finish, summed over the season.", tip_bestFinish: "Best race result (1 = win).", tip_avgFinish: "Average finishing position: lower is better.", tip_dnf: "DNF = Did Not Finish: races not completed (retirements).",
     sess_schedule: "Weekend schedule", sess_yourTime: "Times in your timezone", sess_fp1: "Practice 1", sess_fp2: "Practice 2", sess_fp3: "Practice 3", sess_sq: "Sprint Qualifying", sess_sprint: "Sprint", sess_quali: "Qualifying", sess_race: "Race", recap_title: "Last race", cmp_teammates: "Teammates",
-    notif_reminder_title: "🏁 {gp}", notif_reminder_body: "Tomorrow at {time}: {session}", sc_leaderToBeat: "Leader to beat",
+    notif_reminder_title: "🏁 {gp}", notif_reminder_body: "Tomorrow at {time}: {session}", notif_reminder_soon_body: "In about 1 hour ({time}): {session}", sc_leaderToBeat: "Leader to beat",
     st_positionsGained: "Positions gained", st_bestFinish: "Best finish", st_avgFinish: "Average finish",
     st_dnf: "Retirements (DNF)", st_titles: "World titles", st_constructorTitles: "Constructors' titles",
     st_careerPoints: "Career points", st_totalPoints: "Total points", st_racesEntered: "Races entered", st_gpEntered: "GPs entered",
@@ -240,7 +240,7 @@ const DICT = {
     dd_notFound: "Driver not found", dd_years: "yrs", dd_form: "Form (recent races)",
     dd_noResults: "No results yet", dd_dnf: "DNF", dd_seasonTitle: "This season", td_formHint: "Best finish of the two cars",
     // race reminders
-    rem_title: "Race reminders", rem_desc: "Tap the bell to get reminded the day before the session",
+    rem_title: "Race reminders", rem_desc: "Tap the bell: we'll remind you the day before and 1 hour before the session",
   },
   fr: {
     nav_overview: "Aperçu", nav_scenarios: "Scénarios", nav_compare: "Comparer", nav_teams: "Écuries", nav_news: "News",
@@ -288,7 +288,7 @@ const DICT = {
     newscat_piloti: "PILOTES", newscat_scuderia: "ÉCURIE", countdown_toRace: "jusqu'à la course", change_theme: "Changer de thème",
     tip_wins: "Victoires de l'écurie (somme des victoires des deux pilotes).", tip_podiums: "Arrivées dans le top 3 (1er, 2e ou 3e).", tip_poles: "Pole positions obtenues en qualifications.", tip_fastest: "Meilleur tour en course.", tip_pointsFin: "Arrivées dans le top 10 (zone des points).", tip_dotd: "Prix « pilote du jour » voté par les fans après la course.", tip_positionsGained: "Positions gagnées de la grille à l'arrivée, cumulées sur la saison.", tip_bestFinish: "Meilleur résultat en course (1 = victoire).", tip_avgFinish: "Position moyenne à l'arrivée : plus basse est meilleure.", tip_dnf: "DNF = Did Not Finish : courses non terminées (abandons).",
     sess_schedule: "Programme du week-end", sess_yourTime: "Horaires dans votre fuseau", sess_fp1: "Essais 1", sess_fp2: "Essais 2", sess_fp3: "Essais 3", sess_sq: "Qualifs Sprint", sess_sprint: "Sprint", sess_quali: "Qualifications", sess_race: "Course", recap_title: "Dernière course", cmp_teammates: "Coéquipiers",
-    notif_reminder_title: "🏁 {gp}", notif_reminder_body: "Demain à {time} : {session}", sc_leaderToBeat: "Leader à battre",
+    notif_reminder_title: "🏁 {gp}", notif_reminder_body: "Demain à {time} : {session}", notif_reminder_soon_body: "Dans environ 1 heure ({time}) : {session}", sc_leaderToBeat: "Leader à battre",
     st_positionsGained: "Places gagnées", st_bestFinish: "Meilleure arrivée", st_avgFinish: "Arrivée moyenne",
     st_dnf: "Abandons (DNF)", st_titles: "Titres mondiaux", st_constructorTitles: "Titres constructeurs",
     st_careerPoints: "Points en carrière", st_totalPoints: "Points totaux", st_racesEntered: "Courses disputées", st_gpEntered: "GP disputés",
@@ -347,7 +347,7 @@ const DICT = {
     map_noResults: "Résultats non disponibles", map_tapResults: "Toucher pour les résultats",
     rmads_title: "Supprimer la publicité", rmads_desc: "Soutenez l'app et retirez les bannières pour de bon", rmads_restore: "Restaurer les achats", rmads_thanks: "Merci ! Publicité supprimée.", rmads_error: "Achat échoué, réessayez", rmads_none: "Aucun achat à restaurer",
     dd_notFound: "Pilote introuvable", dd_years: "ans", dd_form: "Forme (dernières courses)", dd_noResults: "Pas encore de résultats", dd_dnf: "ABD", dd_seasonTitle: "Cette saison", td_formHint: "Meilleur résultat des deux monoplaces",
-    rem_title: "Rappels de course", rem_desc: "Touchez la cloche pour être prévenu la veille de la séance",
+    rem_title: "Rappels de course", rem_desc: "Touchez la cloche : rappel la veille et 1 heure avant la séance",
   },
   es: {
     nav_overview: "Resumen", nav_scenarios: "Escenarios", nav_compare: "Comparar", nav_teams: "Escuderías", nav_news: "News",
@@ -395,7 +395,7 @@ const DICT = {
     newscat_piloti: "PILOTOS", newscat_scuderia: "ESCUDERÍA", countdown_toRace: "hasta la carrera", change_theme: "Cambiar tema",
     tip_wins: "Victorias de la escudería (suma de las victorias de los dos pilotos).", tip_podiums: "Llegadas en el top 3 (1º, 2º o 3º).", tip_poles: "Pole positions conseguidas en clasificación.", tip_fastest: "Vuelta rápida en carrera.", tip_pointsFin: "Llegadas en el top 10 (zona de puntos).", tip_dotd: "Premio «piloto del día» votado por los aficionados tras la carrera.", tip_positionsGained: "Posiciones ganadas desde la parrilla hasta la meta, sumadas en la temporada.", tip_bestFinish: "Mejor resultado en carrera (1 = victoria).", tip_avgFinish: "Posición media a la llegada: más baja es mejor.", tip_dnf: "DNF = Did Not Finish: carreras no terminadas (abandonos).",
     sess_schedule: "Horario del fin de semana", sess_yourTime: "Horas en tu zona horaria", sess_fp1: "Libres 1", sess_fp2: "Libres 2", sess_fp3: "Libres 3", sess_sq: "Clasificación Sprint", sess_sprint: "Sprint", sess_quali: "Clasificación", sess_race: "Carrera", recap_title: "Última carrera", cmp_teammates: "Compañeros de equipo",
-    notif_reminder_title: "🏁 {gp}", notif_reminder_body: "Mañana a las {time}: {session}", sc_leaderToBeat: "Líder a batir",
+    notif_reminder_title: "🏁 {gp}", notif_reminder_body: "Mañana a las {time}: {session}", notif_reminder_soon_body: "En aproximadamente 1 hora ({time}): {session}", sc_leaderToBeat: "Líder a batir",
     st_positionsGained: "Posiciones ganadas", st_bestFinish: "Mejor resultado", st_avgFinish: "Resultado medio",
     st_dnf: "Abandonos (DNF)", st_titles: "Títulos mundiales", st_constructorTitles: "Títulos de constructores",
     st_careerPoints: "Puntos en carrera", st_totalPoints: "Puntos totales", st_racesEntered: "Carreras disputadas", st_gpEntered: "GP disputados",
@@ -454,7 +454,7 @@ const DICT = {
     map_noResults: "Resultados no disponibles", map_tapResults: "Toca para ver los resultados",
     rmads_title: "Quitar publicidad", rmads_desc: "Apoya la app y quita los banners para siempre", rmads_restore: "Restaurar compras", rmads_thanks: "¡Gracias! Publicidad eliminada.", rmads_error: "La compra ha fallado, inténtalo de nuevo", rmads_none: "No hay compras que restaurar",
     dd_notFound: "Piloto no encontrado", dd_years: "años", dd_form: "Forma (últimas carreras)", dd_noResults: "Aún no hay resultados", dd_dnf: "ABN", dd_seasonTitle: "Esta temporada", td_formHint: "Mejor resultado de los dos monoplazas",
-    rem_title: "Recordatorios de carrera", rem_desc: "Toca la campana para que te avisemos el día antes de la sesión",
+    rem_title: "Recordatorios de carrera", rem_desc: "Toca la campana: te avisamos el día antes y 1 hora antes de la sesión",
   },
   de: {
     nav_overview: "Übersicht", nav_scenarios: "Szenarien", nav_compare: "Vergleich", nav_teams: "Teams", nav_news: "News",
@@ -502,7 +502,7 @@ const DICT = {
     newscat_piloti: "FAHRER", newscat_scuderia: "TEAM", countdown_toRace: "bis zum Rennen", change_theme: "Thema wechseln",
     tip_wins: "Siege des Teams (Summe der Siege beider Fahrer).", tip_podiums: "Top-3-Platzierungen (1., 2. oder 3.).", tip_poles: "Pole-Positions im Qualifying.", tip_fastest: "Schnellste Runde im Rennen.", tip_pointsFin: "Top-10-Platzierungen (Punkteränge).", tip_dotd: "„Fahrer des Tages“, von den Fans nach dem Rennen gewählt.", tip_positionsGained: "Von der Startaufstellung bis ins Ziel gewonnene Positionen, über die Saison summiert.", tip_bestFinish: "Bestes Rennergebnis (1 = Sieg).", tip_avgFinish: "Durchschnittliche Zielposition: niedriger ist besser.", tip_dnf: "DNF = Did Not Finish: nicht beendete Rennen (Ausfälle).",
     sess_schedule: "Wochenend-Programm", sess_yourTime: "Zeiten in deiner Zeitzone", sess_fp1: "Training 1", sess_fp2: "Training 2", sess_fp3: "Training 3", sess_sq: "Sprint-Qualifying", sess_sprint: "Sprint", sess_quali: "Qualifying", sess_race: "Rennen", recap_title: "Letztes Rennen", cmp_teammates: "Teamkollegen",
-    notif_reminder_title: "🏁 {gp}", notif_reminder_body: "Morgen um {time}: {session}", sc_leaderToBeat: "Zu schlagen",
+    notif_reminder_title: "🏁 {gp}", notif_reminder_body: "Morgen um {time}: {session}", notif_reminder_soon_body: "In etwa 1 Stunde ({time}): {session}", sc_leaderToBeat: "Zu schlagen",
     st_positionsGained: "Gewonnene Plätze", st_bestFinish: "Bestes Ergebnis", st_avgFinish: "Durchschnitt",
     st_dnf: "Ausfälle (DNF)", st_titles: "WM-Titel", st_constructorTitles: "Konstrukteurstitel",
     st_careerPoints: "Karrierepunkte", st_totalPoints: "Gesamtpunkte", st_racesEntered: "Rennen bestritten", st_gpEntered: "GP bestritten",
@@ -561,7 +561,7 @@ const DICT = {
     map_noResults: "Ergebnisse nicht verfügbar", map_tapResults: "Für Ergebnisse tippen",
     rmads_title: "Werbung entfernen", rmads_desc: "Unterstütze die App und entferne die Banner für immer", rmads_restore: "Käufe wiederherstellen", rmads_thanks: "Danke! Werbung entfernt.", rmads_error: "Kauf fehlgeschlagen, bitte erneut versuchen", rmads_none: "Keine Käufe zum Wiederherstellen",
     dd_notFound: "Fahrer nicht gefunden", dd_years: "J.", dd_form: "Form (letzte Rennen)", dd_noResults: "Noch keine Ergebnisse", dd_dnf: "DNF", dd_seasonTitle: "Diese Saison", td_formHint: "Bestes Ergebnis der beiden Autos",
-    rem_title: "Rennerinnerungen", rem_desc: "Tippe auf die Glocke, um am Tag vor der Session erinnert zu werden",
+    rem_title: "Rennerinnerungen", rem_desc: "Tippe auf die Glocke: Erinnerung am Vortag und 1 Stunde vor der Session",
   },
 };
 function getInitialLang() {

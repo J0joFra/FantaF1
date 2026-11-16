@@ -177,11 +177,14 @@ function SessionSchedule({ data, t, localeTag }) {
               {data.sessions.map(s => {
                 const isRace = s.key === "race";
                 const isSprint = s.key === "sprint";
-                const canRemind = notifOk && REMINDABLE_SESSIONS.has(s.key) && s.hasTime;
+                // A session is "over" ~2h after its start (covers race length).
+                const isPast = s.hasTime && Date.now() > new Date(s.iso).getTime() + 2 * 60 * 60 * 1000;
+                const canRemind = notifOk && REMINDABLE_SESSIONS.has(s.key) && s.hasTime && !isPast;
                 const on = enabled.includes(s.key);
                 return (
                   <div key={s.key}
-                       className={`flex items-center gap-2 px-3 py-2 rounded-xl ${isRace ? "bg-primary/5" : ""}`}>
+                       className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-opacity
+                         ${isRace ? "bg-primary/5" : ""} ${isPast ? "opacity-45" : ""}`}>
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       {isRace && <span className="text-sm">🏁</span>}
                       {isSprint && <span className="tag bg-amber-100 text-amber-700 text-[9px]">SPRINT</span>}
