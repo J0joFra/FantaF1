@@ -6,7 +6,7 @@ export default function PageHeader({ icon: Icon, title, color = "#E8002D", right
   return (
     <div className="bg-gradient-to-r from-[#E8002D] to-[#C20028] sticky top-0 z-30 shadow-md text-white"
          style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-      <div className="px-4 py-3 flex items-center justify-between gap-2">
+      <div className="px-3 py-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="shrink-0">
             <div className="p-1.5 rounded-xl bg-white/15 border border-white/25 shadow-sm">
@@ -14,10 +14,10 @@ export default function PageHeader({ icon: Icon, title, color = "#E8002D", right
             </div>
           </div>
           {typeof title === "string"
-            ? <h1 className="font-heading font-black text-xl uppercase tracking-wide truncate text-white">{title}</h1>
+            ? <h1 className="font-heading font-black text-xl uppercase tracking-tight truncate text-white">{title}</h1>
             : title}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {right}
           <BugReportButton />
           <LanguageSwitcher />

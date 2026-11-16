@@ -127,6 +127,14 @@ function LastRaceRecap({ data, t, localeTag }) {
 // ── Weekend session schedule (times in the user's timezone + per-session bells) ─
 const REMINDABLE_SESSIONS = new Set(["quali", "sprint", "race"]);
 
+// Short UTC-offset label for the user's own timezone, e.g. "UTC+1" / "UTC−3".
+function tzOffsetLabel() {
+  const off = -new Date().getTimezoneOffset(); // minutes east of UTC
+  const sign = off >= 0 ? "+" : "−";
+  const h = Math.floor(Math.abs(off) / 60), m = Math.abs(off) % 60;
+  return `UTC${sign}${h}${m ? ":" + String(m).padStart(2, "0") : ""}`;
+}
+
 function SessionSchedule({ data, t, localeTag }) {
   const [open, setOpen] = useState(false);
   const notifOk = notificationsSupported();
@@ -157,7 +165,7 @@ function SessionSchedule({ data, t, localeTag }) {
       <button onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-2 px-4 py-3 text-left active:bg-gray-50 transition-colors">
         <h2 className="font-heading font-black text-base uppercase tracking-wide">{t("sess_schedule")}</h2>
-        <span className="ml-auto text-[10px] text-muted-foreground font-body shrink-0">{t("sess_yourTime")}</span>
+        <span className="ml-auto text-[10px] text-muted-foreground font-body shrink-0">{t("sess_yourTime")} · {tzOffsetLabel()}</span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       <AnimatePresence initial={false}>
@@ -382,7 +390,12 @@ export default function Home() {
                   </span>
                 )}
               </div>
-              <GpCountdown targetDate={nextRace?.startIso || config?.next_race_date} compact />
+              <div className="flex flex-col items-center gap-0.5 min-w-0">
+                <GpCountdown targetDate={nextRace?.startIso || config?.next_race_date} compact />
+                <span className="text-[9px] font-body text-muted-foreground uppercase tracking-widest leading-none">
+                  {t("countdown_toRace")}
+                </span>
+              </div>
               {(nextRace?.has_sprint ?? config?.next_race_has_sprint) && (
                 <span className="tag bg-amber-100 text-amber-700 shrink-0 ml-auto">Sprint</span>
               )}

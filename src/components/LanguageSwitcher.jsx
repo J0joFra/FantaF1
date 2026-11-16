@@ -4,7 +4,7 @@ import { LANGS, useI18n } from "@/lib/i18n";
 import { useBackHandler } from "@/lib/backStack";
 
 export default function LanguageSwitcher() {
-  const { lang, setLang } = useI18n();
+  const { lang, setLang, t } = useI18n();
   const [open, setOpen] = useState(false);
   useBackHandler(open, () => setOpen(false));
   const ref = useRef(null);
@@ -22,8 +22,8 @@ export default function LanguageSwitcher() {
     <span ref={ref} className="relative inline-flex">
       <button
         onClick={() => setOpen(o => !o)}
-        title="Lingua / Language"
-        aria-label="Lingua"
+        title={t("language")}
+        aria-label={t("language")}
         className="h-9 px-2.5 rounded-full bg-gray-100 flex items-center gap-1 text-muted-foreground border border-gray-200 active:scale-95 transition-transform"
       >
         <Globe className="w-4 h-4" />
