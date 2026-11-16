@@ -278,7 +278,7 @@ function DriverRow({ driver, leader, index, onOpen }) {
       <div className="text-right shrink-0">
         <span className="font-heading font-black text-xl leading-none">{driver.points}</span>
         <p className="text-[10px] text-muted-foreground font-body mt-0.5">
-          {isLeader ? t("pts").toUpperCase() : `−${gap}`}
+          {isLeader ? t("pts") : `−${gap}`}
         </p>
       </div>
 

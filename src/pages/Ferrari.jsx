@@ -209,6 +209,10 @@ export default function Ferrari() {
     [history]
   );
 
+  // Sprint-aware tooltip for the constructors' title card.
+  const sprintsLeft = Math.max(0, (config?.total_sprints || 0) - (config?.sprints_completed || 0));
+  const titleTip = `${tr("tm_titleTip")} ${sprintsLeft > 0 ? tr("tm_titleTipSprint", { n: sprintsLeft }) : tr("tm_titleTipNoSprint")}`;
+
   if (isLoading || !selected) return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
       <PageHeader icon={Shield} title={tr("nav_teams")} />
@@ -332,7 +336,7 @@ export default function Ferrari() {
             <div className="flex items-center gap-2 mb-3">
               <Trophy className="w-4 h-4" style={{ color }} />
               <h3 className="font-heading font-black text-sm uppercase tracking-wide">{tr("tm_title")}</h3>
-              <InfoTip>{tr("tm_titleTip")}</InfoTip>
+              <InfoTip>{titleTip}</InfoTip>
               <span className="ml-auto text-[11px] font-body text-muted-foreground">{titleRace.racesLeft} {tr("tm_gpLeft")}</span>
             </div>
 
