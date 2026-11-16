@@ -7,8 +7,7 @@ import {
   ChevronRight, Grid3x3, Zap, Clock, TrendingDown
 } from "lucide-react";
 
-import { supabase } from "../lib/supabase";
-import { getDriverStandings, getDriverSeasonStats, getUpcomingRaces } from "../lib/supabaseData";
+import { getDriverStandings, getDriverSeasonStats, getUpcomingRaces, getSeasonRaceStatus } from "../lib/supabaseData";
 import { getDriverColor } from "../lib/f1Utils";
 import PageHeader from "@/components/PageHeader";
 import PageSkeleton from "@/components/PageSkeleton";
@@ -802,26 +801,14 @@ export default function ScenariosPage() {
       setError(null);
       
       try {
-        const [standings, seasonStats, upcoming] = await Promise.all([
+        const [standings, seasonStats, upcoming, season] = await Promise.all([
           getDriverStandings(),
           getDriverSeasonStats(),
           getUpcomingRaces(30),
+          getSeasonRaceStatus(),
         ]);
         // GP rimanenti in ordine (nome pulito + bandiera) per etichettare la timeline.
         setRemainingRaces((upcoming || []).map((r: any) => ({ name: r.name, country_id: r.country_id })));
-
-        // Gare ancora da disputare: contate per DATA dalla tabella autoritativa `race`.
-        // Il flag has_results della vista può essere già true per gare future
-        // (es. 2026-11-22 marcata completata prima di correre) → sottostima delle gare
-        // rimaste e falsi "matematicamente fuori". La data è la fonte affidabile.
-        const todayIso = new Date().toISOString().slice(0, 10);
-        const { data: calendarData, error: calendarError } = await supabase
-          .from("race")
-          .select("year, date, sprint_race_date")
-          .gte("date", todayIso)
-          .order("date", { ascending: true });
-
-        if (calendarError) throw calendarError;
 
         const processedDrivers: Driver[] = (standings || []).map((d: any, idx: number) => ({
           id: d.id ?? String(idx),
@@ -835,14 +822,10 @@ export default function ScenariosPage() {
 
         setDrivers(processedDrivers);
 
-        const futureRaces = calendarData || [];
-        // Stagione in corso = l'anno più vicino tra le gare ancora da disputare.
-        const season = futureRaces.length
-          ? Math.min(...futureRaces.map((r: any) => r.year ?? 9999))
-          : new Date().getFullYear();
-        const seasonRemaining = futureRaces.filter((r: any) => (r.year ?? 0) === season);
-        setRacesLeft(seasonRemaining.length);
-        setSprintsLeft(seasonRemaining.filter((r: any) => r.sprint_race_date != null).length);
+        // Gare/sprint ancora da disputare = quelle senza risultati (fonte: i
+        // risultati, non le date — il dataset può avere risultati in anticipo).
+        setRacesLeft(season.totalCount - season.completedCount);
+        setSprintsLeft(season.sprintsTotal - season.sprintsCompleted);
         
         if (processedDrivers.length > 0) {
           // Default: il 2° in classifica (l'inseguitore) — così lo scenario è

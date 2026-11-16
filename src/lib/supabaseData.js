@@ -9,6 +9,53 @@ function currentYear() {
   return new Date().getFullYear();
 }
 
+// ─── SEASON PROGRESS (results-driven) ────────────────────────────────────────
+// Source of truth for "which race is done": a race is completed when it has
+// RACE_RESULT rows — NOT when its calendar date has passed. The dataset can
+// carry results slightly ahead of the calendar dates, which made date-based
+// logic look "one race behind" (wrong last race, next race and GP counts).
+// Everything season-related derives from this so it all stays consistent.
+export async function getSeasonRaceStatus(season = currentYear()) {
+  const { data: races, error } = await supabase
+    .from('race')
+    .select('id, round, date, time, official_name, grand_prix_id, circuit_id, sprint_race_date, year')
+    .eq('year', season)
+    .order('round', { ascending: true });
+  throwIfError(error, 'Season race status');
+
+  const list = races || [];
+  const ids = list.map(r => r.id);
+  let doneSet = new Set();
+  if (ids.length) {
+    const { data: rows } = await supabase
+      .from('race_data').select('race_id').eq('type', 'RACE_RESULT').in('race_id', ids);
+    doneSet = new Set((rows || []).map(r => r.race_id));
+  }
+
+  const withStatus = list.map(r => ({ ...r, done: doneSet.has(r.id) }));
+  const doneRaces = withStatus.filter(r => r.done);
+  const todo = withStatus.filter(r => !r.done);
+
+  return {
+    season,
+    races: withStatus,
+    lastDone: doneRaces.length ? doneRaces[doneRaces.length - 1] : null,
+    nextRace: todo.length ? todo[0] : null,
+    completedCount: doneRaces.length,
+    totalCount: withStatus.length,
+    sprintsTotal: withStatus.filter(r => r.sprint_race_date).length,
+    sprintsCompleted: doneRaces.filter(r => r.sprint_race_date).length,
+  };
+}
+
+// grand_prix name + country for a race row (one query).
+async function gpInfo(grandPrixId) {
+  if (!grandPrixId) return {};
+  const { data } = await supabase
+    .from('grand_prix').select('name, country_id').eq('id', grandPrixId).limit(1);
+  return data?.[0] || {};
+}
+
 // ─── DRIVER STANDINGS ────────────────────────────────────────────────────────
 // View: current_season_driver_standings (9 cols)
 // Known columns from error messages + original code:
@@ -124,15 +171,8 @@ export async function getAllSeasonRaces(season = currentYear()) {
 
 // ─── LAST RACE DATE ──────────────────────────────────────────────────────────
 export async function getLastRaceDate() {
-  const { data, error } = await supabase
-    .from('race')
-    .select('date')
-    .lte('date', new Date().toISOString().slice(0, 10))
-    .order('date', { ascending: false })
-    .limit(1)
-    .single();
-  throwIfError(error, 'Last race date');
-  return data?.date ?? null;
+  const st = await getSeasonRaceStatus();
+  return st.lastDone?.date ?? null;
 }
 
 // ─── DRIVER SEASON STATS (per-race aggregation) ──────────────────────────────
@@ -299,20 +339,11 @@ export async function getConstructorSeasonStats(season = currentYear()) {
 // ─── CONSTRUCTOR RECENT RESULTS (form) ───────────────────────────────────────
 // Best finishing position (of either car) in the most recent completed races.
 // Returns most-recent-first: [{ race_id, date, name, country_id, position, dnf }].
-export async function getConstructorRecentResults(constructorId, limit = 5, season = new Date().getFullYear()) {
+export async function getConstructorRecentResults(constructorId, limit = 5) {
   if (!constructorId) return [];
-  const today = new Date().toISOString().slice(0, 10);
-
-  const { data: races, error } = await supabase
-    .from('race')
-    .select('id, date, official_name, grand_prix_id')
-    .eq('year', season)
-    .lt('date', today)
-    .order('date', { ascending: false })
-    .limit(limit);
-
-  if (error) { console.error('Constructor recent results (races):', error.message); return []; }
-  if (!races || !races.length) return [];
+  const st = await getSeasonRaceStatus();
+  const races = st.races.filter(r => r.done).slice(-limit).reverse(); // latest done, newest first
+  if (!races.length) return [];
 
   const ids = races.map(r => r.id);
   const { data: rows } = await supabase
@@ -371,91 +402,32 @@ export async function getConstructorPointsByYear(constructorId) {
 // but the GP counts come from the authoritative `race` table — the view is
 // incomplete and otherwise produced wrong counts (e.g. 992/1000).
 export async function getSeasonConfig() {
-  const now = new Date();
-
-  const { data: viewRows, error } = await supabase
-    .from('race_calendar_with_results')
-    .select('*')
-    .order('round', { ascending: true });
-
-  throwIfError(error, 'Season config');
-
-  const all = viewRows || [];
-  const yearOf = (r) => {
-    if (r.year) return r.year;
-    if (r.season) return r.season;
-    const d = r.race_date || r.date;
-    return d ? new Date(d).getFullYear() : null;
-  };
-  const upcoming = all.find(r => {
-    const d = r.race_date || r.date;
-    return d && new Date(d) >= now;
-  });
-  const years = all.map(yearOf).filter(Boolean);
-  const season = (upcoming && yearOf(upcoming))
-    || (years.length ? Math.max(...years) : now.getFullYear());
-
-  // Authoritative race count for the season (the view omits some races).
-  const { data: races } = await supabase
-    .from('race')
-    .select('date, sprint_race_date')
-    .eq('year', season)
-    .order('round', { ascending: true });
-
-  const list = (races && races.length)
-    ? races
-    : all.filter(r => yearOf(r) === season).map(r => ({ date: r.race_date || r.date, sprint_race_date: r.sprint_race_date }));
-
-  const completed        = list.filter(r => r.date && new Date(r.date) < now);
-  const sprintRaces      = list.filter(r => r.sprint_race_date);
-  const completedSprints = completed.filter(r => r.sprint_race_date);
+  const st = await getSeasonRaceStatus();
+  const next = st.nextRace; // first race without results (null if season over)
+  const gp = next ? await gpInfo(next.grand_prix_id) : {};
 
   return {
-    season,
-    total_races:          list.length,
-    races_completed:      completed.length,
-    total_sprints:        sprintRaces.length,
-    sprints_completed:    completedSprints.length,
-    next_race_name:       upcoming?.grand_prix_name || upcoming?.official_name || upcoming?.race_name || upcoming?.name || null,
-    next_race_circuit:    upcoming?.circuit_name    || upcoming?.circuit       || '',
-    next_race_date:       upcoming?.race_date       || upcoming?.date          || null,
-    next_race_has_sprint: !!(upcoming?.sprint_race_date || upcoming?.has_sprint_race),
+    season:               st.season,
+    total_races:          st.totalCount,
+    races_completed:      st.completedCount,
+    total_sprints:        st.sprintsTotal,
+    sprints_completed:    st.sprintsCompleted,
+    next_race_name:       gp.name || next?.official_name || null,
+    next_race_circuit:    '',
+    next_race_date:       next?.date || null,
+    next_race_has_sprint: !!next?.sprint_race_date,
   };
 }
 
-// Current-or-next race using the real start datetime (UTC) with a 2h window:
-// a race stays "current" until ~2h after lights-out (i.e. until it's over), then
-// the next race takes over. Returns the ISO start (for the countdown) + flag info.
+// Next race = the first race without results yet (what to count down to).
+// Returns the ISO start (for the countdown) + flag/city info.
 export async function getNextRace() {
-  const now = Date.now();
-  const RACE_WINDOW_MS = 2 * 60 * 60 * 1000; // gara considerata "in corso" per 2h dal via
-  const yesterday = new Date(now - 24 * 3600 * 1000).toISOString().split('T')[0];
+  const st = await getSeasonRaceStatus();
+  const r = st.nextRace || st.lastDone || st.races[st.races.length - 1];
+  if (!r) return null;
 
-  const { data } = await supabase
-    .from('race')
-    .select('id, round, date, time, official_name, grand_prix_id, circuit_id, sprint_race_date, year')
-    .gte('date', yesterday)
-    .order('date', { ascending: true })
-    .limit(12);
+  const gp = await gpInfo(r.grand_prix_id);
 
-  if (!data || !data.length) return null;
-
-  const startMs = (r) => new Date(`${r.date}T${(r.time || '00:00').slice(0, 5)}:00Z`).getTime();
-  // Prima gara la cui fine (via + 2h) è ancora nel futuro.
-  const r = data.find(x => startMs(x) + RACE_WINDOW_MS > now) || data[data.length - 1];
-
-  let name = r.official_name || '';
-  let country_id = null;
-  if (r.grand_prix_id) {
-    const { data: gps } = await supabase
-      .from('grand_prix').select('name, country_id').eq('id', r.grand_prix_id).limit(1);
-    if (gps && gps[0]) {
-      name = gps[0].name || name;
-      country_id = gps[0].country_id || null;
-    }
-  }
-
-  // City (circuit place name)
   let city = '';
   if (r.circuit_id) {
     const { data: cir } = await supabase
@@ -465,10 +437,10 @@ export async function getNextRace() {
 
   return {
     id:            r.id,
-    name,
+    name:          gp.name || r.official_name || '',
     official_name: r.official_name || '',
     startIso:      `${r.date}T${(r.time || '00:00').slice(0, 5)}:00Z`,
-    country_id,
+    country_id:    gp.country_id || null,
     city,
     has_sprint:    !!r.sprint_race_date,
   };
@@ -576,32 +548,19 @@ export async function getFerrariArchiveStats() {
 
 // ─── NEXT N RACES ─────────────────────────────────────────────────────────────
 // Podium (top 3) of the most recent completed race of the season.
-export async function getLastRaceResults(season = new Date().getFullYear()) {
-  const today = new Date().toISOString().split('T')[0];
-  const { data: races } = await supabase
-    .from('race')
-    .select('id, official_name, date, grand_prix_id')
-    .eq('year', season)
-    .lt('date', today)
-    .order('date', { ascending: false })
-    .limit(5);
-  if (!races || !races.length) return null;
+export async function getLastRaceResults() {
+  const st = await getSeasonRaceStatus();
+  const r = st.lastDone; // most recent race that actually has results
+  if (!r) return null;
 
-  for (const r of races) {
-    const results = await fetchRaceResults(r.id);
-    if (!results.length) continue;
+  const results = await fetchRaceResults(r.id);
+  if (!results.length) return null;
 
-    let name = r.official_name || '';
-    if (r.grand_prix_id) {
-      const { data: gps } = await supabase
-        .from('grand_prix').select('name').eq('id', r.grand_prix_id).limit(1);
-      if (gps && gps[0]?.name) name = gps[0].name;
-    }
+  const gp = await gpInfo(r.grand_prix_id);
+  const name = gp.name || r.official_name || '';
 
-    // `podium` kept for back-compat; `results` is the full classification.
-    return { name, date: r.date, results, podium: results.slice(0, 3) };
-  }
-  return null;
+  // `podium` kept for back-compat; `results` is the full classification.
+  return { name, date: r.date, results, podium: results.slice(0, 3) };
 }
 
 // Full race classification (with points) for one race, ordered as officially
@@ -642,8 +601,11 @@ export async function getRaceResults(raceId) {
 // Sessions (FP/Qualifying/Sprint/Race) of the next race, with UTC datetimes.
 // Times in the DB are UTC "HH:MM" strings — we build ISO-UTC so the client can
 // render them in the user's own timezone.
-export async function getNextRaceSessions(season = new Date().getFullYear()) {
-  const today = new Date().toISOString().split('T')[0];
+export async function getNextRaceSessions() {
+  const st = await getSeasonRaceStatus();
+  const nr = st.nextRace; // first race without results
+  if (!nr) return null;
+
   const cols = [
     'round', 'date', 'time', 'official_name', 'grand_prix_id',
     'free_practice_1_date', 'free_practice_1_time',
@@ -655,22 +617,13 @@ export async function getNextRaceSessions(season = new Date().getFullYear()) {
   ].join(', ');
 
   const { data, error } = await supabase
-    .from('race')
-    .select(cols)
-    .eq('year', season)
-    .gte('date', today)
-    .order('date', { ascending: true })
-    .limit(1);
+    .from('race').select(cols).eq('id', nr.id).limit(1);
 
   if (error || !data || !data.length) return null;
   const r = data[0];
 
-  let name = r.official_name || '';
-  if (r.grand_prix_id) {
-    const { data: gps } = await supabase
-      .from('grand_prix').select('name').eq('id', r.grand_prix_id).limit(1);
-    if (gps && gps[0]?.name) name = gps[0].name;
-  }
+  const gp = await gpInfo(r.grand_prix_id);
+  const name = gp.name || r.official_name || '';
 
   const toUtc = (d, t) => `${d}T${(t || '00:00').slice(0, 5)}:00Z`;
   const defs = [
@@ -694,20 +647,11 @@ export async function getNextRaceSessions(season = new Date().getFullYear()) {
 // ─── DRIVER RECENT RESULTS (form) ────────────────────────────────────────────
 // Finishing position of a driver in the most recent completed races of the season.
 // Returns most-recent-first: [{ race_id, date, name, country_id, position, dnf }].
-export async function getDriverRecentResults(driverId, limit = 5, season = new Date().getFullYear()) {
+export async function getDriverRecentResults(driverId, limit = 5) {
   if (!driverId) return [];
-  const today = new Date().toISOString().slice(0, 10);
-
-  const { data: races, error } = await supabase
-    .from('race')
-    .select('id, date, official_name, grand_prix_id')
-    .eq('year', season)
-    .lt('date', today)
-    .order('date', { ascending: false })
-    .limit(limit);
-
-  if (error) { console.error('Driver recent results (races):', error.message); return []; }
-  if (!races || !races.length) return [];
+  const st = await getSeasonRaceStatus();
+  const races = st.races.filter(r => r.done).slice(-limit).reverse(); // latest done, newest first
+  if (!races.length) return [];
 
   const ids = races.map(r => r.id);
   const { data: rows } = await supabase
@@ -743,20 +687,10 @@ export async function getDriverRecentResults(driverId, limit = 5, season = new D
   });
 }
 
-export async function getUpcomingRaces(limit = 5, season = new Date().getFullYear()) {
-  const today = new Date().toISOString().split('T')[0];
-  const { data, error } = await supabase
-    .from('race')
-    .select('id, round, date, sprint_race_date, official_name, grand_prix_id, circuit_id')
-    .eq('year', season)
-    .gte('date', today)
-    .order('round', { ascending: true })
-    .limit(limit);
-
-  if (error) {
-    console.error('Upcoming races:', error.message);
-    return [];
-  }
+export async function getUpcomingRaces(limit = 5) {
+  const st = await getSeasonRaceStatus();
+  const data = st.races.filter(r => !r.done).slice(0, limit); // races without results yet
+  if (!data.length) return [];
 
   // Enrich with grand_prix names if available
   const gpIds = (data || []).map(r => r.grand_prix_id).filter(Boolean);
