@@ -271,7 +271,7 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
   }
 
   return (
-    <div className="bg-gradient-to-br from-rose-600 to-rose-800 text-white rounded-2xl p-5 shadow-lg">
+    <div className="bg-gradient-to-br from-primary to-primary/80 text-white rounded-2xl p-5 shadow-lg">
       <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 mb-3 backdrop-blur-sm">
         <Target className="w-4 h-4" />
         <span className="text-xs font-medium uppercase tracking-wider">{t("sc_objective")}</span>
@@ -279,7 +279,7 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
 
       {analysis.mainRival && (
         <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
-          <p className="text-xs text-rose-100 mb-2 flex items-center gap-1">
+          <p className="text-xs text-white/80 mb-2 flex items-center gap-1">
             <Zap className="w-3 h-3" />
             {t("sc_mainRival")}
           </p>
@@ -289,7 +289,7 @@ function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverC
               {analysis.mainRival.driver.points} pt
             </span>
           </div>
-          <p className="text-xs text-rose-100 mt-1">
+          <p className="text-xs text-white/80 mt-1">
             {t("sc_gap")}: -{analysis.mainRival.currentGap} {t("pts")}
           </p>
         </div>
@@ -356,7 +356,7 @@ function MosaicDiagram({
     <div ref={mosaicRef} className="bg-white rounded-2xl p-3 shadow-lg border border-gray-200 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
-        <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-2 rounded-xl shadow-md shrink-0">
+        <div className="bg-gradient-to-br from-primary to-primary/85 p-2 rounded-xl shadow-md shrink-0">
           <Grid3x3 className="w-4 h-4 text-white" />
         </div>
         <div className="min-w-0 flex-1">
@@ -377,7 +377,7 @@ function MosaicDiagram({
             sub: `${yourDriver.driver_name} vs ${rival.driver_name}`,
           })}
           title={t("share")}
-          className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 active:scale-95 transition-transform shrink-0"
+          className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary active:scale-95 transition-transform shrink-0"
         >
           <Share2 className="w-4 h-4" />
         </button>
@@ -385,7 +385,7 @@ function MosaicDiagram({
 
       {/* Etichetta asse colonne (rivale) */}
       <div className="flex items-center justify-center gap-1 mb-1 text-[11px] font-bold text-gray-600">
-        <span className="text-rose-500">→</span> {t("mos_rivalPos", { rival: rival.driver_name })}
+        <span className="text-primary">→</span> {t("mos_rivalPos", { rival: rival.driver_name })}
       </div>
 
       {/* Matrice mosaico - adatta alla larghezza dello schermo */}
@@ -435,13 +435,13 @@ function MosaicDiagram({
                     text-[11px] font-black leading-none transition-colors
                     ${getCellStyle(cell)}
                     ${cell?.isPossible ? "shadow-sm" : ""}
-                    ${isBest ? "ring-2 ring-rose-500 ring-offset-1 z-10" : ""}
+                    ${isBest ? "ring-2 ring-primary ring-offset-1 z-10" : ""}
                   `}
                 >
                   {/* Pulsing glow on the best (fastest) cell */}
                   {isBest && (
                     <motion.span
-                      className="absolute inset-0 rounded ring-2 ring-rose-400 pointer-events-none"
+                      className="absolute inset-0 rounded ring-2 ring-primary/70 pointer-events-none"
                       animate={{ opacity: [0.9, 0.2, 0.9], scale: [1, 1.18, 1] }}
                       transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
                     />
@@ -472,14 +472,14 @@ function MosaicDiagram({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45, duration: 0.35 }}
           onClick={() => onCellClick(displayBest.yourPos, displayBest.rivalPos)}
-          className="mt-3 w-full text-left p-3 bg-gradient-to-r from-rose-50 to-orange-50 rounded-xl border border-rose-200 active:scale-[0.98] transition-transform"
+          className="mt-3 w-full text-left p-3 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20 active:scale-[0.98] transition-transform"
         >
           <div className="flex items-center gap-2 mb-1.5">
             <motion.span
               animate={{ rotate: [0, -12, 12, 0] }}
               transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 1.2 }}
             >
-              <Trophy className="w-4 h-4 text-rose-600 shrink-0" />
+              <Trophy className="w-4 h-4 text-primary shrink-0" />
             </motion.span>
             <span className="text-xs font-bold text-gray-700">{t("mos_fastest")}</span>
           </div>
@@ -599,11 +599,11 @@ function CellDetailModal({
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-rose-600 to-rose-700 p-6 text-white">
+            <div className="bg-gradient-to-r from-primary to-primary/85 p-6 text-white">
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-2xl font-bold mb-2">{t("cd_title")}</h2>
-                  <div className="flex items-center gap-3 text-rose-100">
+                  <div className="flex items-center gap-3 text-white/80">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl">{yourPosData.emoji}</span>
                       <span>
@@ -647,7 +647,7 @@ function CellDetailModal({
                   <div className="text-xs text-gray-500">{t("cd_start")}</div>
                   <div className="text-sm font-bold">{yourDriver.points} - {rival.points}</div>
                 </div>
-                <div className="bg-rose-50 rounded-xl p-3 text-center">
+                <div className="bg-primary/10 rounded-xl p-3 text-center">
                   <div className="text-xs text-gray-500">{t("cd_finish")}</div>
                   <div className="text-sm font-bold">{details.finalYourPoints} - {details.finalRivalPoints}</div>
                 </div>
@@ -655,7 +655,7 @@ function CellDetailModal({
               
               {/* Timeline gare */}
               <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-rose-500" />
+                <Clock className="w-4 h-4 text-primary" />
                 {t("cd_timeline")}
               </h4>
               <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
@@ -700,7 +700,7 @@ function CellDetailModal({
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">{rival.driver_name}</span>
-                        <span className={`font-mono font-bold ${result.rivalTotal > result.yourTotal ? 'text-rose-600' : 'text-gray-700'}`}>
+                        <span className={`font-mono font-bold ${result.rivalTotal > result.yourTotal ? 'text-primary' : 'text-gray-700'}`}>
                           {result.rivalTotal} pt
                         </span>
                       </div>
@@ -708,7 +708,7 @@ function CellDetailModal({
                     <div className="mt-2 pt-2 border-t border-gray-200">
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-gray-500">{t("cd_diff")}</span>
-                        <span className={`font-bold ${result.yourTotal - result.rivalTotal > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        <span className={`font-bold ${result.yourTotal - result.rivalTotal > 0 ? 'text-emerald-600' : 'text-primary'}`}>
                           {result.yourTotal - result.rivalTotal > 0 ? '+' : ''}{result.yourTotal - result.rivalTotal} pt
                         </span>
                       </div>
@@ -739,7 +739,7 @@ function RivalCard({
     <div
       onClick={onCardClick}
       className={`bg-white rounded-xl p-4 shadow-sm border cursor-pointer transition-all hover:shadow-md ${
-        isMain ? 'border-rose-300 bg-rose-50/50 hover:bg-rose-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+        isMain ? 'border-primary/30 bg-primary/5 hover:bg-primary/10' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
       }`}
     >
       <div className="flex justify-between items-start">
@@ -747,7 +747,7 @@ function RivalCard({
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-bold text-gray-900">{rival.driver.driver_name}</p>
             {isMain && (
-              <span className="text-xs bg-gradient-to-r from-rose-500 to-rose-600 text-white px-2 py-0.5 rounded-full shadow-sm">
+              <span className="text-xs bg-gradient-to-r from-primary to-primary/85 text-white px-2 py-0.5 rounded-full shadow-sm">
                 {t("rc_main")}
               </span>
             )}
@@ -756,13 +756,13 @@ function RivalCard({
         </div>
         <div className="text-right">
           <p className="text-lg font-bold text-gray-900">{rival.driver.points} pt</p>
-          <p className="text-xs text-rose-600 font-medium">-{rival.currentGap} pt</p>
+          <p className="text-xs text-primary font-medium">-{rival.currentGap} pt</p>
         </div>
       </div>
       
       <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
         <div className="flex items-center gap-1">
-          <Target className="w-3 h-3 text-rose-500" />
+          <Target className="w-3 h-3 text-primary" />
           <p className="text-sm font-medium text-gray-700">
             {t("rc_needed", { n: rival.pointsNeeded })}
           </p>
@@ -1026,7 +1026,7 @@ export default function ScenariosPage() {
           {/* Trigger */}
           <button
             onClick={() => setDriverPickerOpen(o => !o)}
-            className="w-full h-12 bg-gray-50 rounded-xl px-4 flex items-center gap-3 text-left focus:outline-none focus:ring-2 focus:ring-rose-500 transition-colors hover:bg-gray-100"
+            className="w-full h-12 bg-gray-50 rounded-xl px-4 flex items-center gap-3 text-left focus:outline-none focus:ring-2 focus:ring-primary transition-colors hover:bg-gray-100"
           >
             {selectedDriver && (
               <span
@@ -1088,7 +1088,7 @@ export default function ScenariosPage() {
                           {d.points} <span className="text-xs font-normal text-gray-400">pt</span>
                         </span>
                         {isSelected && (
-                          <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                          <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
                         )}
                       </button>
                     );
@@ -1159,7 +1159,7 @@ export default function ScenariosPage() {
                     <select
                       value={effectiveRival?.id || ""}
                       onChange={(e) => setSelectedRival(activeRivals.find(r => r.driver.id === e.target.value)?.driver || null)}
-                      className="w-full h-10 bg-gray-50 border-0 rounded-lg px-3 text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+                      className="w-full h-10 bg-gray-50 border-0 rounded-lg px-3 text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                     >
                       {activeRivals.map(r => (
                         <option key={r.driver.id} value={r.driver.id}>
@@ -1230,7 +1230,7 @@ export default function ScenariosPage() {
               onClick={e => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-black text-xl bg-gradient-to-r from-rose-600 to-rose-700 bg-clip-text text-transparent">
+                <h3 className="font-black text-xl bg-gradient-to-r from-primary to-primary/85 bg-clip-text text-transparent">
                   {t("im_title")}
                 </h3>
                 <button onClick={() => setShowInfo(false)} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
@@ -1244,11 +1244,11 @@ export default function ScenariosPage() {
                 <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-2">
                   <p className="font-bold text-gray-800">{t("im_howRead")}</p>
                   <p className="text-xs leading-snug">
-                    <span className="inline-block w-5 font-bold text-rose-600">↓</span>
+                    <span className="inline-block w-5 font-bold text-primary">↓</span>
                     {t("im_rows")}
                   </p>
                   <p className="text-xs leading-snug">
-                    <span className="inline-block w-5 font-bold text-rose-600">→</span>
+                    <span className="inline-block w-5 font-bold text-primary">→</span>
                     {t("im_cols")}
                   </p>
                   <p className="text-xs leading-snug">
