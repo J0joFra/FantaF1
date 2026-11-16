@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Gamepad2, ChevronRight, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronRight, ArrowLeft, ChevronLeft } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StartLights from "@/components/games/StartLights";
 import DriverGuess from "@/components/games/DriverGuess";
@@ -14,6 +15,7 @@ const GAMES = [
 
 export default function Games() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(null);
   const game = GAMES.find((g) => g.id === open);
 
@@ -22,7 +24,15 @@ export default function Games() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
-      <PageHeader icon={Gamepad2} title={t("games_title")} />
+      <PageHeader title={
+        <div className="flex items-center gap-2 min-w-0">
+          <button onClick={() => navigate("/")} aria-label={t("nav_overview")}
+            className="w-9 h-9 -ml-1 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white shrink-0 active:scale-95 transition-transform">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="font-heading font-black text-xl uppercase tracking-tight truncate text-white">{t("games_title")}</span>
+        </div>
+      } />
 
       <div className="px-4 py-5 space-y-4">
         {game ? (

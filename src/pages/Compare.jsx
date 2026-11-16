@@ -7,11 +7,12 @@ import { getDriverStandings, getDriverSeasonStats } from "@/lib/supabaseData";
 import { flagUrl } from "@/lib/flagUtils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Users, Loader2, ArrowLeftRight, Shuffle, Share2, Crown,
+  Users, ArrowLeftRight, Shuffle, Share2, Crown,
   Trophy, Medal, Target, Timer, Star, Award, TrendingUp, Gauge,
   ShieldAlert, Zap, Flag, GitCompare,
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import PageSkeleton from "@/components/PageSkeleton";
 import TutorialSection from "@/components/TutorialSection";
 import InfoTip from "@/components/InfoTip";
 import { useI18n } from "@/lib/i18n";
@@ -98,6 +99,7 @@ function StatRow({ icon: Icon, label, val1, val2, color1, color2, lowerBetter = 
 
 // ── driver hero panel ─────────────────────────────────────────────────────────
 function DriverPanel({ d, color, lead }) {
+  const { t } = useI18n();
   const age = ageFrom(d.date_of_birth);
   return (
     <div className="relative rounded-2xl overflow-hidden p-3 pt-4 text-white shadow-md min-w-0"
@@ -118,9 +120,9 @@ function DriverPanel({ d, color, lead }) {
       <p className="font-body text-[11px] text-white/80 truncate">{d.team}</p>
       <div className="flex items-end gap-1 mt-2">
         <span className="font-heading font-black text-2xl leading-none">{d.points}</span>
-        <span className="font-body text-[10px] text-white/70 mb-0.5">pti · P{d.position}</span>
+        <span className="font-body text-[10px] text-white/70 mb-0.5">{t("pts")} · P{d.position}</span>
       </div>
-      {age && <p className="font-body text-[10px] text-white/70 mt-0.5">{age} anni</p>}
+      {age && <p className="font-body text-[10px] text-white/70 mt-0.5">{age} {t("dd_years")}</p>}
     </div>
   );
 }
@@ -133,7 +135,14 @@ function DriverSelect({ label, placeholder, value, onChange, options, color, d }
       <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mb-2">{label}</p>
       <Select value={value || ""} onValueChange={onChange}>
         <SelectTrigger className="w-full text-xs font-heading font-bold h-9 px-2.5 border-gray-200 rounded-xl">
-          <SelectValue placeholder={placeholder} />
+          {d ? (
+            <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+              <span className="truncate">{d.driver_name}</span>
+            </div>
+          ) : (
+            <SelectValue placeholder={placeholder} />
+          )}
         </SelectTrigger>
         <SelectContent>
           {options.map(x => (
@@ -263,8 +272,9 @@ export default function Compare() {
   };
 
   if (isLoading) return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
-      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
+      <PageHeader icon={GitCompare} title={t("nav_compare")} />
+      <PageSkeleton />
     </div>
   );
 
@@ -272,6 +282,7 @@ export default function Compare() {
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
       <PageHeader icon={GitCompare} title={t("nav_compare")} right={
         <>
+          <TutorialSection items={["tut_cmp_1", "tut_cmp_2", "tut_cmp_3"]} />
           <button onClick={shuffle} title={t("cmp_random")}
             className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-muted-foreground border border-gray-200 active:scale-95 transition-transform">
             <Shuffle className="w-4 h-4" />
@@ -286,7 +297,6 @@ export default function Compare() {
       } />
 
       <div className="px-4 py-5 space-y-4">
-        <TutorialSection items={["tut_cmp_1", "tut_cmp_2", "tut_cmp_3"]} />
 
         {/* ── SELECTORS + swap ── */}
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 items-end">

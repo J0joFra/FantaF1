@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 function getInitial() {
   if (typeof window === "undefined") return false;
@@ -13,6 +14,7 @@ function getInitial() {
 }
 
 export default function ThemeToggle() {
+  const { t } = useI18n();
   const [dark, setDark] = useState(getInitial);
 
   useEffect(() => {
@@ -23,8 +25,8 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={() => setDark(d => !d)}
-      title={dark ? "Tema chiaro" : "Tema scuro"}
-      aria-label="Cambia tema"
+      title={dark ? t("theme_light") : t("theme_dark")}
+      aria-label={t("change_theme")}
       className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-muted-foreground border border-gray-200 active:scale-95 transition-transform"
     >
       {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

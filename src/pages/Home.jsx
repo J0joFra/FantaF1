@@ -18,10 +18,11 @@ import {
 } from "@/lib/f1Utils";
 import { raceFlagUrl, gpIso, flagUrl } from "@/lib/flagUtils";
 import GpCountdown from "@/components/GpCountdown";
-import { Loader2, ChevronDown, ChevronUp, ChevronRight, Info, Trophy, Bell, BellRing } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight, Info, Trophy, Bell, BellRing } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
+import PageSkeleton from "@/components/PageSkeleton";
 import RemoveAdsCard from "@/components/RemoveAdsCard";
 import InfoTip from "@/components/InfoTip";
 import ErrorScreen from "@/components/ErrorScreen";
@@ -127,6 +128,14 @@ function LastRaceRecap({ data, t, localeTag }) {
 // ── Weekend session schedule (times in the user's timezone + per-session bells) ─
 const REMINDABLE_SESSIONS = new Set(["quali", "sprint", "race"]);
 
+// Short UTC-offset label for the user's own timezone, e.g. "UTC+1" / "UTC−3".
+function tzOffsetLabel() {
+  const off = -new Date().getTimezoneOffset(); // minutes east of UTC
+  const sign = off >= 0 ? "+" : "−";
+  const h = Math.floor(Math.abs(off) / 60), m = Math.abs(off) % 60;
+  return `UTC${sign}${h}${m ? ":" + String(m).padStart(2, "0") : ""}`;
+}
+
 function SessionSchedule({ data, t, localeTag }) {
   const [open, setOpen] = useState(false);
   const notifOk = notificationsSupported();
@@ -157,7 +166,7 @@ function SessionSchedule({ data, t, localeTag }) {
       <button onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-2 px-4 py-3 text-left active:bg-gray-50 transition-colors">
         <h2 className="font-heading font-black text-base uppercase tracking-wide">{t("sess_schedule")}</h2>
-        <span className="ml-auto text-[10px] text-muted-foreground font-body shrink-0">{t("sess_yourTime")}</span>
+        <span className="ml-auto text-[10px] text-muted-foreground font-body shrink-0">{t("sess_yourTime")} · {tzOffsetLabel()}</span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       <AnimatePresence initial={false}>
@@ -169,11 +178,14 @@ function SessionSchedule({ data, t, localeTag }) {
               {data.sessions.map(s => {
                 const isRace = s.key === "race";
                 const isSprint = s.key === "sprint";
-                const canRemind = notifOk && REMINDABLE_SESSIONS.has(s.key) && s.hasTime;
+                // A session is "over" ~2h after its start (covers race length).
+                const isPast = s.hasTime && Date.now() > new Date(s.iso).getTime() + 2 * 60 * 60 * 1000;
+                const canRemind = notifOk && REMINDABLE_SESSIONS.has(s.key) && s.hasTime && !isPast;
                 const on = enabled.includes(s.key);
                 return (
                   <div key={s.key}
-                       className={`flex items-center gap-2 px-3 py-2 rounded-xl ${isRace ? "bg-primary/5" : ""}`}>
+                       className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-opacity
+                         ${isRace ? "bg-primary/5" : ""} ${isPast ? "opacity-45" : ""}`}>
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       {isRace && <span className="text-sm">🏁</span>}
                       {isSprint && <span className="tag bg-amber-100 text-amber-700 text-[9px]">SPRINT</span>}
@@ -216,6 +228,7 @@ function SessionSchedule({ data, t, localeTag }) {
 
 // ── Driver row ────────────────────────────────────────────────────────────────
 function DriverRow({ driver, leader, index, onOpen }) {
+  const { t } = useI18n();
   const isLeader = index === 0;
   const color    = getTeamColor(driver.team);
   const gap      = leader.points - driver.points;
@@ -265,7 +278,7 @@ function DriverRow({ driver, leader, index, onOpen }) {
       <div className="text-right shrink-0">
         <span className="font-heading font-black text-xl leading-none">{driver.points}</span>
         <p className="text-[10px] text-muted-foreground font-body mt-0.5">
-          {isLeader ? "PTI" : `−${gap}`}
+          {isLeader ? t("pts") : `−${gap}`}
         </p>
       </div>
 
@@ -309,9 +322,11 @@ export default function Home() {
   const [mapOpen, setMapOpen] = useState(false);
 
   if (ld || lc) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-gradient-to-b from-gray-100 to-gray-200">
-      <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      <p className="text-sm text-muted-foreground font-body">{t("loading")}</p>
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
+      <PageHeader icon={Trophy} title={
+        <div className="font-heading font-black text-xl leading-none truncate text-white tracking-wide">GridUP</div>
+      } />
+      <PageSkeleton />
     </div>
   );
 
@@ -342,19 +357,20 @@ export default function Home() {
           </div>
         }
         right={
-          <a href="/privacy.html"
-            aria-label="Privacy Policy"
-            title="Privacy Policy"
-            className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center
-                       text-white shrink-0">
-            <Info className="w-4 h-4" />
-          </a>
+          <>
+            <TutorialSection items={["tut_home_1", "tut_home_2", "tut_home_3"]} />
+            <a href="/privacy.html"
+              aria-label="Privacy Policy"
+              title="Privacy Policy"
+              className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center
+                         text-white shrink-0">
+              <Info className="w-4 h-4" />
+            </a>
+          </>
         }
       />
 
       <div className="px-4 py-5 space-y-4">
-        <TutorialSection items={["tut_home_1", "tut_home_2", "tut_home_3"]} />
-
 
         {/* ── INTRO + PROSSIMA GARA ── */}
         <div className="app-card p-4">
@@ -381,7 +397,12 @@ export default function Home() {
                   </span>
                 )}
               </div>
-              <GpCountdown targetDate={nextRace?.startIso || config?.next_race_date} compact />
+              <div className="flex flex-col items-center gap-0.5 min-w-0">
+                <GpCountdown targetDate={nextRace?.startIso || config?.next_race_date} compact />
+                <span className="text-[9px] font-body text-muted-foreground uppercase tracking-widest leading-none">
+                  {t("countdown_toRace")}
+                </span>
+              </div>
               {(nextRace?.has_sprint ?? config?.next_race_has_sprint) && (
                 <span className="tag bg-amber-100 text-amber-700 shrink-0 ml-auto">Sprint</span>
               )}
@@ -422,7 +443,7 @@ export default function Home() {
               </h2>
               {lastRaceDate && (
                 <p className="text-[10px] text-muted-foreground font-body mt-0.5">
-                  {t("home_dataAsOf")} {new Date(lastRaceDate).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+                  {t("home_dataAsOf")} {new Date(lastRaceDate).toLocaleDateString(LOCALE_TAG[lang] || "it-IT", { day: "numeric", month: "short", year: "numeric" })}
                 </p>
               )}
             </div>

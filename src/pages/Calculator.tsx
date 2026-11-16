@@ -11,6 +11,7 @@ import { supabase } from "../lib/supabase";
 import { getDriverStandings, getDriverSeasonStats, getUpcomingRaces } from "../lib/supabaseData";
 import { getDriverColor } from "../lib/f1Utils";
 import PageHeader from "@/components/PageHeader";
+import PageSkeleton from "@/components/PageSkeleton";
 import { useI18n } from "@/lib/i18n";
 import { useBannerSpace } from "@/lib/useBannerSpace";
 
@@ -809,12 +810,15 @@ export default function ScenariosPage() {
         // GP rimanenti in ordine (nome pulito + bandiera) per etichettare la timeline.
         setRemainingRaces((upcoming || []).map((r: any) => ({ name: r.name, country_id: r.country_id })));
 
-        // Gare mancanti dall'intero calendario: tutte le gare della stagione senza risultati
-        // (indipendente dalla data odierna). La stagione = l'anno con gare ancora da disputare.
+        // Gare ancora da disputare: contate per DATA dalla tabella autoritativa `race`.
+        // Il flag has_results della vista può essere già true per gare future
+        // (es. 2026-11-22 marcata completata prima di correre) → sottostima delle gare
+        // rimaste e falsi "matematicamente fuori". La data è la fonte affidabile.
+        const todayIso = new Date().toISOString().slice(0, 10);
         const { data: calendarData, error: calendarError } = await supabase
-          .from("race_calendar_with_results")
-          .select("year, date, sprint_race_date, has_results")
-          .or("has_results.is.null,has_results.eq.false")
+          .from("race")
+          .select("year, date, sprint_race_date")
+          .gte("date", todayIso)
           .order("date", { ascending: true });
 
         if (calendarError) throw calendarError;
@@ -831,9 +835,12 @@ export default function ScenariosPage() {
 
         setDrivers(processedDrivers);
 
-        const incomplete = calendarData || [];
-        const season = incomplete.reduce((max: number, r: any) => Math.max(max, r.year ?? 0), 0);
-        const seasonRemaining = incomplete.filter((r: any) => (r.year ?? 0) === season);
+        const futureRaces = calendarData || [];
+        // Stagione in corso = l'anno più vicino tra le gare ancora da disputare.
+        const season = futureRaces.length
+          ? Math.min(...futureRaces.map((r: any) => r.year ?? 9999))
+          : new Date().getFullYear();
+        const seasonRemaining = futureRaces.filter((r: any) => (r.year ?? 0) === season);
         setRacesLeft(seasonRemaining.length);
         setSprintsLeft(seasonRemaining.filter((r: any) => r.sprint_race_date != null).length);
         
@@ -910,11 +917,9 @@ export default function ScenariosPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">{t("loading_data")}</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-24">
+        <PageHeader icon={Grid3x3} title={t("nav_scenarios")} />
+        <PageSkeleton />
       </div>
     );
   }

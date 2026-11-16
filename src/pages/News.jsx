@@ -59,10 +59,14 @@ const CAT_BADGE = {
   PILOTI:    "bg-yellow-100 text-yellow-700 border-yellow-200",
   "F1 NEWS": "bg-gray-100 text-gray-500 border-gray-200",
 };
+// Category is stored in Italian in the DB regardless of locale → localize for display.
+const CAT_KEY = { PILOTI: "newscat_piloti", SCUDERIA: "newscat_scuderia" };
 
 function NewsCard({ item, index }) {
   const { t } = useI18n();
-  const badge = CAT_BADGE[item.category] ?? CAT_BADGE["F1 NEWS"];
+  const cat = (item.category || "F1 NEWS").toUpperCase();
+  const badge = CAT_BADGE[cat] ?? CAT_BADGE["F1 NEWS"];
+  const catLabel = CAT_KEY[cat] ? t(CAT_KEY[cat]) : item.category;
 
   return (
     <motion.article
@@ -89,7 +93,7 @@ function NewsCard({ item, index }) {
         )}
         {/* Category badge */}
         <span className={`absolute top-2.5 left-2.5 text-[9px] font-black uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${badge}`}>
-          {item.category}
+          {catLabel}
         </span>
       </div>
 
@@ -148,13 +152,16 @@ export default function News() {
         icon={Newspaper}
         title="Flash News"
         right={
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white active:scale-95 transition-transform"
-          >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
-          </button>
+          <>
+            <TutorialSection items={["tut_news_1", "tut_news_2"]} />
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white active:scale-95 transition-transform"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+            </button>
+          </>
         }
       />
 
@@ -167,7 +174,6 @@ export default function News() {
       </div>
 
       <div className="px-4 space-y-3">
-        <TutorialSection items={["tut_news_1", "tut_news_2"]} />
 
         {isLoading && [...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
 

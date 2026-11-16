@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Shield, Trophy, TrendingUp, Loader2, Users, Flag, Crown,
+  Shield, Trophy, TrendingUp, Users, Flag, Crown,
   Target, Timer, Star, ShieldAlert, Zap, Medal, Share2, ChevronDown,
 } from "lucide-react";
 import { shareElementAsImage } from "@/lib/shareImage";
@@ -10,16 +10,18 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
 import PageHeader from "@/components/PageHeader";
+import PageSkeleton from "@/components/PageSkeleton";
 import TutorialSection from "@/components/TutorialSection";
 import InfoTip from "@/components/InfoTip";
 import { useI18n } from "@/lib/i18n";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   getConstructorStandings, getConstructorSeasonStats,
-  getConstructorPointsByYear, getDriverStandings, getSeasonConfig,
+  getConstructorPointsByYear, getConstructorRecentResults,
+  getDriverStandings, getSeasonConfig,
 } from "@/lib/supabaseData";
 import { getTeamColor } from "@/lib/f1Utils";
-import { flagUrl } from "@/lib/flagUtils";
+import { flagUrl, raceFlagUrl } from "@/lib/flagUtils";
 
 // Constructor max points per weekend (two cars): race 25+18, sprint 8+7
 const MAX_C_RACE = 43;
@@ -38,6 +40,14 @@ function cmp(v1, v2, lower) {
   if (a === b) return 0;
   if (lower) return a < b ? 1 : 2;
   return a > b ? 1 : 2;
+}
+
+// Colour of a constructor finishing-position chip (best of the two cars).
+function resultStyle(r) {
+  if (r.dnf || r.position == null) return "bg-gray-200 text-gray-500";
+  if (r.position <= 3)  return "bg-emerald-100 text-emerald-700";
+  if (r.position <= 10) return "bg-sky-100 text-sky-700";
+  return "bg-gray-100 text-gray-500";
 }
 
 function FlagImg({ iso, className = "w-5 h-3.5" }) {
@@ -148,6 +158,12 @@ export default function Ferrari() {
     enabled: !!selectedId, staleTime: 30 * 60 * 1000,
   });
 
+  const { data: form = [] } = useQuery({
+    queryKey: ["constructorRecent", selectedId],
+    queryFn: () => getConstructorRecentResults(selectedId, 5),
+    enabled: !!selectedId, staleTime: 30 * 60 * 1000,
+  });
+
   // ── constructors' title race ──
   const titleRace = useMemo(() => {
     if (!selected || !leader || !config) return null;
@@ -193,18 +209,23 @@ export default function Ferrari() {
     [history]
   );
 
+  // Sprint-aware tooltip for the constructors' title card.
+  const sprintsLeft = Math.max(0, (config?.total_sprints || 0) - (config?.sprints_completed || 0));
+  const titleTip = `${tr("tm_titleTip")} ${sprintsLeft > 0 ? tr("tm_titleTipSprint", { n: sprintsLeft }) : tr("tm_titleTipNoSprint")}`;
+
   if (isLoading || !selected) return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
-      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
+      <PageHeader icon={Shield} title={tr("nav_teams")} />
+      <PageSkeleton />
     </div>
   );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
-      <PageHeader icon={Shield} title={tr("nav_teams")} color={color} />
+      <PageHeader icon={Shield} title={tr("nav_teams")} color={color}
+        right={<TutorialSection items={["tut_fer_1", "tut_fer_2", "tut_fer_3"]} />} />
 
       <div className="px-4 py-5 space-y-4">
-        <TutorialSection items={["tut_fer_1", "tut_fer_2", "tut_fer_3"]} />
 
         {/* ── TEAM SELECTOR ── */}
         <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100 relative overflow-hidden">
@@ -280,13 +301,42 @@ export default function Ferrari() {
           )}
         </motion.div>
 
+        {/* ── FORMA (ultime gare, miglior piazzamento tra le due monoposto) ── */}
+        <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
+          <h3 className="font-heading font-black text-sm uppercase tracking-wide mb-3">{tr("dd_form")}</h3>
+          {form.length === 0 ? (
+            <p className="text-xs text-muted-foreground font-body">{tr("dd_noResults")}</p>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                {[...form].reverse().map(r => {
+                  const flag = raceFlagUrl(r, "h20");
+                  return (
+                    <div key={r.race_id} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+                      {flag
+                        ? <img src={flag} alt="" className="h-4 w-auto object-cover rounded-[2px]"
+                            style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.12)" }}
+                            onError={e => { e.target.style.display = "none"; }} />
+                        : <span className="text-xs">🏁</span>}
+                      <div className={`w-full rounded-lg py-1.5 text-center font-heading font-black text-sm ${resultStyle(r)}`}>
+                        {r.dnf ? tr("dd_dnf") : r.position != null ? `P${r.position}` : "–"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-muted-foreground font-body mt-2">{tr("td_formHint")}</p>
+            </>
+          )}
+        </div>
+
         {/* ── TITLE RACE (constructors' championship calc) ── */}
         {titleRace && (
           <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
             <div className="flex items-center gap-2 mb-3">
               <Trophy className="w-4 h-4" style={{ color }} />
               <h3 className="font-heading font-black text-sm uppercase tracking-wide">{tr("tm_title")}</h3>
-              <InfoTip>{tr("tm_titleTip")}</InfoTip>
+              <InfoTip>{titleTip}</InfoTip>
               <span className="ml-auto text-[11px] font-body text-muted-foreground">{titleRace.racesLeft} {tr("tm_gpLeft")}</span>
             </div>
 
