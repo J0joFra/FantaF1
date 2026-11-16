@@ -32,15 +32,26 @@ export async function getSeasonRaceStatus(season = currentYear()) {
     doneSet = new Set((rows || []).map(r => r.race_id));
   }
 
-  const withStatus = list.map(r => ({ ...r, done: doneSet.has(r.id) }));
+  // Una gara conta come "corsa" solo se ha i risultati E la sua data non è nel
+  // futuro. Il dataset può contenere risultati in anticipo (una gara con
+  // risultato ma data ancora a venire): senza questo controllo verrebbe data
+  // per disputata, sballando "ultima"/"prossima" gara e il conteggio.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const isRun = (r) => doneSet.has(r.id) && (!r.date || r.date <= todayStr);
+
+  const withStatus = list.map(r => ({ ...r, done: isRun(r) }));
   const doneRaces = withStatus.filter(r => r.done);
   const todo = withStatus.filter(r => !r.done);
+  // La "prossima" è la prima gara ancora da correre con data odierna o futura,
+  // così una gara passata e mai disputata (cancellata) non viene scambiata per
+  // il prossimo appuntamento.
+  const upcoming = todo.filter(r => !r.date || r.date >= todayStr);
 
   return {
     season,
     races: withStatus,
     lastDone: doneRaces.length ? doneRaces[doneRaces.length - 1] : null,
-    nextRace: todo.length ? todo[0] : null,
+    nextRace: upcoming.length ? upcoming[0] : (todo.length ? todo[0] : null),
     completedCount: doneRaces.length,
     totalCount: withStatus.length,
     sprintsTotal: withStatus.filter(r => r.sprint_race_date).length,
