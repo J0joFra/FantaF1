@@ -570,8 +570,24 @@ export async function getLastRaceResults() {
   const gp = await gpInfo(r.grand_prix_id);
   const name = gp.name || r.official_name || '';
 
+  // Giro veloce e Pilota del giorno (posizione 1 = chi l'ha ottenuto): marcano
+  // le righe corrispondenti così il recap mostra più dell'ordine d'arrivo.
+  const { data: extra } = await supabase
+    .from('race_data')
+    .select('type, driver_id')
+    .eq('race_id', r.id)
+    .in('type', ['FASTEST_LAP', 'DRIVER_OF_THE_DAY_RESULT'])
+    .eq('position_number', 1);
+  const flId   = (extra || []).find(x => x.type === 'FASTEST_LAP')?.driver_id || null;
+  const dotdId = (extra || []).find(x => x.type === 'DRIVER_OF_THE_DAY_RESULT')?.driver_id || null;
+  const marked = results.map(p => ({
+    ...p,
+    fl:   !!flId   && p.driverId === flId,
+    dotd: !!dotdId && p.driverId === dotdId,
+  }));
+
   // `podium` kept for back-compat; `results` is the full classification.
-  return { name, date: r.date, results, podium: results.slice(0, 3) };
+  return { name, country_id: gp.country_id || null, date: r.date, results: marked, podium: marked.slice(0, 3) };
 }
 
 // Full race classification (with points) for one race, ordered as officially
@@ -596,6 +612,7 @@ async function fetchRaceResults(raceId) {
   return rows.map(x => ({
     pos:     x.position_number,
     posText: x.position_text || (x.position_number != null ? String(x.position_number) : '—'),
+    driverId: x.driver_id || null,
     driver:  dmap[x.driver_id]?.name || x.driver_id || '',
     code:    dmap[x.driver_id]?.abbreviation || '',
     team:    (x.constructor_id || '').replace(/-/g, ' '),
