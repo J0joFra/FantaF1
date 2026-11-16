@@ -134,7 +134,14 @@ function DriverSelect({ label, placeholder, value, onChange, options, color, d }
       <p className="font-body text-[10px] text-muted-foreground uppercase tracking-widest mb-2">{label}</p>
       <Select value={value || ""} onValueChange={onChange}>
         <SelectTrigger className="w-full text-xs font-heading font-bold h-9 px-2.5 border-gray-200 rounded-xl">
-          <SelectValue placeholder={placeholder} />
+          {d ? (
+            <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+              <span className="truncate">{d.driver_name}</span>
+            </div>
+          ) : (
+            <SelectValue placeholder={placeholder} />
+          )}
         </SelectTrigger>
         <SelectContent>
           {options.map(x => (
@@ -273,6 +280,7 @@ export default function Compare() {
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
       <PageHeader icon={GitCompare} title={t("nav_compare")} right={
         <>
+          <TutorialSection items={["tut_cmp_1", "tut_cmp_2", "tut_cmp_3"]} />
           <button onClick={shuffle} title={t("cmp_random")}
             className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-muted-foreground border border-gray-200 active:scale-95 transition-transform">
             <Shuffle className="w-4 h-4" />
@@ -287,7 +295,6 @@ export default function Compare() {
       } />
 
       <div className="px-4 py-5 space-y-4">
-        <TutorialSection items={["tut_cmp_1", "tut_cmp_2", "tut_cmp_3"]} />
 
         {/* ── SELECTORS + swap ── */}
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 items-end">

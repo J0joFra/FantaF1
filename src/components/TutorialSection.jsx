@@ -1,63 +1,78 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GraduationCap, ChevronDown } from "lucide-react";
+import { GraduationCap, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useBackHandler } from "@/lib/backStack";
 
 /**
- * Tendina "Tutorial" in fondo a una pagina: chiusa di default, occupa una riga
- * sola finché non serve, e spiega a passi cosa si può fare lì.
+ * Header button that opens the page's tutorial steps in a bottom sheet.
+ * Goes in PageHeader's `right` slot, so the steps no longer sit as a banner at
+ * the top of every tab pushing the content down.
  *
- *   <TutorialSection items={["tut_home_1", "tut_home_2"]} />
+ *   <PageHeader ... right={<TutorialSection items={["tut_home_1", "tut_home_2"]} />} />
  *
- * `items` sono chiavi i18n, non testo: la traduzione la fa il componente, così
- * ogni pagina dichiara solo il proprio elenco di passi.
+ * `items` are i18n keys, not text.
  */
 export default function TutorialSection({ items }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  useBackHandler(open, () => setOpen(false));
 
   if (!items?.length) return null;
 
   return (
-    <div className="app-card overflow-hidden">
+    <>
       <button
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-        className="w-full flex items-center gap-2 px-4 py-3 text-left active:scale-[0.99] transition-transform"
+        onClick={() => setOpen(true)}
+        aria-label={t("tut_title")}
+        title={t("tut_title")}
+        className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-primary border border-gray-200 active:scale-95 transition-transform shrink-0"
       >
-        <GraduationCap className="w-4 h-4 text-primary shrink-0" />
-        <span className="font-heading font-black text-sm uppercase tracking-wide flex-1 text-foreground">
-          {t("tut_title")}
-        </span>
-        <ChevronDown
-          className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
-        />
+        <GraduationCap className="w-4 h-4" />
       </button>
 
-      <AnimatePresence initial={false}>
+      <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="overflow-hidden"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-end justify-center"
+            onClick={() => setOpen(false)}
           >
-            <ol className="px-4 pb-4 pt-3 space-y-2.5 border-t border-border">
-              {items.map((key, i) => (
-                <li key={key} className="flex gap-2.5">
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary font-heading font-black text-[11px] flex items-center justify-center">
-                    {i + 1}
-                  </span>
-                  <span className="text-[13px] text-muted-foreground font-body leading-snug">
-                    {t(key)}
-                  </span>
-                </li>
-              ))}
-            </ol>
+            <motion.div
+              initial={{ y: 80 }} animate={{ y: 0 }} exit={{ y: 80 }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+              className="bg-card w-full max-w-md rounded-t-3xl p-6 shadow-2xl safe-bottom"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <GraduationCap className="w-5 h-5 text-primary shrink-0" />
+                <h3 className="font-heading font-black text-lg uppercase tracking-wide flex-1 text-foreground">
+                  {t("tut_title")}
+                </h3>
+                <button
+                  onClick={() => setOpen(false)}
+                  aria-label={t("close")}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-muted-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <ol className="space-y-3">
+                {items.map((key, i) => (
+                  <li key={key} className="flex gap-3">
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary font-heading font-black text-xs flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <span className="text-sm text-muted-foreground font-body leading-snug pt-0.5">
+                      {t(key)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

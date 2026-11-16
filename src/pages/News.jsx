@@ -152,13 +152,16 @@ export default function News() {
         icon={Newspaper}
         title="Flash News"
         right={
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white active:scale-95 transition-transform"
-          >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
-          </button>
+          <>
+            <TutorialSection items={["tut_news_1", "tut_news_2"]} />
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white active:scale-95 transition-transform"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+            </button>
+          </>
         }
       />
 
@@ -171,7 +174,6 @@ export default function News() {
       </div>
 
       <div className="px-4 space-y-3">
-        <TutorialSection items={["tut_news_1", "tut_news_2"]} />
 
         {isLoading && [...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
 

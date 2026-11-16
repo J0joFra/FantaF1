@@ -216,10 +216,10 @@ export default function Ferrari() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
-      <PageHeader icon={Shield} title={tr("nav_teams")} color={color} />
+      <PageHeader icon={Shield} title={tr("nav_teams")} color={color}
+        right={<TutorialSection items={["tut_fer_1", "tut_fer_2", "tut_fer_3"]} />} />
 
       <div className="px-4 py-5 space-y-4">
-        <TutorialSection items={["tut_fer_1", "tut_fer_2", "tut_fer_3"]} />
 
         {/* ── TEAM SELECTOR ── */}
         <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100 relative overflow-hidden">

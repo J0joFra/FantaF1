@@ -354,19 +354,20 @@ export default function Home() {
           </div>
         }
         right={
-          <a href="/privacy.html"
-            aria-label="Privacy Policy"
-            title="Privacy Policy"
-            className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center
-                       text-white shrink-0">
-            <Info className="w-4 h-4" />
-          </a>
+          <>
+            <TutorialSection items={["tut_home_1", "tut_home_2", "tut_home_3"]} />
+            <a href="/privacy.html"
+              aria-label="Privacy Policy"
+              title="Privacy Policy"
+              className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center
+                         text-white shrink-0">
+              <Info className="w-4 h-4" />
+            </a>
+          </>
         }
       />
 
       <div className="px-4 py-5 space-y-4">
-        <TutorialSection items={["tut_home_1", "tut_home_2", "tut_home_3"]} />
-
 
         {/* ── INTRO + PROSSIMA GARA ── */}
         <div className="app-card p-4">
