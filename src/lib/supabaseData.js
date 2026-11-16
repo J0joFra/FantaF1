@@ -46,14 +46,22 @@ export async function getSeasonRaceStatus(season = currentYear()) {
   // così una gara passata e mai disputata (cancellata) non viene scambiata per
   // il prossimo appuntamento.
   const upcoming = todo.filter(r => !r.date || r.date >= todayStr);
+  // Gare passate e mai disputate (cancellate): né corse né in programma. Non
+  // devono gonfiare il conteggio di "gare rimaste".
+  const cancelled = todo.filter(r => r.date && r.date < todayStr);
 
   return {
     season,
     races: withStatus,
+    upcoming,
+    cancelled,
     lastDone: doneRaces.length ? doneRaces[doneRaces.length - 1] : null,
-    nextRace: upcoming.length ? upcoming[0] : (todo.length ? todo[0] : null),
+    nextRace: upcoming.length ? upcoming[0] : null,
     completedCount: doneRaces.length,
     totalCount: withStatus.length,
+    // Gare/sprint ancora da correre = solo quelle in programma (future).
+    remainingCount: upcoming.length,
+    remainingSprints: upcoming.filter(r => r.sprint_race_date).length,
     sprintsTotal: withStatus.filter(r => r.sprint_race_date).length,
     sprintsCompleted: doneRaces.filter(r => r.sprint_race_date).length,
   };
@@ -421,8 +429,12 @@ export async function getSeasonConfig() {
     season:               st.season,
     total_races:          st.totalCount,
     races_completed:      st.completedCount,
+    // Gare che si correranno davvero (escluse le cancellate) e quante ne restano.
+    races_scheduled:      st.completedCount + st.remainingCount,
+    races_remaining:      st.remainingCount,
     total_sprints:        st.sprintsTotal,
     sprints_completed:    st.sprintsCompleted,
+    sprints_remaining:    st.remainingSprints,
     next_race_name:       gp.name || next?.official_name || null,
     next_race_circuit:    '',
     next_race_date:       next?.date || null,
@@ -717,7 +729,7 @@ export async function getDriverRecentResults(driverId, limit = 5) {
 
 export async function getUpcomingRaces(limit = 5) {
   const st = await getSeasonRaceStatus();
-  const data = st.races.filter(r => !r.done).slice(0, limit); // races without results yet
+  const data = st.upcoming.slice(0, limit); // scheduled races still to come (excludes cancelled)
   if (!data.length) return [];
 
   // Enrich with grand_prix names if available

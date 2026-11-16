@@ -167,8 +167,8 @@ export default function Ferrari() {
   // ── constructors' title race ──
   const titleRace = useMemo(() => {
     if (!selected || !leader || !config) return null;
-    const racesLeft   = Math.max(0, (config.total_races   || 0) - (config.races_completed   || 0));
-    const sprintsLeft = Math.max(0, (config.total_sprints || 0) - (config.sprints_completed || 0));
+    const racesLeft   = config.races_remaining   ?? 0;
+    const sprintsLeft = config.sprints_remaining ?? 0;
     const maxAvail    = racesLeft * MAX_C_RACE + sprintsLeft * MAX_C_SPRINT;
 
     if (selected.id === leader.id) {
@@ -210,7 +210,7 @@ export default function Ferrari() {
   );
 
   // Sprint-aware tooltip for the constructors' title card.
-  const sprintsLeft = Math.max(0, (config?.total_sprints || 0) - (config?.sprints_completed || 0));
+  const sprintsLeft = config?.sprints_remaining ?? 0;
   const titleTip = `${tr("tm_titleTip")} ${sprintsLeft > 0 ? tr("tm_titleTipSprint", { n: sprintsLeft }) : tr("tm_titleTipNoSprint")}`;
 
   if (isLoading || !selected) return (
