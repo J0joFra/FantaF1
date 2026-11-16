@@ -825,8 +825,8 @@ export default function ScenariosPage() {
 
         // Gare/sprint ancora da disputare = quelle senza risultati (fonte: i
         // risultati, non le date — il dataset può avere risultati in anticipo).
-        setRacesLeft(season.totalCount - season.completedCount);
-        setSprintsLeft(season.sprintsTotal - season.sprintsCompleted);
+        setRacesLeft(season.remainingCount);
+        setSprintsLeft(season.remainingSprints);
         setSeasonYear(season.season);
         
         if (processedDrivers.length > 0) {

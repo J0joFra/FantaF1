@@ -10,8 +10,8 @@ export const MAX_POINTS_WEEKEND_NO_SPRINT   = MAX_POINTS_RACE;
 // ─── CHAMPIONSHIP MATH ───────────────────────────────────────────────────────
 export function calculateMaxAvailablePoints(config) {
   if (!config) return 0;
-  const racesLeft   = (config.total_races   || 0) - (config.races_completed   || 0);
-  const sprintsLeft = (config.total_sprints || 0) - (config.sprints_completed || 0);
+  const racesLeft   = config.races_remaining   ?? ((config.total_races   || 0) - (config.races_completed   || 0));
+  const sprintsLeft = config.sprints_remaining ?? ((config.total_sprints || 0) - (config.sprints_completed || 0));
   return racesLeft * MAX_POINTS_RACE + sprintsLeft * MAX_POINTS_SPRINT;
 }
 

@@ -464,7 +464,7 @@ export default function Home() {
               )}
             </div>
             <span className="text-xs text-muted-foreground font-body">
-              {config?.races_completed ?? 0}/{config?.total_races ?? 0} GP
+              {config?.races_completed ?? 0}/{config?.races_scheduled ?? config?.total_races ?? 0} GP
             </span>
           </div>
           <div className="px-4">
@@ -504,7 +504,7 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-3 gap-3 text-center">
               {[
-                { v: (config.total_races||0) - (config.races_completed||0), l: t("home_racesRemaining") },
+                { v: config.races_remaining ?? ((config.total_races||0) - (config.races_completed||0)), l: t("home_racesRemaining") },
                 { v: maxAvailable,                                           l: t("home_maxAvailable") },
                 { v: config.next_race_has_sprint
                     ? MAX_POINTS_RACE + MAX_POINTS_SPRINT
