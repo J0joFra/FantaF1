@@ -4,11 +4,13 @@ import { ChevronRight, ArrowLeft, ChevronLeft } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StartLights from "@/components/games/StartLights";
 import DriverGuess from "@/components/games/DriverGuess";
+import Predictions from "@/components/games/Predictions";
 import { dayNumber, playedToday } from "@/lib/driverGame";
 import { useI18n } from "@/lib/i18n";
 import { useBackHandler } from "@/lib/backStack";
 
 const GAMES = [
+  { id: "predict", emoji: "🔮", title: "predict_title", desc: "predict_desc", Component: Predictions },
   { id: "guess", emoji: "🕵️", title: "guess_title", desc: "guess_desc", Component: DriverGuess },
   { id: "lights", emoji: "🚦", title: "lights_title", desc: "lights_desc", Component: StartLights },
 ];
