@@ -1189,25 +1189,75 @@ export default function ScenariosPage() {
             {/* ─── MOSAICO: subito sotto, senza schede da scegliere ─── */}
             {!analysis.isAlreadyChampion && !analysis.isMathematicallyOut && (
               activeRivals.length === 0 ? (
-                <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 text-center">
-                  <Award className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                  <p className="text-gray-600 font-medium">{t("rivals_lead")}</p>
-                  <p className="text-xs text-gray-400 mt-1">{t("rivals_noneAhead")}</p>
-                </div>
+                // Selezionato il leader (non ancora campione matematico): card
+                // positiva, coerente con le altre due.
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 18 }}
+                  className="relative overflow-hidden rounded-2xl p-6 text-center text-white shadow-lg
+                             bg-gradient-to-br from-emerald-500 to-emerald-700"
+                >
+                  <motion.div
+                    className="inline-block mb-2"
+                    animate={{ scale: [1, 1.12, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <Award className="w-12 h-12 drop-shadow" />
+                  </motion.div>
+                  <p className="font-heading font-black text-xl">{t("rivals_lead")}</p>
+                  <p className="text-sm text-white/80 mt-1">{t("rivals_noneAhead")}</p>
+                </motion.div>
               ) : (
-                // Il rivale è automaticamente il leader da battere (già indicato
-                // sopra): niente secondo selettore, solo il mosaico.
-                effectiveRival && mosaicData && (
-                  <MosaicDiagram
-                    cells={mosaicData.cells}
-                    bestCombination={mosaicData.bestCombination}
-                    yourDriver={selectedDriver}
-                    rival={effectiveRival}
-                    racesLeft={racesLeft}
-                    sprintsLeft={Math.min(sprintsLeft, racesLeft)}
-                    onCellClick={(yourPos, rivalPos) => setSelectedCell({ yourPos, rivalPos })}
-                  />
-                )
+                // Titolo ancora in palio: card "Obiettivo" animata (brand) +
+                // mosaico. Il rivale è il leader da battere (già indicato sopra).
+                <>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 18 }}
+                    className="relative overflow-hidden rounded-2xl p-5 text-white shadow-lg
+                               bg-gradient-to-br from-primary to-primary/80"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <motion.div
+                        animate={{ scale: [1, 1.18, 1] }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        <Target className="w-5 h-5" />
+                      </motion.div>
+                      <span className="text-xs font-bold uppercase tracking-wider">{t("sc_objective")}</span>
+                    </div>
+                    {analysis.mainRival && (
+                      <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
+                        <p className="text-xs text-white/80 mb-1.5 flex items-center gap-1">
+                          <Zap className="w-3 h-3" /> {t("sc_mainRival")}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="font-heading font-black text-lg truncate">{analysis.mainRival.driver.driver_name}</span>
+                          <span className="text-sm font-mono bg-white/20 px-2 py-0.5 rounded shrink-0 ml-2">
+                            {analysis.mainRival.driver.points} {t("pts")}
+                          </span>
+                        </div>
+                        <p className="text-xs text-white/80 mt-1">
+                          {t("sc_gap")}: −{analysis.mainRival.currentGap} {t("pts")}
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+
+                  {effectiveRival && mosaicData && (
+                    <MosaicDiagram
+                      cells={mosaicData.cells}
+                      bestCombination={mosaicData.bestCombination}
+                      yourDriver={selectedDriver}
+                      rival={effectiveRival}
+                      racesLeft={racesLeft}
+                      sprintsLeft={Math.min(sprintsLeft, racesLeft)}
+                      onCellClick={(yourPos, rivalPos) => setSelectedCell({ yourPos, rivalPos })}
+                    />
+                  )}
+                </>
               )
             )}
 
