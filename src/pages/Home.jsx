@@ -34,6 +34,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { hapticTap, hapticSuccess } from "@/lib/native";
 import { useFavourite } from "@/lib/favourite";
+import { favReminderSupported, isFavReminderOn, toggleFavReminder, syncFavReminder } from "@/lib/favReminder";
 import { playedToday } from "@/lib/driverGame";
 import { format } from "date-fns";
 import { it, enGB, fr, es, de } from "date-fns/locale";
@@ -315,40 +316,68 @@ function DriverRow({ driver, leader, index, onOpen, fav, onToggleFav }) {
 }
 
 // ── "Pilota del cuore" card ───────────────────────────────────────────────────
-function FavouriteCard({ driver, leader, lastResult, onOpen, onRemove, t }) {
+function FavouriteCard({ driver, leader, lastResult, raceIso, gpName, onOpen, t }) {
   const color = getTeamColor(driver.team);
   const gap = (leader?.points ?? driver.points) - driver.points;
+  const [remOn, setRemOn] = useState(() => isFavReminderOn());
+  const showToggle = favReminderSupported();
+
+  const toggleRem = async (e) => {
+    e.stopPropagation();
+    const res = await toggleFavReminder(raceIso, gpName, driver.driver_name, t);
+    if (res === "on") { setRemOn(true); hapticSuccess(); }
+    else if (res === "off") { setRemOn(false); hapticTap(); }
+  };
+
   return (
-    <div
-      onClick={onOpen}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter") onOpen?.(); }}
-      className="app-card px-4 py-3 flex items-center gap-3 cursor-pointer active:scale-[0.99] transition-transform"
-    >
-      <div className="w-11 h-11 rounded-full shrink-0 flex items-center justify-center
-                      font-heading font-black text-sm text-white select-none"
-           style={{ background: `linear-gradient(135deg, ${color}99, ${color})` }}>
-        {(driver.driver_code || driver.driver_name).slice(0, 3).toUpperCase()}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-body uppercase tracking-widest text-primary/80 leading-none flex items-center gap-1">
-          <Heart className="w-3 h-3 fill-primary text-primary" /> {t("fav_yourDriver")}
-        </p>
-        <p className="font-heading font-black text-base leading-tight truncate mt-0.5">{driver.driver_name}</p>
-        <p className="text-xs text-muted-foreground font-body truncate">{driver.team}</p>
-      </div>
-      <div className="text-right shrink-0">
-        <p className="font-heading font-black text-lg leading-none">P{driver.position}</p>
-        <p className="text-[10px] text-muted-foreground font-body mt-0.5">
-          {driver.points} {t("pts")}{gap > 0 ? ` · −${gap}` : ""}
-        </p>
-        {lastResult != null && (
-          <p className="text-[10px] font-body mt-0.5 text-muted-foreground">
-            {t("fav_last")}: <span className="font-bold text-foreground">{lastResult}</span>
+    <div className="app-card overflow-hidden">
+      <div
+        onClick={onOpen}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter") onOpen?.(); }}
+        className="px-4 py-3 flex items-center gap-3 cursor-pointer active:bg-gray-50 transition-colors"
+      >
+        <div className="w-11 h-11 rounded-full shrink-0 flex items-center justify-center
+                        font-heading font-black text-sm text-white select-none"
+             style={{ background: `linear-gradient(135deg, ${color}99, ${color})` }}>
+          {(driver.driver_code || driver.driver_name).slice(0, 3).toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-body uppercase tracking-widest text-primary/80 leading-none flex items-center gap-1">
+            <Heart className="w-3 h-3 fill-primary text-primary" /> {t("fav_yourDriver")}
           </p>
-        )}
+          <p className="font-heading font-black text-base leading-tight truncate mt-0.5">{driver.driver_name}</p>
+          <p className="text-xs text-muted-foreground font-body truncate">{driver.team}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="font-heading font-black text-lg leading-none">P{driver.position}</p>
+          <p className="text-[10px] text-muted-foreground font-body mt-0.5">
+            {driver.points} {t("pts")}{gap > 0 ? ` · −${gap}` : ""}
+          </p>
+          {lastResult != null && (
+            <p className="text-[10px] font-body mt-0.5 text-muted-foreground">
+              {t("fav_last")}: <span className="font-bold text-foreground">{lastResult}</span>
+            </p>
+          )}
+        </div>
       </div>
+
+      {showToggle && (
+        <button
+          onClick={toggleRem}
+          aria-pressed={remOn}
+          className="w-full flex items-center gap-2 px-4 py-2.5 border-t border-gray-100 text-left active:bg-gray-50 transition-colors"
+        >
+          {remOn ? <BellRing className="w-4 h-4 text-primary" /> : <Bell className="w-4 h-4 text-muted-foreground" />}
+          <span className={`text-xs font-body font-semibold flex-1 ${remOn ? "text-primary" : "text-muted-foreground"}`}>
+            {t("fav_notify")}
+          </span>
+          <span className={`w-9 h-5 rounded-full relative shrink-0 transition-colors ${remOn ? "bg-primary" : "bg-gray-200"}`}>
+            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${remOn ? "left-4" : "left-0.5"}`} />
+          </span>
+        </button>
+      )}
     </div>
   );
 }
@@ -387,6 +416,15 @@ export default function Home() {
   });
   const [mapOpen, setMapOpen] = useState(false);
   const { fav, toggle: toggleFav } = useFavourite();
+
+  // Tiene allineato il promemoria del pilota del cuore alla gara e al pilota
+  // correnti (ri-programma al cambio di pilota, gara o lingua; annulla se tolto).
+  useEffect(() => {
+    const favD = fav ? (drivers || []).find(d => d.id === fav) : null;
+    syncFavReminder(nextRace?.startIso || null, nextRace?.name || null, favD?.driver_name || null, t)
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fav, nextRace?.startIso, nextRace?.name, lang, drivers]);
 
   if (ld || lc) return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 pb-4">
@@ -493,6 +531,8 @@ export default function Home() {
             driver={favDriver}
             leader={leader}
             lastResult={favLast}
+            raceIso={nextRace?.startIso || config?.next_race_date}
+            gpName={nextRace?.name || config?.next_race_name}
             onOpen={() => navigate(`/driver/${favDriver.id}`)}
             t={t}
           />
