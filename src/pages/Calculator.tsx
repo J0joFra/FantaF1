@@ -328,9 +328,9 @@ function MosaicDiagram({
     matrix[cell.yourPos - 1][cell.rivalPos - 1] = cell;
   });
 
-  // Di default mostra solo le posizioni che contano per il titolo (P1-P6);
-  // le posizioni basse aggiungono solo rumore. Toggle per vederle tutte.
-  const positions = showAllPos ? SCORING_POSITIONS : SCORING_POSITIONS.slice(0, 6);
+  // Di default mostra solo le prime 5 posizioni (P1-P5): sono quelle che
+  // contano per il titolo e tengono la griglia compatta. Toggle per P1-P10.
+  const positions = showAllPos ? SCORING_POSITIONS : SCORING_POSITIONS.slice(0, 5);
 
   // "Migliore" tra le SOLE posizioni mostrate, così la cella che pulsa e la card
   // "strategia più veloce" coincidono sempre con la griglia visibile (evita di
