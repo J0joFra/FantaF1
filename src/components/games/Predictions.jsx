@@ -1,12 +1,11 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Check, Clock, Lock } from "lucide-react";
-import { getPredictionContext, getPodiums } from "@/lib/supabaseData";
+import { Trophy, Check, Clock, Lock, Wrench } from "lucide-react";
+import { getPredictionContext, getRaceOutcomes } from "@/lib/supabaseData";
 import {
-  getPrediction, savePrediction, allPredictions, scorePodium, MAX_POINTS_PER_RACE,
+  getPrediction, savePrediction, allPredictions, scoreRace, normalizePrediction, MAX_POINTS_PER_RACE,
 } from "@/lib/predictions";
-import { getDriverColor } from "@/lib/f1Utils";
+import { getDriverColor, getTeamColor } from "@/lib/f1Utils";
 import { raceFlagUrl } from "@/lib/flagUtils";
 import { hapticSelect, hapticSuccess } from "@/lib/native";
 import { useI18n } from "@/lib/i18n";
@@ -24,52 +23,60 @@ export default function Predictions() {
   });
   const race = ctx?.race || null;
   const drivers = ctx?.drivers || [];
+  const teams = ctx?.teams || [];
   const driverById = useMemo(() => Object.fromEntries(drivers.map(d => [d.id, d])), [drivers]);
+  const teamById = useMemo(() => Object.fromEntries(teams.map(x => [x.id, x])), [teams]);
 
-  // Stored predictions (re-read after each save via the bump counter).
   const [bump, setBump] = useState(0);
   const history = useMemo(() => allPredictions(), [bump]);
   const storedIds = useMemo(() => history.map(h => h.raceId), [history]);
 
-  const { data: podiums = {} } = useQuery({
-    queryKey: ["predictionPodiums", storedIds],
-    queryFn: () => getPodiums(storedIds),
+  const { data: outcomes = {} } = useQuery({
+    queryKey: ["predictionOutcomes", storedIds],
+    queryFn: () => getRaceOutcomes(storedIds),
     enabled: storedIds.length > 0,
     staleTime: 10 * 60 * 1000,
   });
 
-  // Current pick for the next race — seed from an existing prediction.
+  // Current pick — seed from an existing prediction.
   const existing = race ? getPrediction(race.id) : null;
-  const [pick, setPick] = useState(() => existing
-    ? [existing.p1, existing.p2, existing.p3]
-    : [null, null, null]);
+  const seed = normalizePrediction(existing);
+  const [slots, setSlots] = useState(() => seed.slots);
+  const [pitTeam, setPitTeam] = useState(() => seed.pitTeam);
   const [activeSlot, setActiveSlot] = useState(0);
   const [justSaved, setJustSaved] = useState(false);
 
-  const firstEmpty = () => { const i = pick.findIndex(x => !x); return i === -1 ? 0 : i; };
+  const firstEmpty = () => { const i = slots.findIndex(x => !x); return i === -1 ? activeSlot : i; };
 
   const chooseDriver = (id) => {
-    if (pick.includes(id)) return; // already on the podium
-    const slot = pick[activeSlot] ? firstEmpty() : activeSlot;
-    const next = [...pick]; next[slot] = id;
-    setPick(next);
-    setActiveSlot(next.findIndex(x => !x) === -1 ? slot : next.findIndex(x => !x));
+    if (slots.includes(id)) return; // one driver, one slot
+    const slot = slots[activeSlot] ? firstEmpty() : activeSlot;
+    const next = [...slots]; next[slot] = id;
+    setSlots(next);
+    const e = next.findIndex(x => !x);
+    setActiveSlot(e === -1 ? slot : e);
+    setJustSaved(false);
+    hapticSelect();
+  };
+  const clearSlot = (i) => {
+    const next = [...slots]; next[i] = null;
+    setSlots(next); setActiveSlot(i); setJustSaved(false);
+  };
+  const choosePit = (id) => {
+    setPitTeam(prev => (prev === id ? null : id));
     setJustSaved(false);
     hapticSelect();
   };
 
-  const clearSlot = (i) => {
-    const next = [...pick]; next[i] = null;
-    setPick(next); setActiveSlot(i); setJustSaved(false);
-  };
-
-  const complete = pick.every(Boolean);
-  const changed = !existing || existing.p1 !== pick[0] || existing.p2 !== pick[1] || existing.p3 !== pick[2];
+  const podiumComplete = slots[0] && slots[1] && slots[2];
+  const changed = !existing
+    || JSON.stringify(seed.slots) !== JSON.stringify(slots)
+    || seed.pitTeam !== pitTeam;
 
   const save = () => {
-    if (!race || !complete) return;
+    if (!race || !podiumComplete) return;
     savePrediction(race.id, {
-      p1: pick[0], p2: pick[1], p3: pick[2],
+      slots, pitTeam,
       raceName: race.name, raceDate: race.date, country_id: race.country_id,
     });
     setBump(b => b + 1);
@@ -77,11 +84,10 @@ export default function Predictions() {
     hapticSuccess();
   };
 
-  // Personal total across scored predictions.
   const total = useMemo(() => history.reduce((sum, h) => {
-    const s = scorePodium(h, podiums[h.raceId]);
+    const s = scoreRace(h, outcomes[h.raceId]);
     return sum + (s ? s.points : 0);
-  }, 0), [history, podiums]);
+  }, 0), [history, outcomes]);
 
   const nameOf = (id) => driverById[id]?.name || id || "—";
   const codeOf = (id) => driverById[id]?.code || "";
@@ -90,6 +96,34 @@ export default function Predictions() {
   if (isLoading) {
     return <div className="app-card p-6 text-center text-sm text-muted-foreground font-body">{t("predict_loading")}</div>;
   }
+
+  const SlotRow = ({ i }) => {
+    const id = slots[i];
+    const active = activeSlot === i;
+    const podium = i < 3;
+    return (
+      <button
+        onClick={() => (id ? clearSlot(i) : setActiveSlot(i))}
+        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border text-left transition-colors
+          ${active ? "border-primary bg-primary/5" : "border-gray-200 bg-gray-50"}`}
+      >
+        <span className={`shrink-0 text-center ${podium ? "text-lg w-6" : "w-6 font-heading font-black text-xs text-gray-400"}`}>
+          {podium ? MEDALS[i] : `P${i + 1}`}
+        </span>
+        {id ? (
+          <>
+            <span className="w-1 h-5 rounded-full shrink-0" style={{ backgroundColor: colorOf(id) }} />
+            <span className="font-heading font-bold text-sm text-foreground truncate flex-1">{nameOf(id)}</span>
+            <span className="text-[10px] text-muted-foreground font-body shrink-0">{t("predict_tapToChange")}</span>
+          </>
+        ) : (
+          <span className={`text-sm font-body flex-1 ${active ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+            {t("predict_chooseP", { n: i + 1 })}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -102,7 +136,6 @@ export default function Predictions() {
         <Trophy className="w-8 h-8 text-primary/30" />
       </div>
 
-      {/* Next race prediction */}
       {race ? (
         <div className="app-card overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
@@ -118,40 +151,25 @@ export default function Predictions() {
             </div>
           </div>
 
-          {/* Podium slots */}
-          <div className="px-3 pt-3 space-y-2">
-            {[0, 1, 2].map(i => {
-              const id = pick[i];
-              const active = activeSlot === i;
-              return (
-                <button
-                  key={i}
-                  onClick={() => (id ? clearSlot(i) : setActiveSlot(i))}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors
-                    ${active ? "border-primary bg-primary/5" : "border-gray-200 bg-gray-50"}`}
-                >
-                  <span className="text-xl shrink-0">{MEDALS[i]}</span>
-                  {id ? (
-                    <>
-                      <span className="w-1 h-6 rounded-full shrink-0" style={{ backgroundColor: colorOf(id) }} />
-                      <span className="font-heading font-bold text-sm text-foreground truncate flex-1">{nameOf(id)}</span>
-                      <span className="text-[11px] text-muted-foreground font-body shrink-0">{t("predict_tapToChange")}</span>
-                    </>
-                  ) : (
-                    <span className={`text-sm font-body flex-1 ${active ? "text-primary font-semibold" : "text-muted-foreground"}`}>
-                      {t("predict_chooseP", { n: i + 1 })}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          {/* Podio */}
+          <div className="px-3 pt-3">
+            <p className="text-[10px] font-body uppercase tracking-widest text-gray-400 mb-1.5 px-1">{t("predict_podium")}</p>
+            <div className="space-y-1.5">{[0, 1, 2].map(i => <SlotRow key={i} i={i} />)}</div>
+          </div>
+
+          {/* 4-10 */}
+          <div className="px-3 pt-3">
+            <p className="text-[10px] font-body uppercase tracking-widest text-gray-400 mb-1.5 px-1">
+              {t("predict_rest")} <span className="text-gray-300 normal-case tracking-normal">· {t("predict_optional")}</span>
+            </p>
+            <div className="space-y-1.5">{[3, 4, 5, 6, 7, 8, 9].map(i => <SlotRow key={i} i={i} />)}</div>
           </div>
 
           {/* Driver grid */}
           <div className="px-3 py-3">
             <div className="grid grid-cols-2 gap-1.5">
               {drivers.map(d => {
-                const picked = pick.includes(d.id);
+                const picked = slots.includes(d.id);
                 return (
                   <button
                     key={d.id}
@@ -169,21 +187,44 @@ export default function Predictions() {
             </div>
           </div>
 
+          {/* Pit stop team */}
+          <div className="px-3 pb-2 border-t border-gray-100 pt-3">
+            <p className="text-[10px] font-body uppercase tracking-widest text-gray-400 mb-1.5 px-1 flex items-center gap-1">
+              <Wrench className="w-3 h-3" /> {t("predict_pit")} <span className="text-gray-300 normal-case tracking-normal">· {t("predict_optional")}</span>
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {teams.map(tm => {
+                const on = pitTeam === tm.id;
+                const tc = getTeamColor(tm.name);
+                return (
+                  <button
+                    key={tm.id}
+                    onClick={() => choosePit(tm.id)}
+                    className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors
+                      ${on ? "border-primary bg-primary/5" : "border-gray-200 bg-white active:bg-gray-50"}`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tc }} />
+                    <span className="font-body text-xs text-foreground truncate flex-1">{tm.name}</span>
+                    {on && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Save */}
-          <div className="px-3 pb-3">
+          <div className="px-3 pb-3 pt-2">
             <button
               onClick={save}
-              disabled={!complete || (!changed && !!existing)}
+              disabled={!podiumComplete || (!changed && !!existing)}
               className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-body font-semibold text-sm transition-colors
-                ${complete && (changed || !existing)
+                ${podiumComplete && (changed || !existing)
                   ? "bg-primary text-white active:scale-[0.98]"
                   : "bg-gray-100 text-muted-foreground"}`}
             >
               {justSaved
                 ? <><Check className="w-4 h-4" /> {t("predict_saved")}</>
-                : existing
-                  ? <>{t("predict_update")}</>
-                  : <>{t("predict_save")}</>}
+                : existing ? t("predict_update") : t("predict_save")}
             </button>
             <p className="text-[10px] text-muted-foreground font-body text-center mt-2 flex items-center justify-center gap-1">
               <Lock className="w-3 h-3" /> {t("predict_lockHint")}
@@ -197,7 +238,6 @@ export default function Predictions() {
         </div>
       )}
 
-      {/* How scoring works */}
       <p className="text-[11px] text-muted-foreground font-body leading-snug px-1">
         {t("predict_rules", { max: MAX_POINTS_PER_RACE })}
       </p>
@@ -209,18 +249,17 @@ export default function Predictions() {
           {history
             .filter(h => !race || h.raceId !== String(race.id))
             .map(h => {
-              const actual = podiums[h.raceId];
-              const score = scorePodium(h, actual);
+              const score = scoreRace(h, outcomes[h.raceId]);
               return (
                 <div key={h.raceId} className="app-card px-4 py-3">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2">
                     {raceFlagUrl(h, "h40") && (
                       <img src={raceFlagUrl(h, "h40")} alt="" className="w-6 h-4 object-cover rounded-sm ring-1 ring-black/5 shrink-0" />
                     )}
                     <span className="font-heading font-bold text-xs uppercase tracking-wide truncate flex-1">{h.raceName}</span>
                     {score ? (
-                      <span className={`tag shrink-0 ${score.perfect ? "bg-emerald-100 text-emerald-700" : "bg-primary/10 text-primary"}`}>
-                        {score.perfect ? "🏆 " : ""}{score.points} {t("pts")}
+                      <span className={`tag shrink-0 ${score.perfectPodium ? "bg-emerald-100 text-emerald-700" : "bg-primary/10 text-primary"}`}>
+                        {score.perfectPodium ? "🏆 " : ""}{score.points} {t("pts")}
                       </span>
                     ) : (
                       <span className="tag bg-amber-100 text-amber-700 shrink-0 flex items-center gap-1">
@@ -228,22 +267,13 @@ export default function Predictions() {
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[0, 1, 2].map(i => {
-                      const predId = [h.p1, h.p2, h.p3][i];
-                      const kind = score?.detail?.[i]?.kind;
-                      const bg = kind === "exact" ? "bg-emerald-50 border-emerald-200"
-                        : kind === "podium" ? "bg-amber-50 border-amber-200"
-                        : score ? "bg-gray-50 border-gray-200 opacity-60"
-                        : "bg-gray-50 border-gray-200";
-                      return (
-                        <div key={i} className={`rounded-lg border px-2 py-1.5 ${bg}`}>
-                          <span className="text-[10px]">{MEDALS[i]}</span>
-                          <span className="block font-heading font-bold text-[11px] truncate">{codeOf(predId) || nameOf(predId)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {score && (
+                    <div className="flex gap-2 mt-2 text-[10px] font-body text-muted-foreground">
+                      <span>{t("predict_podium")}: <b className="text-foreground">{score.podiumPts}</b></span>
+                      <span>4–10: <b className="text-foreground">{score.restPts}</b></span>
+                      <span className="flex items-center gap-0.5"><Wrench className="w-2.5 h-2.5" /> <b className="text-foreground">{score.pitPts}</b></span>
+                    </div>
+                  )}
                 </div>
               );
             })}
