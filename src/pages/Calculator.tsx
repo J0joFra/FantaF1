@@ -1150,38 +1150,19 @@ export default function ScenariosPage() {
                   <p className="text-xs text-gray-400 mt-1">{t("rivals_noneAhead")}</p>
                 </div>
               ) : (
-                <>
-                  {/* Selettore rivale (facoltativo): di default il rivale principale */}
-                  <div className="bg-white rounded-xl p-3 shadow-md border border-gray-100">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
-                      {t("sc_chooseDriver")}
-                    </label>
-                    <select
-                      value={effectiveRival?.id || ""}
-                      onChange={(e) => setSelectedRival(activeRivals.find(r => r.driver.id === e.target.value)?.driver || null)}
-                      className="w-full h-10 bg-gray-50 border-0 rounded-lg px-3 text-sm font-medium text-gray-900 outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-                    >
-                      {activeRivals.map(r => (
-                        <option key={r.driver.id} value={r.driver.id}>
-                          {r.driver.driver_name} — {r.driver.points} pt
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Mosaico: già visibile, nessun click necessario */}
-                  {effectiveRival && mosaicData && (
-                    <MosaicDiagram
-                      cells={mosaicData.cells}
-                      bestCombination={mosaicData.bestCombination}
-                      yourDriver={selectedDriver}
-                      rival={effectiveRival}
-                      racesLeft={racesLeft}
-                      sprintsLeft={Math.min(sprintsLeft, racesLeft)}
-                      onCellClick={(yourPos, rivalPos) => setSelectedCell({ yourPos, rivalPos })}
-                    />
-                  )}
-                </>
+                // Il rivale è automaticamente il leader da battere (già indicato
+                // sopra): niente secondo selettore, solo il mosaico.
+                effectiveRival && mosaicData && (
+                  <MosaicDiagram
+                    cells={mosaicData.cells}
+                    bestCombination={mosaicData.bestCombination}
+                    yourDriver={selectedDriver}
+                    rival={effectiveRival}
+                    racesLeft={racesLeft}
+                    sprintsLeft={Math.min(sprintsLeft, racesLeft)}
+                    onCellClick={(yourPos, rivalPos) => setSelectedCell({ yourPos, rivalPos })}
+                  />
+                )
               )
             )}
 
