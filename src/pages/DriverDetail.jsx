@@ -3,13 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ChevronLeft, Loader2, Crown, Trophy, Medal, Target, Timer,
-  Star, Award, TrendingUp, Gauge, Zap, Flag,
+  Star, Award, TrendingUp, Gauge, Zap, Flag, Heart,
 } from "lucide-react";
 import {
   getDriverStandings, getDriverSeasonStats, getDriverRecentResults,
 } from "@/lib/supabaseData";
 import { getDriverColor } from "@/lib/f1Utils";
 import { flagUrl, raceFlagUrl } from "@/lib/flagUtils";
+import { useFavourite } from "@/lib/favourite";
+import { hapticTap } from "@/lib/native";
 import PageHeader from "@/components/PageHeader";
 import { useI18n } from "@/lib/i18n";
 
@@ -50,6 +52,7 @@ export default function DriverDetail() {
   const { t, lang } = useI18n();
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isFav, toggle } = useFavourite();
 
   const { data: drivers = [], isLoading } = useQuery({
     queryKey: ["driverStandings"], queryFn: getDriverStandings, staleTime: 5 * 60 * 1000,
@@ -138,8 +141,17 @@ export default function DriverDetail() {
           style={{ background: `linear-gradient(160deg, ${color}, ${color}cc 55%, ${color}99)` }}
         >
           {d.position === 1 && (
-            <Crown className="absolute top-3 right-3 w-5 h-5 text-yellow-300 drop-shadow" />
+            <Crown className="absolute top-3 right-12 w-5 h-5 text-yellow-300 drop-shadow" />
           )}
+          <button
+            onClick={() => { toggle(d.id); hapticTap(); }}
+            aria-pressed={isFav(d.id)}
+            aria-label={isFav(d.id) ? t("fav_remove") : t("fav_add")}
+            className="absolute top-2 right-2 w-9 h-9 rounded-full bg-black/15 border border-white/25
+                       flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <Heart className={`w-5 h-5 ${isFav(d.id) ? "fill-white text-white" : "text-white/80"}`} />
+          </button>
           <div className="flex items-center gap-2 mb-1">
             {d.nationality_iso && (
               <img src={flagUrl(d.nationality_iso, "h20")} alt=""
