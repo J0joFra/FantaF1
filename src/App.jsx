@@ -1,7 +1,13 @@
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClientInstance } from '@/lib/query-client';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Route, Routes } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
+// On the native build the app is served from a local bundle with no SPA
+// fallback, so a hard reload or deep link to a sub-route would 404. HashRouter
+// keeps routing in the URL fragment (index.html always loads). Web keeps clean
+// URLs with BrowserRouter.
+const Router = Capacitor.isNativePlatform() ? HashRouter : BrowserRouter;
 import PageNotFound from './lib/PageNotFound';
 import { I18nProvider } from '@/lib/i18n';
 import AppLayout from './components/layout/AppLayout';
@@ -17,6 +23,7 @@ import Games from './pages/Games';
 import { useState, useEffect } from 'react';
 import { showBanner } from '@/lib/ads';
 import { initPurchases } from '@/lib/purchases';
+import { initNativeChrome } from '@/lib/native';
 import { useBannerSpace } from '@/lib/useBannerSpace';
 
 function App() {
@@ -30,6 +37,7 @@ function App() {
   // need the bottom of the screen hold it back until they close.
   useEffect(() => {
     initPurchases();  // restores "remove ads" entitlement (native only)
+    initNativeChrome();  // brand-red native status bar (native only)
     showBanner();
   }, []);
 

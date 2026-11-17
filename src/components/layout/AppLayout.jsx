@@ -1,11 +1,16 @@
 import { Outlet, useLocation, Link } from "react-router-dom";
-import { BarChart2, Calculator, GitCompare, Shield, Newspaper } from "lucide-react";
+import { BarChart2, Calculator, GitCompare, Shield, Newspaper, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Capacitor } from "@capacitor/core";
 import { useI18n } from "@/lib/i18n";
 import { useAndroidBack } from "@/lib/useAndroidBack";
+import { hapticSelect, hapticTap } from "@/lib/native";
 import { syncDailyReminder } from "@/lib/dailyReminder";
-import { useEffect, useState } from "react";
+import { queryClientInstance } from "@/lib/query-client";
+import OfflineBanner from "@/components/OfflineBanner";
+import { useEffect, useRef, useState } from "react";
+
+const PTR_THRESHOLD = 70; // px of pull needed to trigger a refresh
 
 const tabs = [
   { path: "/",           key: "nav_overview",  icon: BarChart2  },
@@ -26,6 +31,42 @@ export default function AppLayout() {
   // Il gesto indietro riporta alla Panoramica invece di chiudere l'app.
   useAndroidBack();
 
+  // ── Pull-to-refresh ────────────────────────────────────────────────────────
+  // Trascinando giù dall'inizio della pagina si ricaricano i dati (classifiche,
+  // calendario, news…). Si attiva solo quando si è già in cima allo scroll.
+  const mainRef = useRef(null);
+  const startY = useRef(0);
+  const tracking = useRef(false);
+  const [pull, setPull] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onTouchStart = (e) => {
+    if (refreshing) return;
+    const el = mainRef.current;
+    tracking.current = !!el && el.scrollTop <= 0;
+    if (tracking.current) startY.current = e.touches[0].clientY;
+  };
+  const onTouchMove = (e) => {
+    if (!tracking.current || refreshing) return;
+    const el = mainRef.current;
+    if (el && el.scrollTop > 0) { tracking.current = false; setPull(0); return; }
+    const dy = e.touches[0].clientY - startY.current;
+    setPull(dy > 0 ? Math.min(dy * 0.5, 90) : 0); // elastic resistance
+  };
+  const onTouchEnd = async () => {
+    if (!tracking.current) return;
+    tracking.current = false;
+    if (pull >= PTR_THRESHOLD && !refreshing) {
+      setRefreshing(true);
+      setPull(48);
+      hapticTap();
+      try { await queryClientInstance.invalidateQueries(); } catch { /* ignore */ }
+      setTimeout(() => { setRefreshing(false); setPull(0); }, 600);
+    } else {
+      setPull(0);
+    }
+  };
+
   // Sul nativo la bottom nav (fixed) salirebbe sopra la tastiera e coprirebbe il
   // contenuto: la nascondiamo mentre un campo di testo è a fuoco.
   const [kbOpen, setKbOpen] = useState(false);
@@ -44,19 +85,46 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col app-column overflow-x-hidden">
-      <main className="flex-1 overflow-y-auto overflow-x-hidden pb-nav">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -16 }}
-            transition={{ duration: 0.18, ease: "easeInOut" }}
-            className="min-h-full"
+      <OfflineBanner />
+      <main
+        ref={mainRef}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        className="relative flex-1 overflow-y-auto overflow-x-hidden pb-nav"
+        style={{ overscrollBehaviorY: "contain" }}
+      >
+        {/* Pull-to-refresh indicator */}
+        {pull > 0 && (
+          <div
+            className="absolute top-0 left-0 right-0 flex items-center justify-center pointer-events-none z-20"
+            style={{ height: pull, opacity: Math.min(1, pull / PTR_THRESHOLD) }}
           >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+            <RefreshCw
+              className={`w-5 h-5 text-primary ${refreshing ? "animate-spin" : ""}`}
+              style={refreshing ? undefined : { transform: `rotate(${pull * 3}deg)` }}
+            />
+          </div>
+        )}
+        <div
+          style={{
+            transform: `translateY(${pull}px)`,
+            transition: tracking.current ? "none" : "transform 0.2s ease-out",
+          }}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.18, ease: "easeInOut" }}
+              className="min-h-full"
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </main>
 
       {/* Bottom nav — iOS/Android style (hidden while typing so it doesn't cover content) */}
@@ -67,7 +135,7 @@ export default function AppLayout() {
           {tabs.map(({ path, key, icon: Icon }) => {
             const active = pathname === path;
             return (
-              <Link key={path} to={path}
+              <Link key={path} to={path} onClick={() => { if (!active) hapticSelect(); }}
                 className={`relative flex flex-col items-center justify-center gap-0.5 transition-colors
                   ${active ? "text-primary" : "text-muted-foreground"}`}>
                 {active && (

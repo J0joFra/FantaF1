@@ -638,6 +638,51 @@ export async function getRaceResults(raceId) {
   return fetchRaceResults(raceId);
 }
 
+// ─── PRONOSTICI (pre-race podium predictions) ────────────────────────────────
+// Context for the predictions game: the next race to predict + the drivers the
+// user can pick from (current-season standings).
+export async function getPredictionContext() {
+  const [st, standings] = await Promise.all([getSeasonRaceStatus(), getDriverStandings()]);
+  const nr = st.nextRace;
+  let race = null;
+  if (nr) {
+    const gp = await gpInfo(nr.grand_prix_id);
+    race = {
+      id: nr.id,
+      name: gp.name || nr.official_name || '',
+      country_id: gp.country_id || null,
+      date: nr.date,
+      time: nr.time || null,
+    };
+  }
+  const drivers = (standings || []).map((d, i) => ({
+    id:   d.id ?? String(i),
+    name: d.driver_name ?? '',
+    code: d.driver_code || (d.id ? d.id.toUpperCase().slice(0, 3) : ''),
+    team: d.team || '',
+  }));
+  return { race, drivers };
+}
+
+// Actual top-3 (driver ids, in order) for the given races — only those that
+// already have results. Returns { raceId: [p1, p2, p3] }.
+export async function getPodiums(raceIds = []) {
+  const ids = (raceIds || []).filter(x => x != null);
+  if (!ids.length) return {};
+  const { data: rows } = await supabase
+    .from('race_data')
+    .select('race_id, position_number, driver_id')
+    .in('race_id', ids)
+    .eq('type', 'RACE_RESULT')
+    .in('position_number', [1, 2, 3]);
+  const out = {};
+  (rows || []).forEach(r => {
+    if (!out[r.race_id]) out[r.race_id] = [];
+    out[r.race_id][r.position_number - 1] = r.driver_id;
+  });
+  return out;
+}
+
 // Sessions (FP/Qualifying/Sprint/Race) of the next race, with UTC datetimes.
 // Times in the DB are UTC "HH:MM" strings — we build ISO-UTC so the client can
 // render them in the user's own timezone.
