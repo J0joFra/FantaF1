@@ -3,8 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield, Trophy, TrendingUp, Users, Flag, Crown,
-  Target, Timer, Star, ShieldAlert, Zap, Medal, Share2, ChevronDown,
+  Target, Timer, Star, ShieldAlert, Zap, Medal, Share2, ChevronDown, Heart,
 } from "lucide-react";
+import { useFavouriteTeam } from "@/lib/favourite";
+import { hapticTap } from "@/lib/native";
 import { shareElementAsImage } from "@/lib/shareImage";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -112,6 +114,7 @@ export default function Ferrari() {
   const [mode, setMode] = useState("season");
   const cmpRef = useRef(null);
   const [showMore, setShowMore] = useState(false);
+  const { fav: favTeam, toggle: toggleFavTeam, isFav: isFavTeam } = useFavouriteTeam();
 
   const { data: teams = [], isLoading } = useQuery({
     queryKey: ["constructorStandings"], queryFn: getConstructorStandings, staleTime: 5 * 60 * 1000,
@@ -126,13 +129,14 @@ export default function Ferrari() {
     queryKey: ["seasonConfig"], queryFn: getSeasonConfig, staleTime: 10 * 60 * 1000,
   });
 
-  // default to Ferrari once data loads
+  // Default selection: la scuderia del cuore se impostata, altrimenti Ferrari.
   useEffect(() => {
     if (!selectedId && teams.length) {
+      const favT = favTeam ? teams.find(t => t.id === favTeam) : null;
       const ferrari = teams.find(t => /ferrari/i.test(t.team_name));
-      setSelectedId((ferrari || teams[0]).id);
+      setSelectedId((favT || ferrari || teams[0]).id);
     }
-  }, [teams, selectedId]);
+  }, [teams, selectedId, favTeam]);
 
   const selected = teams.find(t => t.id === selectedId);
   const leader   = teams[0];
@@ -262,9 +266,17 @@ export default function Ferrari() {
               </div>
               <h2 className="font-heading font-black text-3xl leading-none truncate">{selected.team_name}</h2>
             </div>
-            <div className="text-right shrink-0">
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              <button
+                onClick={() => { toggleFavTeam(selected.id); hapticTap(); }}
+                aria-pressed={isFavTeam(selected.id)}
+                aria-label={isFavTeam(selected.id) ? tr("fav_remove") : tr("favt_add")}
+                className="w-9 h-9 rounded-full bg-black/15 border border-white/25 flex items-center justify-center active:scale-90 transition-transform"
+              >
+                <Heart className={`w-5 h-5 ${isFavTeam(selected.id) ? "fill-white text-white" : "text-white/80"}`} />
+              </button>
               <div className="font-heading font-black text-4xl leading-none">P{selected.position}</div>
-              {selected.championship_won && <Crown className="w-5 h-5 text-yellow-300 inline mt-1" />}
+              {selected.championship_won && <Crown className="w-5 h-5 text-yellow-300" />}
             </div>
           </div>
 
@@ -377,9 +389,12 @@ export default function Ferrari() {
               const tc = getTeamColor(t.team_name);
               const pct = leader.points > 0 ? (t.points / leader.points) * 100 : 0;
               const active = t.id === selectedId;
+              const favd = isFavTeam(t.id);
               return (
-                <button key={t.id} onClick={() => setSelectedId(t.id)}
-                  className={`w-full flex items-center gap-3 py-2 px-2 rounded-xl transition-colors ${active ? "bg-gray-50" : "hover:bg-gray-50"}`}>
+                <div key={t.id} onClick={() => setSelectedId(t.id)}
+                  role="button" tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter") setSelectedId(t.id); }}
+                  className={`w-full flex items-center gap-3 py-2 px-2 rounded-xl cursor-pointer transition-colors ${active ? "bg-gray-50" : "hover:bg-gray-50"}`}>
                   <span className="font-heading font-black text-sm w-5 text-center"
                         style={{ color: active ? tc : "#9ca3af" }}>{t.position}</span>
                   <div className="flex-1 min-w-0 text-left">
@@ -392,7 +407,15 @@ export default function Ferrari() {
                            style={{ width: `${pct}%`, backgroundColor: tc, boxShadow: `0 0 6px ${tc}66` }} />
                     </div>
                   </div>
-                </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleFavTeam(t.id); hapticTap(); }}
+                    aria-pressed={favd}
+                    aria-label={favd ? tr("fav_remove") : tr("favt_add")}
+                    className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                  >
+                    <Heart className={`w-4 h-4 ${favd ? "fill-primary text-primary" : "text-gray-300"}`} />
+                  </button>
+                </div>
               );
             })}
           </div>
