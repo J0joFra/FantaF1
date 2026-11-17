@@ -1126,43 +1126,138 @@ export default function ScenariosPage() {
           >
             {/* ─── ESITO GIÀ DECISO: titolo vinto o fuori dai giochi ─── */}
             {analysis.isAlreadyChampion && (
-              <div className="bg-white rounded-2xl p-6 shadow-md border border-emerald-200 text-center">
-                <Trophy className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                <p className="font-heading font-black text-xl text-emerald-600">{t("sc_champion")}</p>
-                <p className="text-sm text-gray-500 mt-1">{selectedDriver.driver_name}</p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 16 }}
+                className="relative overflow-hidden rounded-2xl p-6 text-center text-white shadow-lg
+                           bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600"
+              >
+                {/* raggi rotanti di sfondo */}
+                <motion.div
+                  aria-hidden
+                  className="absolute inset-0 opacity-25 pointer-events-none"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  style={{ background: "conic-gradient(from 0deg, transparent 0 18deg, rgba(255,255,255,0.5) 22deg 26deg, transparent 30deg 360deg)" }}
+                />
+                {/* scintille */}
+                {[...Array(5)].map((_, i) => (
+                  <motion.span
+                    key={i} aria-hidden
+                    className="absolute text-white pointer-events-none"
+                    style={{ left: `${10 + i * 19}%`, top: i % 2 ? "16%" : "68%" }}
+                    animate={{ opacity: [0, 1, 0], scale: [0.4, 1, 0.4] }}
+                    transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.35 }}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </motion.span>
+                ))}
+                <motion.div
+                  className="relative inline-block mb-2"
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Trophy className="w-14 h-14 drop-shadow" />
+                </motion.div>
+                <p className="relative font-heading font-black text-2xl drop-shadow-sm">{t("sc_champion")}</p>
+                <p className="relative text-sm text-white/90 font-semibold mt-1">{selectedDriver.driver_name}</p>
+              </motion.div>
             )}
 
             {analysis.isMathematicallyOut && (
-              <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-200 text-center">
-                <AlertTriangle className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                <p className="font-heading font-black text-xl text-gray-500">{t("sc_out")}</p>
-                <p className="text-sm text-gray-500 mt-1">{selectedDriver.driver_name}</p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="relative overflow-hidden rounded-2xl p-6 text-center shadow-md
+                           bg-gradient-to-br from-slate-700 to-slate-900 text-white"
+              >
+                <motion.div
+                  className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white/10 mb-3"
+                  initial={{ scale: 0.6, rotate: -10 }}
+                  animate={{ scale: 1, rotate: [-10, 10, -6, 6, 0] }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                >
+                  <AlertTriangle className="w-7 h-7 text-rose-400" />
+                </motion.div>
+                <p className="font-heading font-black text-xl">{t("sc_out")}</p>
+                <p className="text-sm text-white/60 mt-1">{selectedDriver.driver_name}</p>
+              </motion.div>
             )}
 
             {/* ─── MOSAICO: subito sotto, senza schede da scegliere ─── */}
             {!analysis.isAlreadyChampion && !analysis.isMathematicallyOut && (
               activeRivals.length === 0 ? (
-                <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 text-center">
-                  <Award className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                  <p className="text-gray-600 font-medium">{t("rivals_lead")}</p>
-                  <p className="text-xs text-gray-400 mt-1">{t("rivals_noneAhead")}</p>
-                </div>
+                // Selezionato il leader (non ancora campione matematico): card
+                // positiva, coerente con le altre due.
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 18 }}
+                  className="relative overflow-hidden rounded-2xl p-6 text-center text-white shadow-lg
+                             bg-gradient-to-br from-emerald-500 to-emerald-700"
+                >
+                  <motion.div
+                    className="inline-block mb-2"
+                    animate={{ scale: [1, 1.12, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <Award className="w-12 h-12 drop-shadow" />
+                  </motion.div>
+                  <p className="font-heading font-black text-xl">{t("rivals_lead")}</p>
+                  <p className="text-sm text-white/80 mt-1">{t("rivals_noneAhead")}</p>
+                </motion.div>
               ) : (
-                // Il rivale è automaticamente il leader da battere (già indicato
-                // sopra): niente secondo selettore, solo il mosaico.
-                effectiveRival && mosaicData && (
-                  <MosaicDiagram
-                    cells={mosaicData.cells}
-                    bestCombination={mosaicData.bestCombination}
-                    yourDriver={selectedDriver}
-                    rival={effectiveRival}
-                    racesLeft={racesLeft}
-                    sprintsLeft={Math.min(sprintsLeft, racesLeft)}
-                    onCellClick={(yourPos, rivalPos) => setSelectedCell({ yourPos, rivalPos })}
-                  />
-                )
+                // Titolo ancora in palio: card "Obiettivo" animata (brand) +
+                // mosaico. Il rivale è il leader da battere (già indicato sopra).
+                <>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 18 }}
+                    className="relative overflow-hidden rounded-2xl p-5 text-white shadow-lg
+                               bg-gradient-to-br from-primary to-primary/80"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <motion.div
+                        animate={{ scale: [1, 1.18, 1] }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        <Target className="w-5 h-5" />
+                      </motion.div>
+                      <span className="text-xs font-bold uppercase tracking-wider">{t("sc_objective")}</span>
+                    </div>
+                    {analysis.mainRival && (
+                      <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
+                        <p className="text-xs text-white/80 mb-1.5 flex items-center gap-1">
+                          <Zap className="w-3 h-3" /> {t("sc_mainRival")}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="font-heading font-black text-lg truncate">{analysis.mainRival.driver.driver_name}</span>
+                          <span className="text-sm font-mono bg-white/20 px-2 py-0.5 rounded shrink-0 ml-2">
+                            {analysis.mainRival.driver.points} {t("pts")}
+                          </span>
+                        </div>
+                        <p className="text-xs text-white/80 mt-1">
+                          {t("sc_gap")}: −{analysis.mainRival.currentGap} {t("pts")}
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+
+                  {effectiveRival && mosaicData && (
+                    <MosaicDiagram
+                      cells={mosaicData.cells}
+                      bestCombination={mosaicData.bestCombination}
+                      yourDriver={selectedDriver}
+                      rival={effectiveRival}
+                      racesLeft={racesLeft}
+                      sprintsLeft={Math.min(sprintsLeft, racesLeft)}
+                      onCellClick={(yourPos, rivalPos) => setSelectedCell({ yourPos, rivalPos })}
+                    />
+                  )}
+                </>
               )
             )}
 
