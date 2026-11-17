@@ -642,7 +642,9 @@ export async function getRaceResults(raceId) {
 // Context for the predictions game: the next race to predict + the drivers the
 // user can pick from (current-season standings).
 export async function getPredictionContext() {
-  const [st, standings] = await Promise.all([getSeasonRaceStatus(), getDriverStandings()]);
+  const [st, standings, cons] = await Promise.all([
+    getSeasonRaceStatus(), getDriverStandings(), getConstructorStandings(),
+  ]);
   const nr = st.nextRace;
   let race = null;
   if (nr) {
@@ -661,25 +663,46 @@ export async function getPredictionContext() {
     code: d.driver_code || (d.id ? d.id.toUpperCase().slice(0, 3) : ''),
     team: d.team || '',
   }));
-  return { race, drivers };
+  const teams = (cons || []).map((c, i) => ({
+    id: c.id ?? String(i),
+    name: c.team_name ?? '',
+  }));
+  return { race, drivers, teams };
 }
 
-// Actual top-3 (driver ids, in order) for the given races — only those that
-// already have results. Returns { raceId: [p1, p2, p3] }.
-export async function getPodiums(raceIds = []) {
+// Actual outcomes for scoring the given races (only those with results):
+//   { raceId: { top10: [d1..d10], pitTeam: <constructor_id|null> } }
+// pitTeam = constructor of the single fastest pit stop of the race.
+export async function getRaceOutcomes(raceIds = []) {
   const ids = (raceIds || []).filter(x => x != null);
   if (!ids.length) return {};
-  const { data: rows } = await supabase
+
+  const { data: res } = await supabase
     .from('race_data')
     .select('race_id, position_number, driver_id')
     .in('race_id', ids)
     .eq('type', 'RACE_RESULT')
-    .in('position_number', [1, 2, 3]);
+    .gte('position_number', 1).lte('position_number', 10);
+
+  const { data: pits } = await supabase
+    .from('race_data')
+    .select('race_id, constructor_id, pit_stop_time_millis')
+    .in('race_id', ids)
+    .eq('type', 'PIT_STOP')
+    .not('pit_stop_time_millis', 'is', null);
+
   const out = {};
-  (rows || []).forEach(r => {
-    if (!out[r.race_id]) out[r.race_id] = [];
-    out[r.race_id][r.position_number - 1] = r.driver_id;
+  const ensure = (rid) => (out[rid] ||= { top10: [], pitTeam: null });
+  (res || []).forEach(r => { ensure(r.race_id).top10[r.position_number - 1] = r.driver_id; });
+
+  const best = {};
+  (pits || []).forEach(p => {
+    const m = p.pit_stop_time_millis;
+    if (m == null) return;
+    if (!(p.race_id in best) || m < best[p.race_id].m) best[p.race_id] = { m, team: p.constructor_id };
   });
+  Object.keys(best).forEach(rid => { ensure(rid).pitTeam = best[rid].team; });
+
   return out;
 }
 
