@@ -1126,19 +1126,64 @@ export default function ScenariosPage() {
           >
             {/* ─── ESITO GIÀ DECISO: titolo vinto o fuori dai giochi ─── */}
             {analysis.isAlreadyChampion && (
-              <div className="bg-white rounded-2xl p-6 shadow-md border border-emerald-200 text-center">
-                <Trophy className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                <p className="font-heading font-black text-xl text-emerald-600">{t("sc_champion")}</p>
-                <p className="text-sm text-gray-500 mt-1">{selectedDriver.driver_name}</p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 16 }}
+                className="relative overflow-hidden rounded-2xl p-6 text-center text-white shadow-lg
+                           bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600"
+              >
+                {/* raggi rotanti di sfondo */}
+                <motion.div
+                  aria-hidden
+                  className="absolute inset-0 opacity-25 pointer-events-none"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  style={{ background: "conic-gradient(from 0deg, transparent 0 18deg, rgba(255,255,255,0.5) 22deg 26deg, transparent 30deg 360deg)" }}
+                />
+                {/* scintille */}
+                {[...Array(5)].map((_, i) => (
+                  <motion.span
+                    key={i} aria-hidden
+                    className="absolute text-white pointer-events-none"
+                    style={{ left: `${10 + i * 19}%`, top: i % 2 ? "16%" : "68%" }}
+                    animate={{ opacity: [0, 1, 0], scale: [0.4, 1, 0.4] }}
+                    transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.35 }}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </motion.span>
+                ))}
+                <motion.div
+                  className="relative inline-block mb-2"
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Trophy className="w-14 h-14 drop-shadow" />
+                </motion.div>
+                <p className="relative font-heading font-black text-2xl drop-shadow-sm">{t("sc_champion")}</p>
+                <p className="relative text-sm text-white/90 font-semibold mt-1">{selectedDriver.driver_name}</p>
+              </motion.div>
             )}
 
             {analysis.isMathematicallyOut && (
-              <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-200 text-center">
-                <AlertTriangle className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                <p className="font-heading font-black text-xl text-gray-500">{t("sc_out")}</p>
-                <p className="text-sm text-gray-500 mt-1">{selectedDriver.driver_name}</p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="relative overflow-hidden rounded-2xl p-6 text-center shadow-md
+                           bg-gradient-to-br from-slate-700 to-slate-900 text-white"
+              >
+                <motion.div
+                  className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white/10 mb-3"
+                  initial={{ scale: 0.6, rotate: -10 }}
+                  animate={{ scale: 1, rotate: [-10, 10, -6, 6, 0] }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                >
+                  <AlertTriangle className="w-7 h-7 text-rose-400" />
+                </motion.div>
+                <p className="font-heading font-black text-xl">{t("sc_out")}</p>
+                <p className="text-sm text-white/60 mt-1">{selectedDriver.driver_name}</p>
+              </motion.div>
             )}
 
             {/* ─── MOSAICO: subito sotto, senza schede da scegliere ─── */}
