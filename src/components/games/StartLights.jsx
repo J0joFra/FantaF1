@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Share2, RotateCcw } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { hapticTap, hapticSuccess, hapticError } from "@/lib/native";
 import { buildGameCard, shareCanvas } from "@/lib/shareImage";
 
 /* ─── SEMAFORO ────────────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ export default function StartLights() {
     for (let i = 1; i <= 5; i++) {
       timers.current.push(setTimeout(() => {
         setLit(i);
+        hapticTap(); // each red light lands with a tap (no-op on web)
         if (i === 5) setPhase("armed");
       }, i * LIGHT_MS));
     }
@@ -82,12 +84,14 @@ export default function StartLights() {
     }
     if (phase === "lighting" || phase === "armed") {
       clearTimers();
+      hapticError(); // jump start — false start buzz
       setPhase("jump");
       return;
     }
     // phase === "go"
     const reaction = Math.round(performance.now() - goAt.current);
     if (reaction < MIN_HUMAN_MS) {
+      hapticError();
       setPhase("jump");
       return;
     }
@@ -96,7 +100,10 @@ export default function StartLights() {
     if (!best || reaction < best) {
       setBest(reaction);
       setIsNewBest(true);
+      hapticSuccess(); // new personal best
       try { localStorage.setItem(BEST_KEY, String(reaction)); } catch { /* ignore */ }
+    } else {
+      hapticTap();
     }
   };
 

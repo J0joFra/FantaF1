@@ -17,6 +17,7 @@ import Games from './pages/Games';
 import { useState, useEffect } from 'react';
 import { showBanner } from '@/lib/ads';
 import { initPurchases } from '@/lib/purchases';
+import { initNativeChrome } from '@/lib/native';
 import { useBannerSpace } from '@/lib/useBannerSpace';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
   // need the bottom of the screen hold it back until they close.
   useEffect(() => {
     initPurchases();  // restores "remove ads" entitlement (native only)
+    initNativeChrome();  // brand-red native status bar (native only)
     showBanner();
   }, []);
 

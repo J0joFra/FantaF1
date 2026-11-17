@@ -32,6 +32,7 @@ import {
   notificationsSupported, getEnabledReminders, toggleReminder, syncReminders,
 } from "@/lib/notifications";
 import { useI18n } from "@/lib/i18n";
+import { hapticTap, hapticSuccess } from "@/lib/native";
 import { playedToday } from "@/lib/driverGame";
 import { format } from "date-fns";
 import { it, enGB, fr, es, de } from "date-fns/locale";
@@ -173,8 +174,8 @@ function SessionSchedule({ data, t, localeTag }) {
 
   const toggle = async (s) => {
     const res = await toggleReminder(s.key, s, data.name, t);
-    if (res === "on") setEnabled(e => [...new Set([...e, s.key])]);
-    else if (res === "off") setEnabled(e => e.filter(k => k !== s.key));
+    if (res === "on") { setEnabled(e => [...new Set([...e, s.key])]); hapticSuccess(); }
+    else if (res === "off") { setEnabled(e => e.filter(k => k !== s.key)); hapticTap(); }
   };
 
   return (
