@@ -197,7 +197,7 @@ export default function SeasonCalendarModal({ races = [], error, open, onClose }
                   {races.length > 0 ? `${completed} / ${races.length} GP` : "Caricamento…"}
                 </p>
               </div>
-              <button onClick={onClose}
+              <button onClick={onClose} aria-label={t("close")}
                 className="w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center text-white active:scale-95 transition-transform">
                 <X className="w-4 h-4" />
               </button>

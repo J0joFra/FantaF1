@@ -289,7 +289,7 @@ export default function DriverGuess() {
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-xs font-body text-muted-foreground">{guessed.length}/{MAX_GUESSES}</span>
             {canRemind && (
-              <button onClick={toggleReminder} title={t("guess_reminder")}
+              <button onClick={toggleReminder} title={t("guess_reminder")} aria-label={t("guess_reminder")}
                 className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-95 transition-transform
                   ${reminderOn ? "bg-primary text-white border-primary" : "bg-gray-50 border-border text-muted-foreground"}`}>
                 {reminderOn ? <BellRing className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
