@@ -320,6 +320,7 @@ function MosaicDiagram({
             sub: `${yourDriver.driver_name} vs ${rival.driver_name}`,
           })}
           title={t("share")}
+          aria-label={t("share")}
           className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary active:scale-95 transition-transform shrink-0"
         >
           <Share2 className="w-4 h-4" />
@@ -564,6 +565,7 @@ function CellDetailModal({
                 </div>
                 <button
                   onClick={onClose}
+                  aria-label={t("close")}
                   className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
                 >
                   <X className="w-5 h-5" />
@@ -875,6 +877,7 @@ export default function ScenariosPage() {
         right={
           <button
             onClick={() => setShowInfo(true)}
+            aria-label={t("aria_info")}
             className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors border border-gray-200"
           >
             <HelpCircle className="w-4 h-4" />
@@ -1252,7 +1255,7 @@ export default function ScenariosPage() {
                 <h3 className="font-black text-xl bg-gradient-to-r from-primary to-primary/85 bg-clip-text text-transparent">
                   {t("im_title")}
                 </h3>
-                <button onClick={() => setShowInfo(false)} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                <button onClick={() => setShowInfo(false)} aria-label={t("close")} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
                   <X className="w-4 h-4 mx-auto" />
                 </button>
               </div>

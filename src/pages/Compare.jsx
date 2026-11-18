@@ -283,7 +283,7 @@ export default function Compare() {
       <PageHeader icon={GitCompare} title={t("nav_compare")} right={
         <>
           <TutorialSection items={["tut_cmp_1", "tut_cmp_2", "tut_cmp_3"]} />
-          <button onClick={shuffle} title={t("cmp_random")}
+          <button onClick={shuffle} title={t("cmp_random")} aria-label={t("cmp_random")}
             className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-muted-foreground border border-gray-200 active:scale-95 transition-transform">
             <Shuffle className="w-4 h-4" />
           </button>

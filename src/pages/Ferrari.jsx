@@ -447,6 +447,7 @@ export default function Ferrari() {
                   sub: `${selected.team_name} vs ${compare.team_name}`,
                 })}
                 title={tr("share")}
+                aria-label={tr("share")}
                 data-html2canvas-ignore
                 className="ml-auto w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary active:scale-95 transition-transform shrink-0"
               >
