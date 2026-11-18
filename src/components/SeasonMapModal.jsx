@@ -215,7 +215,7 @@ export default function SeasonCalendarModal({ races = [], error, open, onClose }
             {error && (
               <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">
                 <AlertTriangle className="w-10 h-10 text-red-400" />
-                <p className="font-heading font-black text-base text-foreground">Errore caricamento</p>
+                <p className="font-heading font-black text-base text-foreground">{t("map_error")}</p>
                 <p className="text-xs text-muted-foreground font-body">{error.message}</p>
               </div>
             )}
@@ -224,7 +224,7 @@ export default function SeasonCalendarModal({ races = [], error, open, onClose }
             {!error && races.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground font-body">Caricamento calendario…</p>
+                <p className="text-sm text-muted-foreground font-body">{t("map_loading")}</p>
               </div>
             )}
 

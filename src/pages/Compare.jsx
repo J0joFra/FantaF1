@@ -288,7 +288,7 @@ export default function Compare() {
             <Shuffle className="w-4 h-4" />
           </button>
           {d1 && d2 && (
-            <button onClick={share} title="Condividi"
+            <button onClick={share} title={t("share")} aria-label={t("share")}
               className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-muted-foreground border border-gray-200 active:scale-95 transition-transform">
               <Share2 className="w-4 h-4" />
             </button>
@@ -302,7 +302,7 @@ export default function Compare() {
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 items-end">
           <DriverSelect label={t("cmp_pilot1")} placeholder={t("cmp_selectDriver")} value={id1} onChange={setId1} color={c1} d={d1}
             options={drivers.filter(x => x.id !== id2)} />
-          <button onClick={swap} disabled={!id1 && !id2} title="Scambia"
+          <button onClick={swap} disabled={!id1 && !id2} title={t("cmp_swap")} aria-label={t("cmp_swap")}
             className="mb-3 w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-primary disabled:opacity-30 active:scale-90 transition-transform">
             <ArrowLeftRight className="w-4 h-4" />
           </button>

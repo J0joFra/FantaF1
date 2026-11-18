@@ -241,63 +241,6 @@ function generateDetailedCombination(
 
 // ─── UI COMPONENTS ─────────────────────────────────────────────────────────
 
-function MagicNumberCard({ analysis }: { analysis: ChampionshipAnalysis; driverColor: string }) {
-  const { t } = useI18n();
-  if (analysis.isAlreadyChampion) {
-    return (
-      <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 text-white rounded-2xl p-6 text-center shadow-lg">
-        <div className="relative inline-block mb-3">
-          <Sparkles className="w-16 h-16 text-yellow-300 animate-pulse" />
-          <Trophy className="w-8 h-8 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-yellow-400" />
-        </div>
-        <h3 className="font-bold text-2xl mb-2">{t("sc_champion")}</h3>
-        <p className="text-emerald-100 text-sm">
-          {t("mc_alreadyWon", { driver: analysis.driver.driver_name })}
-        </p>
-      </div>
-    );
-  }
-
-  if (analysis.isMathematicallyOut) {
-    return (
-      <div className="bg-gradient-to-br from-gray-700 to-gray-900 text-white rounded-2xl p-6 text-center shadow-lg">
-        <AlertTriangle className="w-16 h-16 mx-auto mb-3 text-gray-400" />
-        <h3 className="font-bold text-2xl mb-2">{t("sc_out")}</h3>
-        <p className="text-gray-300 text-sm">
-          {t("mc_cantWin", { driver: analysis.driver.driver_name })}
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-gradient-to-br from-primary to-primary/80 text-white rounded-2xl p-5 shadow-lg">
-      <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 mb-3 backdrop-blur-sm">
-        <Target className="w-4 h-4" />
-        <span className="text-xs font-medium uppercase tracking-wider">{t("sc_objective")}</span>
-      </div>
-
-      {analysis.mainRival && (
-        <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
-          <p className="text-xs text-white/80 mb-2 flex items-center gap-1">
-            <Zap className="w-3 h-3" />
-            {t("sc_mainRival")}
-          </p>
-          <div className="flex justify-between items-center">
-            <span className="font-bold text-lg">{analysis.mainRival.driver.driver_name}</span>
-            <span className="text-sm font-mono bg-white/20 px-2 py-0.5 rounded">
-              {analysis.mainRival.driver.points} pt
-            </span>
-          </div>
-          <p className="text-xs text-white/80 mt-1">
-            {t("sc_gap")}: -{analysis.mainRival.currentGap} {t("pts")}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // 🔥 COMPONENTE MOSAICO CON COLORI MIGLIORATI
 function MosaicDiagram({ 
   cells,
