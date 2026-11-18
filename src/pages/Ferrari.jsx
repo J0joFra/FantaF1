@@ -424,7 +424,7 @@ export default function Ferrari() {
         {/* Toggle: confronto + storico nascosti di default per alleggerire la pagina */}
         <button
           onClick={() => setShowMore(s => !s)}
-          className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors active:scale-[0.98] border border-rose-200"
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-primary hover:bg-primary/10 rounded-xl transition-colors active:scale-[0.98] border border-primary/20"
         >
           {showMore ? tr("sc_simpleView") : tr("sc_advanced")}
           <ChevronDown className={`w-4 h-4 transition-transform ${showMore ? "rotate-180" : ""}`} />
@@ -448,7 +448,7 @@ export default function Ferrari() {
                 })}
                 title={tr("share")}
                 data-html2canvas-ignore
-                className="ml-auto w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 active:scale-95 transition-transform shrink-0"
+                className="ml-auto w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary active:scale-95 transition-transform shrink-0"
               >
                 <Share2 className="w-4 h-4" />
               </button>
