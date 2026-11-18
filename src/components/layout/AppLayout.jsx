@@ -1,6 +1,7 @@
 import { Outlet, useLocation, Link } from "react-router-dom";
-import { BarChart2, Calculator, GitCompare, Shield, Newspaper, RefreshCw } from "lucide-react";
+import { BarChart2, Calculator, GitCompare, Shield, Newspaper, RefreshCw, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Suspense } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useI18n } from "@/lib/i18n";
 import { useAndroidBack } from "@/lib/useAndroidBack";
@@ -121,7 +122,13 @@ export default function AppLayout() {
               transition={{ duration: 0.18, ease: "easeInOut" }}
               className="min-h-full"
             >
-              <Outlet />
+              <Suspense fallback={
+                <div className="flex items-center justify-center py-24">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              }>
+                <Outlet />
+              </Suspense>
             </motion.div>
           </AnimatePresence>
         </div>

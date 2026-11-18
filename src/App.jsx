@@ -13,14 +13,16 @@ import { I18nProvider } from '@/lib/i18n';
 import AppLayout from './components/layout/AppLayout';
 import Onboarding from './components/Onboarding';
 import SplashScreen from './components/SplashScreen';
-import Home from './pages/Home';
-import Calculator from './pages/Calculator';
-import Compare from './pages/Compare';
-import Ferrari from './pages/Ferrari';
-import News from './pages/News';
-import DriverDetail from './pages/DriverDetail';
-import Games from './pages/Games';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy } from 'react';
+// Route-based code splitting: each page is its own chunk, loaded on demand, so
+// heavy deps (e.g. recharts in the Teams tab) stay off the initial bundle.
+const Home = lazy(() => import('./pages/Home'));
+const Calculator = lazy(() => import('./pages/Calculator'));
+const Compare = lazy(() => import('./pages/Compare'));
+const Ferrari = lazy(() => import('./pages/Ferrari'));
+const News = lazy(() => import('./pages/News'));
+const DriverDetail = lazy(() => import('./pages/DriverDetail'));
+const Games = lazy(() => import('./pages/Games'));
 import { showBanner } from '@/lib/ads';
 import { initPurchases } from '@/lib/purchases';
 import { initNativeChrome } from '@/lib/native';
