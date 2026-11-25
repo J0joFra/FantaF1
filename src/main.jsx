@@ -1,10 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from '@/App.jsx'
+import AppErrorBoundary from '@/components/AppErrorBoundary'
 import '@/index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <App />
+  <AppErrorBoundary>
+    <App />
+  </AppErrorBoundary>
 )
 
 // Register the service worker used for Web Push race reminders.
