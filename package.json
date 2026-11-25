@@ -7,6 +7,7 @@
     "dev": "vite",
     "icons": "node scripts/generate-icons.cjs",
     "build": "vite build",
+    "android": "npm run build && npx cap sync android",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
