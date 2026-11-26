@@ -1,39 +1,27 @@
-<!doctype html>
-<html><head><meta charset="utf-8"><style>
-* { margin:0; padding:0; box-sizing:border-box; }
-html, body { width:1024px; height:576px; overflow:hidden; }
-body {
-  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background:
-    radial-gradient(70% 90% at 50% 45%, rgba(255,255,255,0.10), transparent 70%),
-    radial-gradient(120% 140% at 90% 120%, rgba(0,0,0,0.30), transparent 60%),
-    linear-gradient(135deg, #E8002D 0%, #C20028 55%, #8e001d 100%);
-  position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
-}
-body::before { content:""; position:absolute; inset:0;
-  background-image: linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px);
-  background-size: 48px 48px;
-  -webkit-mask-image: radial-gradient(80% 90% at 50% 50%, #000 30%, transparent 85%);
-}
-/* checkered strip bottom */
-.flag { position:absolute; left:0; right:0; bottom:0; height:24px; opacity:.16;
-  background: conic-gradient(#fff 25%, transparent 0 50%, #fff 0 75%, transparent 0) 0 0/24px 24px; }
-.row { position:relative; z-index:1; display:flex; align-items:center; gap:34px; }
-.icon { width:150px; height:150px; border-radius:34px; box-shadow:0 18px 44px rgba(0,0,0,.35); }
-.name { color:#fff; font-size:118px; font-weight:800; letter-spacing:-3px; line-height:1; text-shadow:0 6px 24px rgba(0,0,0,.25); }
-.lights { position:relative; z-index:1; margin-top:40px; display:flex; gap:16px; }
-.pod { background:#111116; border-radius:14px; padding:8px; display:flex; flex-direction:column; gap:8px;
-  box-shadow:0 10px 26px rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.08); }
-.l { width:30px; height:30px; border-radius:50%; background:#ff1a1a; box-shadow:0 0 16px 4px rgba(255,40,40,.65), inset 0 -4px 8px rgba(0,0,0,.25); }
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1024px;height:576px;overflow:hidden}
+body{position:relative;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#fff;
+ background:radial-gradient(60% 80% at 50% 40%,rgba(232,0,45,.38),transparent 70%),
+            radial-gradient(120% 120% at 50% 120%,rgba(232,0,45,.25),transparent 60%),#0e0f13;
+ display:flex;flex-direction:column;align-items:center;justify-content:center}
+body::before{content:"";position:absolute;inset:0;
+ background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 3px,transparent 3px 22px)}
+.flag{position:absolute;left:0;right:0;bottom:0;height:22px;opacity:.14;
+ background:conic-gradient(#fff 25%,transparent 0 50%,#fff 0 75%,transparent 0) 0 0/22px 22px}
+.name{position:relative;font-size:76px;font-weight:900;letter-spacing:-1.5px;line-height:1;text-shadow:0 8px 30px rgba(0,0,0,.5)}
+.sub{position:relative;margin-top:14px;font-size:22px;font-weight:700;letter-spacing:6px;color:rgba(255,255,255,.75)}
+.sub b{color:#ff3355}
+.apps{position:relative;margin-top:44px;display:flex;gap:56px}
+.app{display:flex;flex-direction:column;align-items:center;gap:12px}
+.app img{width:132px;height:132px;border-radius:30px;box-shadow:0 16px 40px rgba(0,0,0,.55),0 0 0 2px rgba(255,255,255,.12)}
+.app span{font-size:22px;font-weight:800;letter-spacing:.5px}
 </style></head><body>
-<div class="row"><img class="icon" src="../store_icon.png"><div class="name">GridUp</div></div>
-<div class="lights">
-  <div class="pod"><span class="l"></span><span class="l"></span></div>
-  <div class="pod"><span class="l"></span><span class="l"></span></div>
-  <div class="pod"><span class="l"></span><span class="l"></span></div>
-  <div class="pod"><span class="l"></span><span class="l"></span></div>
-  <div class="pod"><span class="l"></span><span class="l"></span></div>
+<div class="name">Joaquim Francalanci</div>
+<div class="sub">FORMULA 1 <b>•</b> APPS <b>•</b> GAMES</div>
+<div class="apps">
+ <div class="app"><img src="../store_icon.png"><span>GridUp</span></div>
+ <div class="app"><img src="driver-clash-icon-512.png"><span>Driver Clash</span></div>
 </div>
 <div class="flag"></div>
 </body></html>
