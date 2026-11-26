@@ -13,6 +13,7 @@ Aggiorna solo (basso rischio, non tocca struttura/RLS/storico):
   - driver                        (SOLO i piloti nuovi, non presenti nel DB — upsert)
   - season_driver_standing        (classifica piloti della stagione)
   - season_constructor_standing   (classifica costruttori della stagione)
+  - race                          (calendario della stagione: date, round, circuiti; via le gare tolte)
   - race_data                     (risultati/qualifiche/sprint/giri veloci/DOTD dei GP della stagione)
 
 Richiede in .env (NON committare .env):
@@ -141,7 +142,7 @@ def first_int_after_values(line):
 
 # ── Pass 1: race(id→anno) + classifiche + tutti i driver dal dump ─────────────
 print(f"Lettura dump: {DUMP}")
-race_year, sds, scs, bad = {}, [], [], 0
+race_year, race_rows, sds, scs, bad = {}, {}, [], [], 0
 all_drivers_in_dump = {}   # id → row completa
 
 with open(DUMP, encoding="utf-8") as fh:
@@ -155,6 +156,8 @@ with open(DUMP, encoding="utf-8") as fh:
             p = parse_insert(line)
             if p and p[1].get("id") is not None and p[1].get("year") is not None:
                 race_year[p[1]["id"]] = p[1]["year"]
+                race_rows[p[1]["id"]] = p[1]
+                bad += (p[2] != p[3])
         elif line.startswith('INSERT INTO "season_driver_standing"'):
             p = parse_insert(line)
             if p:
@@ -220,6 +223,19 @@ def get_existing_driver_ids():
     except urllib.error.HTTPError as e:
         raise SystemExit(f"ERRORE GET /driver: HTTP {e.code} — {e.read().decode(errors='replace')}")
 
+def get_json(path):
+    h = dict(HEAD)
+    h["Accept"] = "application/json"
+    r = urllib.request.Request(BASE + path, headers=h, method="GET")
+    try:
+        with urllib.request.urlopen(r) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        raise SystemExit(f"ERRORE GET {path}: HTTP {e.code} — {e.read().decode(errors='replace')}")
+
+def patch(table, query, body):
+    _req("PATCH", f"/{table}?{query}", body=body)
+
 def delete(table, query):
     _req("DELETE", f"/{table}?{query}")
 
@@ -250,12 +266,28 @@ missing_ids = drivers_needed - existing_ids
 new_drivers = [all_drivers_in_dump[did] for did in missing_ids if did in all_drivers_in_dump]
 unknown_ids = missing_ids - set(all_drivers_in_dump.keys())
 
+# ── Calendario: cosa cambia rispetto a Supabase ───────────────────────────────
+# Se F1DB toglie o sposta una gara (nel 2026: Bahrain e Arabia Saudita
+# cancellati), gli id delle gare successive cambiano. Prima questo script
+# aggiornava solo race_data, con gli id nuovi, lasciando il calendario
+# vecchio: ogni risultato finiva sulla gara dopo. Ora il calendario della
+# stagione si allinea al dump prima di scrivere i risultati.
+db_races = {r["id"]: r for r in get_json(f"/race?year=eq.{YEAR}&select=id,round,grand_prix_id,date")}
+stale_race_ids = sorted(set(db_races) - race_set)
+changed_races = [rid for rid in race_ids
+                 if rid not in db_races
+                 or any(db_races[rid].get(k) != race_rows[rid].get(k) for k in ("round", "grand_prix_id", "date"))]
+
 leader = sds[0] if sds else None
 leader_txt = f"{leader.get('driver_id')} ({leader.get('points')} pt)" if leader else "n/d"
 span = f"{race_ids[0]}..{race_ids[-1]}" if race_ids else "-"
 
 print(f"\nStagione rilevata: {YEAR}")
 print(f"  gare (race_id)             : {len(race_ids)}  [{span}]")
+print(f"  calendario: gare da togliere: {stale_race_ids or '-'}")
+changed_txt = ", ".join(f"{rid}=R{race_rows[rid].get('round')} {race_rows[rid].get('grand_prix_id')}"
+                        for rid in changed_races)
+print(f"  calendario: gare cambiate   : {len(changed_races)}" + (f"  ({changed_txt})" if changed_txt else ""))
 print(f"  season_driver_standing     : {len(sds)}")
 print(f"  season_constructor_standing: {len(scs)}")
 print(f"  race_data                  : {len(rdata)}")
@@ -288,6 +320,27 @@ if new_drivers:
     print(f"[OK] driver nuovi (upsert): {len(new_drivers)}")
 else:
     print("[OK] driver: nessun nuovo pilota da aggiungere")
+
+# 0b. Calendario della stagione (prima di race_data, che lo referenzia)
+if stale_race_ids:
+    ids = ",".join(str(x) for x in stale_race_ids)
+    for t in ("race_data", "race_driver_standing", "race_constructor_standing"):
+        delete(t, f"race_id=in.({ids})")
+    delete("race", f"id=in.({ids})")
+    print(f"[OK] race: tolte {len(stale_race_ids)} gare non più nel calendario ({ids})")
+if changed_races:
+    # (year, round) è unico: prima si spostano i round esistenti fuori dalla
+    # strada, poi si scrive il calendario nuovo. Senza, spostare Miami dal
+    # round 6 al 4 urta contro il round 4 vecchio ancora presente.
+    for rid in race_ids:
+        if rid in db_races:
+            patch("race", f"id=eq.{rid}", {"round": 1000 + rid})
+    race_cols = set((get_json("/race?select=*&limit=1") or [{}])[0].keys())
+    rows = [{k: v for k, v in race_rows[rid].items() if not race_cols or k in race_cols} for rid in race_ids]
+    upsert("race", rows)
+    print(f"[OK] race: calendario {YEAR} allineato ({len(rows)} gare)")
+else:
+    print(f"[OK] race: calendario {YEAR} già allineato")
 
 # 1. Classifiche piloti
 delete("season_driver_standing", f"year=eq.{YEAR}")
