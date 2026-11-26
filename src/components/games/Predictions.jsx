@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Trophy, Check, Clock, Lock, Wrench } from "lucide-react";
-import { getPredictionContext, getRaceOutcomes } from "@/lib/supabaseData";
+import { getPredictionContext, getRaceOutcomes, getAllSeasonRaces } from "@/lib/supabaseData";
 import {
   getPrediction, savePrediction, allPredictions, scoreRace, normalizePrediction, MAX_POINTS_PER_RACE,
+  reconcileWithCalendar,
 } from "@/lib/predictions";
 import { getDriverColor, getTeamColor } from "@/lib/f1Utils";
 import { raceFlagUrl } from "@/lib/flagUtils";
@@ -45,6 +46,22 @@ export default function Predictions() {
   const [pitTeam, setPitTeam] = useState(() => seed.pitTeam);
   const [activeSlot, setActiveSlot] = useState(0);
   const [justSaved, setJustSaved] = useState(false);
+
+  // Pronostici salvati con un id di gara che nel frattempo è cambiato (il
+  // calendario 2026 è stato rinumerato): si rimettono sotto la gara con la
+  // stessa data, prima di valutarli.
+  const { data: seasonRaces } = useQuery({
+    queryKey: ["allSeasonRaces"], queryFn: () => getAllSeasonRaces(), staleTime: 60 * 60 * 1000,
+  });
+  useEffect(() => {
+    if (!seasonRaces?.length || !reconcileWithCalendar(seasonRaces)) return;
+    setBump(b => b + 1);
+    if (race) {
+      const fixed = normalizePrediction(getPrediction(race.id));
+      setSlots(fixed.slots);
+      setPitTeam(fixed.pitTeam);
+    }
+  }, [seasonRaces]);
 
   const firstEmpty = () => { const i = slots.findIndex(x => !x); return i === -1 ? activeSlot : i; };
 

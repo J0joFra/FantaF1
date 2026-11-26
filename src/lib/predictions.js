@@ -110,3 +110,43 @@ export function scoreRace(pred, outcome) {
 
   return { points: podiumPts + restPts + pitPts, perfectPodium, podiumPts, restPts, pitPts, detail, pit };
 }
+
+/**
+ * Rimette ogni pronostico sotto l'id giusto, cercando la gara per data.
+ *
+ * Il pronostico è salvato con l'id della gara, e gli id possono cambiare:
+ * nel 2026 F1DB ha tolto due gare e rinumerato le successive, e chi aveva
+ * pronosticato Las Vegas si ritrovava il pronostico sotto l'id di San Paolo,
+ * valutato con i risultati sbagliati. La data invece non cambia, ed è salvata
+ * con il pronostico: se la gara di quella data ha un altro id, il pronostico
+ * si sposta lì. Restituisce quanti ne ha spostati.
+ *
+ * races: [{ id, date }] della stagione.
+ */
+export function reconcileWithCalendar(races = []) {
+  const idByDate = Object.fromEntries(races.filter(r => r.date).map(r => [r.date, String(r.id)]));
+  const moves = [];
+  for (const id of readIndex()) {
+    const p = getPrediction(id);
+    const target = p?.raceDate ? idByDate[p.raceDate] : null;
+    if (target && target !== String(id)) moves.push({ from: String(id), to: target, data: p });
+  }
+  if (!moves.length) return 0;
+
+  // In due tempi: prima si tolgono tutti, poi si riscrivono. Gli id slittano
+  // tutti nella stessa direzione, e spostandoli uno alla volta il primo
+  // sovrascriverebbe il pronostico che deve ancora partire.
+  const movedFrom = new Set(moves.map(m => m.from));
+  try {
+    moves.forEach(m => localStorage.removeItem(PREFIX + m.from));
+    let index = readIndex().filter(id => !movedFrom.has(String(id)));
+    for (const m of moves) {
+      const there = getPrediction(m.to);
+      if (there && there.raceDate === m.data.raceDate) continue; // c'è già quello giusto
+      localStorage.setItem(PREFIX + m.to, JSON.stringify(m.data));
+      index.push(m.to);
+    }
+    writeIndex(index);
+  } catch { /* ignore */ }
+  return moves.length;
+}
